@@ -1,0 +1,6 @@
+# Depot public de distribution : donnees, sauvegardes et journaux restent sur l'appareil
+donnees/
+sauvegardes/
+*.log
+*.log.old
+server.pid

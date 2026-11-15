@@ -1,0 +1,98 @@
+<!doctype html>
+<!-- @zone socle | Structure de la page (header, menu « ⋯ » #plusMenu (dont #majBtn, #clientsBtn et #apkBtn : V1.9, dans l'APK seulement), #banner, #viewHome, #viewLights, #viewScenes, #viewAnim, #viewElectro, #viewSt, #viewAppareils et #viewPlus (téléphone), #menu, #onglets) et ordre de chargement CSS/scripts ; version.js en tête (classe tel ou tab). -->
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="version.js"></script>
+<title>Maison IKEA</title>
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="entete.css">
+<link rel="stylesheet" href="accueil.css">
+<link rel="stylesheet" href="cameras.css">
+<link rel="stylesheet" href="cameras-ajout.css">
+<link rel="stylesheet" href="plan.css">
+<link rel="stylesheet" href="panneau.css">
+<link rel="stylesheet" href="scenarios.css">
+<link rel="stylesheet" href="animations.css">
+<link rel="stylesheet" href="electromenager.css">
+<link rel="stylesheet" href="st-compte.css">
+<link rel="stylesheet" href="hubs.css">
+<link rel="stylesheet" href="pieces.css">
+<link rel="stylesheet" href="maj.css">
+<link rel="stylesheet" href="clients.css">
+<link rel="stylesheet" href="tel.css">
+<meta name="theme-color" content="#0d1015">
+<meta name="mobile-web-app-capable" content="yes"></head>
+<body>
+<header>
+ <div class="hl"><button id="menuBtn" class="hbtn" title="Menu" aria-label="Menu"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><button id="homeBtn" class="hbtn" title="Accueil" aria-label="Accueil"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></button><span id="where" class="where"></span><div id="status" class="status">Connexion…</div><div id="stamp" class="stamp"></div></div>
+ <div class="hr"><button id="plusBtn" class="hbtn" title="Plus" aria-label="Plus : actualiser, plein écran, affichage" aria-haspopup="true" aria-expanded="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button><button id="alloff" class="b-warn">Tout OFF</button>
+  <div id="plusMenu" class="pmenu hidden" role="menu"><button id="refresh" class="pitem" role="menuitem">Actualiser</button><div id="pmStamp" class="pstamp"></div><button id="fsBtn" class="pitem" role="menuitem">Plein écran</button><button id="majBtn" class="pitem" role="menuitem">Mise à jour</button><button id="clientsBtn" class="pitem" role="menuitem">Appareils autorisés</button><button id="apkBtn" class="pitem hidden" role="menuitem">Réglages de l'application</button><div class="plab">Affichage</div><div id="affichage" class="paff"></div></div></div>
+</header>
+<div id="banner" class="banner hidden"></div>
+<div id="viewHome" class="view"><div id="homeMain" class="hmain"></div><div id="homeCams" class="hcams hidden"></div></div>
+<div id="viewLights" class="view hidden">
+ <div class="left">
+  <div id="rooms" class="rooms"></div>
+  <div class="selbar"><button id="selAll" class="b-small">Tout sélectionner</button><button id="selNone" class="b-small">Aucune</button><button id="orgBtn" class="b-small">Organiser</button><button id="orgReset" class="b-small" style="display:none">Réinitialiser</button><span id="selCount" class="selcount"></span></div>
+  <div id="tiles" class="tiles"></div>
+  <div id="stTous" class="hidden"></div>
+ </div>
+ <div class="right" id="panel"></div>
+</div>
+<div id="viewScenes" class="view hidden">
+ <div class="scenebar"><button id="saveScene" class="b-main">Enregistrer comme scénario</button><span class="hint">Enregistre l’état actuel des appareils sélectionnés (ou de tous si aucune n’est sélectionnée).</span></div>
+ <div id="sceneList" class="scenes"></div>
+</div>
+<div id="viewAnim" class="view hidden"></div>
+<div id="viewElectro" class="view hidden"><div id="electroList" class="e-liste"></div></div>
+<div id="viewSt" class="view hidden"><div id="stListe" class="e-liste"></div></div>
+<div id="viewAppareils" class="view hidden"></div>
+<div id="viewPlus" class="view hidden"></div>
+<div id="scrim" class="scrim"></div><nav id="menu" class="menu"></nav>
+<nav id="onglets" class="onglets" aria-label="Sections"></nav>
+<script src="app.js"></script>
+<script src="prevision.js"></script>
+<script src="commandes.js"></script>
+<script src="plan.js"></script>
+<script src="menu.js"></script>
+<script src="scenes.js"></script>
+<script src="home.js"></script>
+<script src="cameras.js"></script>
+<script src="cameras-ajout.js"></script>
+<script src="st-compte.js"></script>
+<script src="electromenager.js"></script>
+<script src="st-familles.js"></script>
+<script src="reglages.js"></script>
+<script src="panel.js"></script>
+<script src="hubs.js"></script>
+<script src="pieces.js"></script>
+<script src="pieces-gestion.js"></script>
+<script src="pieces-liste.js"></script>
+<script src="pieces-choix.js"></script>
+<script src="animations.js"></script>
+<script src="maj.js"></script>
+<script src="clients.js"></script>
+<script src="apk.js"></script>
+<script src="navigation.js"></script>
+<script src="tel.js"></script>
+<script>
+(function () {
+  var b = document.getElementById('fsBtn');
+  function msg(t) { if (window.APP && APP.banner) APP.banner(t, 'warn'); else alert(t); }
+  if (b) {
+    b.onclick = function () {
+      var d = document, e = d.documentElement;
+      var req = e.requestFullscreen || e.webkitRequestFullscreen;
+      var ex = d.exitFullscreen || d.webkitExitFullscreen;
+      var inFs = d.fullscreenElement || d.webkitFullscreenElement;
+      try {
+        if (inFs) { ex.call(d); }
+        else if (req) { var p = req.call(e); if (p && p.catch) { p.catch(function (err) { msg('Plein écran refusé : ' + (err && err.message)); }); } }
+        else { msg('Plein écran non disponible sur ce navigateur.'); }
+      } catch (x) { msg('Plein écran : ' + x.message); }
+    };
+  }
+  if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistrations) { navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }).catch(function () {}); }
+})();
+</script>
+</body></html>

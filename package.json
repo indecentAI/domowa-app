@@ -1,0 +1,18 @@
+{
+  "name": "dirigera-tablette",
+  "version": "1.1.0",
+  "description": "Interface locale (Termux) de la maison : hub IKEA DIRIGERA, cameras IP, lave-linge Samsung SmartThings",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "dependencies": {
+    "bonjour-service": "1.4.4",
+    "dirigera": "2.0.2",
+    "node-ssdp": "4.0.1",
+    "onvif": "0.8.3"
+  },
+  "private": true
+}

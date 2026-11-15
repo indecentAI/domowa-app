@@ -1,0 +1,24 @@
+<!doctype html>
+<!-- @zone distant | Page d'appairage (V1.8, autonome : seule page servie par l'écoute réseau à un appareil sans jeton, avec appairage.css et appairage.js) : code à 8 chiffres et nom de l'appareil, POST /api/appairage, puis ouverture de l'application ; V1.9 : « Étape 3 sur 4 » dans l'APK. -->
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Maison IKEA - Autoriser cet appareil</title>
+<link rel="stylesheet" href="appairage.css">
+<meta name="theme-color" content="#0d1015"></head>
+<body>
+<main class="ap-carte">
+ <p id="apEtape" class="ap-etape" hidden>Étape 3 sur 4</p>
+ <h1 class="ap-titre">Autoriser cet appareil</h1>
+ <p class="ap-p">Cet appareil n'est pas encore autorisé à ouvrir l'application de la maison. Il faut un code à 8 chiffres, valable 5 minutes.</p>
+ <p class="ap-p ap-ou">Où trouver le code : sur un appareil déjà autorisé (ou sur la machine du serveur), menu « ⋯ » ou onglet Plus, « Appareils autorisés », puis « Autoriser un appareil ».</p>
+ <form id="apForm" autocomplete="off" novalidate>
+  <label class="ap-lab" for="apCode">Code à 8 chiffres</label>
+  <input id="apCode" class="ap-in ap-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="9" placeholder="0000 0000" aria-describedby="apMsg">
+  <label class="ap-lab" for="apNom">Nom de cet appareil</label>
+  <input id="apNom" class="ap-in" type="text" maxlength="30" placeholder="Smartphone de…">
+  <button id="apOk" class="ap-btn" type="submit" disabled>Autoriser cet appareil</button>
+ </form>
+ <div id="apMsg" class="ap-msg" role="status" aria-live="polite"></div>
+</main>
+<script src="appairage.js"></script>
+</body></html>

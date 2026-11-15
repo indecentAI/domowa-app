@@ -1,0 +1,7 @@
+{
+  "id": "cameras",
+  "nom": "Cameras IP : flux RTSP via ffmpeg, PTZ ONVIF, recherche ONVIF/mDNS/SSDP/scan ; donnees/cameras.json et donnees/camera-secrets/",
+  "module": "index.mjs",
+  "types": ["camera"],
+  "zone": "cameras"
+}

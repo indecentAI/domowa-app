@@ -1,0 +1,20 @@
+{
+ "_note": "Base de marques : motif = expression testee sur le nom, le modele et les annonces reseau ; rtsp = chemins candidats (sd = leger, hd = detaille). A completer pour d'autres marques. Chemins non verifies sauf Tapo.",
+ "marques": [
+  { "nom": "TP-Link Tapo", "motif": "tapo|tp-?link|tc[0-9]{2}|c[0-9]{3}", "onvif_port": 2020,
+    "rtsp": [ { "chemin": "stream2", "qualite": "sd" }, { "chemin": "stream1", "qualite": "hd" } ],
+    "aide": "Application Tapo : Parametres avances > Compte de la camera : creer un identifiant et un mot de passe (differents du compte Tapo)." },
+  { "nom": "Reolink", "motif": "reolink|rlc-|argus",
+    "rtsp": [ { "chemin": "h264Preview_01_sub", "qualite": "sd" }, { "chemin": "h264Preview_01_main", "qualite": "hd" } ],
+    "aide": "Reolink : activer RTSP et ONVIF dans Reglages > Reseau > Parametres avances > Serveur de ports." },
+  { "nom": "Hikvision / EZVIZ", "motif": "hikvision|ezviz|hik-|ds-2",
+    "rtsp": [ { "chemin": "Streaming/Channels/102", "qualite": "sd" }, { "chemin": "Streaming/Channels/101", "qualite": "hd" } ],
+    "aide": "Activer RTSP et ONVIF dans la configuration reseau de la camera ; EZVIZ : le code de verification de l'etiquette sert de mot de passe." },
+  { "nom": "Dahua / Imou", "motif": "dahua|imou|dh-|ipc-",
+    "rtsp": [ { "chemin": "cam/realmonitor?channel=1&subtype=1", "qualite": "sd" }, { "chemin": "cam/realmonitor?channel=1&subtype=0", "qualite": "hd" } ],
+    "aide": "Imou : activer ONVIF/RTSP dans les parametres de l'appareil (application Imou Life)." },
+  { "nom": "Xiaomi", "motif": "xiaomi|mijia|mi home",
+    "rtsp": [],
+    "aide": "Beaucoup de cameras Xiaomi n'offrent pas RTSP en standard : utiliser l'ajout manuel si votre modele le permet." }
+ ]
+}

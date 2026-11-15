@@ -1,0 +1,8 @@
+{
+  "id": "smartthings",
+  "nom": "Samsung SmartThings (cloud, exception : api.smartthings.com seul, TLS strict, OAuth donnees/smartthings.json) : lave-linge (type washer) et familles generiques en lecture seule (familles.mjs)",
+  "module": "index.mjs",
+  "types": ["washer"],
+  "zone": "electromenager",
+  "libelle": "Électroménager"
+}

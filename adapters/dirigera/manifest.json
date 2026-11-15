@@ -1,0 +1,6 @@
+{
+  "id": "dirigera",
+  "nom": "Hub IKEA DIRIGERA : lumieres et prises (HTTPS local, TLS strict, adresse donnees/dirigera.json, jeton donnees/dirigera-token.txt, npm dirigera 2.0.2 ; contrat hub)",
+  "module": "index.mjs",
+  "types": ["light", "outlet"]
+}

@@ -1,0 +1,92 @@
+/* @zone accueil */
+/* accueil.css : page d'accueil (V1.5) : rubriques Pièces / Actions / Catégories (4 au plus), une ligne de cartes chacune, défilement horizontal au doigt
+   (.hline, posé par home.js : fondu au bord .fg / .fd et flèches .hfl quand il reste des cartes de ce côté) ; cartes de taille fixe ; écran bas (680 px ou moins) : cartes compactes. */
+#viewHome{align-items:stretch;padding:0}
+.hmain{flex:1;min-width:0;display:flex;flex-direction:column;align-items:stretch;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:14px 0 0}
+.hmain>*{flex:none}
+.hrow{margin-bottom:8px;min-width:0}
+.hlabel{display:flex;align-items:center;min-height:26px;text-transform:uppercase;margin:0 18px 4px 20px;font-size:12px;letter-spacing:.12em;color:#7d8ba3}
+.hfleches{display:none;margin-left:auto;gap:8px}
+.hrow.hdeborde .hfleches{display:flex}
+.hfl{position:relative;width:30px;height:26px;min-height:0;padding:0;border-radius:13px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid #262c37;color:#7d8ba3}
+.hfl::after{content:"";position:absolute;inset:-9px -7px}
+.hfl:disabled{opacity:.3}
+.hfl:active{border-color:#cfe6ff;color:#fff}
+.hline{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding:0 16px;padding:2px 16px 16px;scrollbar-width:none}
+.hline::-webkit-scrollbar{display:none}
+.hline.fg{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 56px)}
+.hline.fd{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 56px),transparent 100%)}
+.hline.fg.fd{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 56px,#000 calc(100% - 56px),transparent 100%)}
+.hempty{color:var(--muted);font-size:16px;padding:8px 4px}
+.hwrap{position:relative;flex:none;margin:0 12px 0 0;scroll-snap-align:start}
+.hcard{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;width:190px;height:92px;min-height:0;padding:12px 16px;margin:0;text-align:left;background:linear-gradient(180deg,#141922,#0f131a);border:1px solid rgba(140,165,210,.16);border-radius:22px;box-shadow:0 10px 20px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.hcard:active{border-color:#cfe6ff;box-shadow:0 0 0 1px #cfe6ff,0 0 24px 3px rgba(170,210,255,.5)}
+.hname{display:block;max-width:100%;font-size:19px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hcount{font-weight:400;color:var(--muted);margin-top:4px;font-size:13px}
+.hroom{width:250px;height:128px;justify-content:flex-start;padding:14px 56px 66px 16px}
+.hbtns{position:absolute;left:16px;right:16px;bottom:12px;display:flex;gap:10px}
+.hpow{flex:none;width:44px;height:44px;padding:0;min-height:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#0d1117}
+/* V1.6 : état lisible sans la couleur : ON = bouton plein (icône sombre), OFF = contour gris ; plus de rouge pour OFF (lu comme une erreur) */
+.hscn.on{color:#ffffff;border:2px solid #ffffff;box-shadow:0 0 12px rgba(255,255,255,.45)}
+.hlamp.on{color:#2a1f08;background:#ffe9b8;border:2px solid #ffe9b8;box-shadow:0 0 14px rgba(255,220,150,.5)}
+.hplug.on{color:#06260f;background:#52d98a;border:2px solid #52d98a;box-shadow:0 0 14px rgba(82,217,138,.4)}
+.hlamp.off,.hplug.off{color:#8b97ab;border:2px solid #3a4252;box-shadow:none}
+.hscn.off{color:#4b5361;border:2px solid #262c37;box-shadow:none}
+/* Carte « Scénarios » (V1.5) : nom et nombre à gauche, un bouton-icône par favori à droite (.hscnb, posé sur la place .hscnplace) ; la carte s'élargit avec le nombre de favoris (--n) */
+.hscen{flex-direction:row;align-items:center;justify-content:flex-start;width:auto;min-width:190px}
+.htexte{display:flex;flex-direction:column;align-items:flex-start;flex:none;width:150px;min-width:0}
+.hscnplace{flex:none;width:calc(var(--n, 0) * 52px - 8px);margin-left:8px}
+.hscnb{position:absolute;right:16px;top:50%;transform:translateY(-50%);display:flex;gap:8px}
+/* V1.4 : crayon de chaque carte de pièce (fenêtre « Pièces », home.js) ; pièce sans lumière ni prise (.hsans : sans boutons) ; carte « + » au bout de la ligne */
+.hedit{position:absolute;top:10px;right:10px;width:34px;height:34px;min-height:0;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#0d1117;border:1px solid #2c3442;color:#9fb0c8}
+.hedit::after{content:"";position:absolute;inset:-7px;border-radius:50%}
+.hedit:active{border-color:#cfe6ff;color:#fff;box-shadow:0 0 0 1px #cfe6ff,0 0 16px 2px rgba(170,210,255,.45)}
+.hwrap.hplusw{display:flex}
+.hcard.hplus{width:64px;height:100%;align-items:center;justify-content:center;padding:0;border-style:dashed;color:#7d8ba3;background:transparent}
+/* Écran bas (paysage de 680 px de haut ou moins) : cartes compactes, 4 rubriques et caméras sans défilement vertical */
+@media (max-height:680px) and (min-width:821px){
+.hmain{padding-top:8px}
+.hrow{margin-bottom:2px}
+.hlabel{margin-bottom:2px}
+.hline{padding-bottom:10px}
+.hcard{height:76px;padding:8px 14px}
+.hroom{height:112px;padding:10px 52px 58px 14px}
+.hbtns{bottom:10px}
+.hedit{top:8px;right:8px}
+}
+@media (max-width:820px){#viewHome{flex-direction:column;overflow-y:auto}.hmain{flex:none;overflow:visible}}
+/* V1.6 : version smartphone (classe tel, version.js) : accueil en défilement vertical ; rubriques en grilles (pièces sur 2 colonnes en portrait), plus de lignes
+   horizontales ni de flèches ; Catégories dans l'onglet Appareils ; carte « Scénarios » et « Animations » pleine largeur, favoris en icônes de 48 px sous le nom. */
+.tel #viewHome{flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.tel .hmain{flex:none;overflow:visible;padding:12px 0 0}
+.tel .hrow[data-rubrique="Catégories"]{display:none}
+.tel .hfleches{display:none}
+.tel .hlabel{margin:0 14px 6px 16px}
+.tel .hline{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;overflow:visible;padding:2px 12px 14px;-webkit-mask-image:none;scroll-snap-type:none}
+.tel .hwrap{margin:0;min-width:0}
+.tel .hcard{width:100%}
+.tel .hroom{width:100%;height:132px;padding:14px 52px 70px 16px}
+.tel .hbtns{left:14px;right:14px;bottom:12px;gap:12px}
+.tel .hpow{width:48px;height:48px}
+.tel .hcard.hplus{width:100%;height:132px}
+.tel .hwrap:has(.hscen){grid-column:1/-1}
+.tel .hscen{width:100%;height:auto;min-height:76px}
+.tel .hscnplace{display:none}
+.tel .hscnb{position:static;transform:none;display:flex;flex-wrap:wrap;gap:10px;margin:0 14px}
+/* V1.6 : carte à favoris (Scénarios, Animations) : l'enveloppe porte le dessin de la carte, nom en haut (bouton transparent), favoris dessous, dans la carte */
+.tel .hwrap:has(.hscnb){padding-bottom:14px;background:linear-gradient(180deg,#141922,#0f131a);border:1px solid rgba(140,165,210,.16);border-radius:22px;box-shadow:0 10px 20px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05)}
+.tel .hwrap:has(.hscnb)>.hscen{background:transparent;border-color:transparent;box-shadow:none}
+/* V1.6 : tablette en portrait (classe tab) : rubriques en grille, toutes les cartes visibles (aucune ligne qui défile en largeur), sans flèches ni fondu ; le paysage ne change pas */
+@media (orientation:portrait){
+ .tab .hfleches{display:none}
+ .tab .hline{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;overflow:visible;padding:2px 16px 14px;-webkit-mask-image:none;scroll-snap-type:none}
+ .tab .hwrap{margin:0;min-width:0}
+ .tab .hcard,.tab .hroom{width:100%}
+ .tab .hcard.hplus{width:100%;height:128px}
+ .tab .hwrap:has(.hscen){grid-column:1/-1}
+ .tab .hscen{width:100%;height:auto;min-height:76px}
+ .tab .hscnplace{display:none}
+ .tab .hscnb{position:static;transform:none;flex-wrap:wrap;margin:0 16px}
+ .tab .hwrap:has(.hscnb){padding-bottom:14px;background:linear-gradient(180deg,#141922,#0f131a);border:1px solid rgba(140,165,210,.16);border-radius:22px;box-shadow:0 10px 20px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05)}
+ .tab .hwrap:has(.hscnb)>.hscen{background:transparent;border-color:transparent;box-shadow:none}
+}

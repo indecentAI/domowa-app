@@ -1,0 +1,43 @@
+/* @zone telephone */
+/* tel.css : version smartphone (V1.6, classe « tel » sur <html>, posée par version.js ; sans effet sur la tablette) : en-tête réduit, barre d'onglets (portrait : en bas ;
+   paysage : rail à gauche, en-tête masqué, Tout OFF en bas du rail), écrans « Appareils » et « Plus » (tel.js), marges de l'encoche et de la barre de gestes (safe-area). */
+.onglets{display:none}
+#alloffRail{display:none}
+.tel #menuBtn,.tel #homeBtn,.tel #plusBtn,.tel #stamp,.tel #plusMenu,.tel #menu,.tel #scrim{display:none}
+.tel header{padding:calc(6px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 6px calc(12px + env(safe-area-inset-left));min-height:56px}
+.tel .hl{flex:1;min-width:0}
+.tel .where{flex:0 1 auto;min-width:0;margin:0 10px 0 4px;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tel .status{flex:none;margin-right:8px;white-space:nowrap}
+.tel #alloff{flex:none;min-height:44px;padding:0 14px}
+.tel .onglets{display:flex;flex:none;align-items:stretch;gap:2px;padding:4px calc(4px + env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) calc(4px + env(safe-area-inset-left));background:linear-gradient(180deg,#12161e,#0e1218);border-top:1px solid rgba(140,165,210,.14);box-shadow:0 -8px 24px rgba(0,0,0,.45);position:relative;z-index:2}
+.tel .onglet{flex:1;min-width:0;min-height:56px;padding:4px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1px solid transparent;border-radius:14px;background:transparent;color:#8b97ab;font-size:12px;font-weight:500;box-shadow:none}
+.tel .onglet[aria-current="page"]{color:#fff;background:rgba(207,230,255,.09);border-color:rgba(207,230,255,.35)}
+.tel .banner{bottom:calc(76px + env(safe-area-inset-bottom))}
+/* Écrans « Appareils » et « Plus » : liste de lignes de 56 px, défilement vertical dans la vue */
+.tel .tf-vue{flex-direction:column;align-items:stretch;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px calc(12px + env(safe-area-inset-right)) 24px calc(12px + env(safe-area-inset-left))}
+.tf-liste{display:flex;flex-direction:column;gap:8px;width:100%;max-width:640px;margin:0 auto}
+.tf-sec{margin:12px 6px 2px;text-transform:uppercase;font-size:12px;letter-spacing:.1em;color:#7d8ba3}
+.tf-ligne{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:56px;padding:0 18px;border-radius:16px;background:linear-gradient(180deg,#141922,#0f131a);border:1px solid rgba(140,165,210,.16);color:var(--text);font-size:17px;font-weight:500;text-align:left}
+.tf-ligne:active{border-color:#cfe6ff}
+.tf-nom{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tf-nb{flex:none;color:#7d8ba3;font-size:14px;font-weight:400}
+.tf-aff{display:flex;gap:8px}
+.tf-affb{flex:1;min-width:0;min-height:48px;padding:0 6px;border-radius:14px;font-size:14px;font-weight:500;background:#0d1117;border:1px solid #262c37;color:#c9d4e6}
+.tf-affb.sel{color:#fff;border-color:#cfe6ff;box-shadow:0 0 0 1px #cfe6ff}
+.tf-aide{margin:4px 6px 0;font-size:13px;color:#7d8ba3;line-height:1.35}
+/* Paysage : rail vertical à gauche (onglets puis Tout OFF), en-tête masqué : toute la hauteur au contenu */
+@media (orientation:landscape){
+ .tel body{padding-left:calc(84px + env(safe-area-inset-left))}
+ .tel header{display:none}
+ .tel .onglets{position:fixed;left:0;top:0;bottom:0;width:calc(84px + env(safe-area-inset-left));flex-direction:column;gap:2px;padding:calc(4px + env(safe-area-inset-top)) 4px calc(4px + env(safe-area-inset-bottom)) calc(4px + env(safe-area-inset-left));border-top:0;border-right:1px solid rgba(140,165,210,.14);box-shadow:8px 0 24px rgba(0,0,0,.45);overflow-y:auto}
+ .tel .onglet{flex:1 1 0;min-height:44px;max-height:64px;padding:2px 0}
+ .tel #alloffRail{display:flex;flex:none;min-height:48px;margin-top:6px;font-size:13px;color:#ffd27a;background:linear-gradient(180deg,#4a3913,#33270d);border:1px solid rgba(255,190,70,.4)}
+ .tel .banner{bottom:12px;left:calc(50% + 42px)}
+}
+/* Feuille de réglages (tel.js) : voile et poignée (glisser vers le bas ou toucher : fermer) */
+.tf-voile{position:fixed;left:0;top:0;right:0;bottom:0;z-index:45;background:rgba(3,5,9,.6)}
+.tf-voile.hidden{display:none}
+.tf-poignee{display:none}
+.tel .tf-poignee{display:block;position:sticky;top:0;z-index:3;width:100%;min-height:44px;margin:0 0 4px;padding:0;border:0;border-radius:0;background:linear-gradient(180deg,#141922 70%,rgba(20,25,34,0));box-shadow:none}
+.tel .tf-poignee::before{content:"";display:block;width:44px;height:5px;margin:0 auto;border-radius:3px;background:#3a4252}
+@media (orientation:landscape){.tel .tf-poignee,.tel .tf-voile{display:none}}

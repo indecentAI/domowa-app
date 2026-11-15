@@ -1,0 +1,45 @@
+/* @zone scenarios */
+/* scenarios.css : onglet Scénarios (cartes, pastilles, boutons). */
+.scenebar{display:flex;align-items:center;margin-bottom:14px}
+.scenes{display:flex;flex-wrap:wrap}
+.dots{display:flex;flex-wrap:wrap;margin-bottom:8px}
+.dot{width:14px;height:14px;border-radius:50%;margin:0 3px 3px 0;border:1px solid rgba(255,255,255,.2)}
+.srow button{flex:1;margin-right:8px;min-height:46px;font-size:15px}
+.srow button:last-child{margin-right:0}
+body.busy .scenes{pointer-events:none}
+#viewScenes{flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#viewScenes>*{flex:none}
+.shead{display:flex;align-items:center;margin-bottom:8px}
+.shead .sname{flex:1;min-width:0;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sicon{flex:none;width:44px;height:44px;min-height:0;padding:0;margin:0 0 0 8px;border-radius:50%;background:transparent;color:var(--muted);display:flex;align-items:center;justify-content:center}
+.sslot{flex:none;width:44px;height:44px;min-height:0;padding:0;margin:0 10px 0 0;border-radius:50%;background:rgba(255,255,255,.05);color:#dbe6f7;display:flex;align-items:center;justify-content:center}
+.sslot.empty{background:transparent;border:1px dashed rgba(140,165,210,.3);color:#566175}
+.sstar{flex:none;width:44px;height:44px;min-height:0;padding:0;margin:0 0 0 2px;border-radius:50%;background:transparent;color:#6b7687;display:flex;align-items:center;justify-content:center}
+.sstar svg{fill:none}
+.sstar.on{color:#ffffff;filter:drop-shadow(0 0 4px rgba(255,255,255,.35))}
+.sstar.on svg{fill:currentColor}
+.ipick{position:fixed;left:0;top:0;right:0;bottom:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(3,5,9,.7)}
+.ipanel{display:flex;flex-direction:column;width:400px;max-width:92%;max-height:90%;padding:16px;border-radius:24px;background:linear-gradient(180deg,#141922,#0f131a);border:1px solid rgba(140,165,210,.2);box-shadow:0 18px 40px rgba(0,0,0,.6)}
+.ititle{font-size:16px;font-weight:500;margin-bottom:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.igrid{flex:1;min-height:0;display:flex;flex-wrap:wrap;margin-bottom:6px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.iopt{flex:none;width:64px;height:58px;min-height:0;padding:0;margin:0 8px 8px 0;border-radius:16px;background:#0d1117;border:1px solid rgba(140,165,210,.16);color:#dbe6f7;display:flex;align-items:center;justify-content:center}
+.iopt.sel{border-color:#cfe6ff;box-shadow:0 0 12px rgba(170,210,255,.4)}
+.inone{width:100%;min-height:46px;margin-top:4px;border-radius:16px;background:transparent;border:1px solid rgba(140,165,210,.25);color:var(--muted);font-size:15px;font-weight:400}
+.srow{display:flex;align-items:center}
+.srow .sapply{flex:1;min-width:0;margin-right:28px}
+.sapply{background:linear-gradient(180deg,#5aa9ff,#3a7be0);color:#fff;border:1px solid rgba(207,230,255,.45);font-weight:500;border-radius:16px;box-shadow:0 8px 18px rgba(40,100,200,.35),inset 0 1px 0 rgba(255,255,255,.35)}
+.hint{margin-left:14px;font-size:13px;color:#6b7687}
+.scard{padding:14px;margin:0 12px 12px 0;width:300px;max-width:100%;background:linear-gradient(180deg,#141922,#0f131a);border:1px solid rgba(140,165,210,.16);border-radius:24px;box-shadow:0 12px 26px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.05)}
+.sname{margin-bottom:8px;font-size:18px;font-weight:500}
+.tsub{color:var(--muted);margin-bottom:8px;font-size:13px}
+.srow .sdel{flex:none;width:46px;height:46px;min-height:0;padding:0;margin:0;border-radius:50%;background:rgba(255,90,95,.14);border:1px solid rgba(255,90,95,.35);color:#ff8a8e;display:flex;align-items:center;justify-content:center;box-shadow:0 5px 12px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08)}
+/* V1.6 : smartphone (classe tel) : cartes pleine largeur (2 colonnes en paysage ; aussi les cartes des animations), « Enregistrer comme scénario » dans un pied en bas de l'écran */
+.tel .scenes{gap:12px}
+.tel .scard{width:100%;margin:0}
+@media (orientation:landscape){.tel .scard{width:calc(50% - 6px)}}
+.tel .scenebar{order:1;align-self:stretch;position:sticky;bottom:-24px;z-index:2;flex-wrap:wrap;margin:auto -12px -24px;padding:10px 12px 12px;background:#0a0d13;border-top:1px solid rgba(140,165,210,.14)}
+.tel .scenebar .hint{order:-1;flex:1 1 100%;margin:0 0 8px}
+.tel #saveScene{flex:1}
+@media (orientation:landscape){.tel .scenebar .hint{display:none}}
+/* V1.6 : tablette en portrait : cartes des scénarios (et des animations, .scard) en grille sur toute la largeur */
+@media (orientation:portrait){.tab .scenes{align-self:stretch;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}.tab .scard{width:auto;margin:0}}

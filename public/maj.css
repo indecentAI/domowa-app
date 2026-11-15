@@ -1,0 +1,20 @@
+/* @zone distribution | fenêtre « Mise à jour » (V1.8, préfixe mj-, construite par maj.js ; cadre et éléments communs : classes hb- de hubs.css) et point du menu « ⋯ » quand une version est disponible. */
+.mj-panel{width:min(560px,100%)}
+.mj-body{display:flex;flex-direction:column}
+.mj-body>*{flex:none}
+.mj-body>.mj-notes{flex:0 1 auto;min-height:72px}
+.mj-notes{margin:0 0 8px;padding:10px 14px;border-radius:12px;background:#141c2b;max-height:34vh;overflow-y:auto}
+.mj-note{font-size:14px;line-height:1.45;margin:6px 0;color:#c9d3e6;word-break:break-word}
+.mj-note.mj-tete{font-weight:600;color:#fff}
+.mj-pied{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.mj-pied button{min-height:44px}
+.mj-arme{outline:2px solid #ffd166;outline-offset:2px}
+.mj-motif{color:#ffcf8a}
+.mj-attente{margin:10px 0 14px}
+.mj-barre{height:6px;border-radius:3px;background:linear-gradient(90deg,#1f2a3d 0,#5aa2ff 50%,#1f2a3d 100%);background-size:200% 100%;animation:mj-va 1.6s linear infinite}
+@keyframes mj-va{from{background-position:200% 0}to{background-position:0 0}}
+.mj-point{position:relative}
+.mj-point::before{content:"";position:absolute;top:6px;right:6px;width:10px;height:10px;border-radius:50%;background:#52d98a;box-shadow:0 0 0 2px #0e1420}
+.pitem.mj-dispo::after{content:" ●";color:#52d98a}
+.tel .mj-panel{width:100%}
+.tel .mj-pied{position:sticky;bottom:-18px;z-index:2;margin:14px -14px -18px;padding:12px 14px 14px;background:#0f131a}
