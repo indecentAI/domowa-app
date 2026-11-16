@@ -8,6 +8,13 @@
     ["Que se passe-t-il pendant la mise à jour ?", "Les animations en cours sont arrêtées, les données sont sauvegardées, la nouvelle version est installée puis contrôlée, et le serveur redémarre (moins d'une minute). La page se recharge seule. Les réglages, pièces, scénarios et comptes ne sont pas touchés."],
     ["Et si la nouvelle version ne marche pas ?", "Si le contrôle échoue, la version précédente est remise automatiquement. Vous pouvez aussi revenir vous-même en arrière avec « Revenir à … »."],
     ["La vérification dit « Dépôt injoignable »", "Il faut Internet pour lire le dépôt. L'application continue de fonctionner sans mise à jour."],
+    ["Signature refusée", "La version publiée n'a pas une signature valide pour la clé de la version installée : elle n'est peut-être pas authentique, elle est refusée et rien n'est changé. Attendez une nouvelle publication ; ne l'installez pas par un autre moyen."],
+    ["Fichiers modifiés à la main", "Un fichier du serveur a été modifié sur cette machine (ancien correctif tapé à la main, par exemple) : la mise à jour depuis l'application est refusée pour ne rien écraser. En terminal, sur la machine du serveur : ./maj.sh (il montre les fichiers et propose de les remettre), ou ./maj.sh retour."],
+    ["Version publiée qui ne suit pas", "La dernière version publiée ne prolonge pas la version installée (installation faite depuis un autre dépôt, ou version d'essai plus récente) : rien n'est proposé. En terminal : ./maj.sh etat donne le détail."],
+    ["Installation mise à jour ailleurs", "Cette installation n'est pas un clone du dépôt (paquet copié à la main) ou elle est gérée par Home Assistant : elle se met à jour par ce moyen-là, pas depuis cette fenêtre."],
+    ["Une opération est en cours", "Une mise à jour, un appairage de hub ou une opération sur les pièces est déjà en cours : attendez qu'elle se termine (une minute au plus), puis réessayez."],
+    ["La version proposée a changé", "Une nouvelle version a été publiée pendant que la fenêtre était ouverte : « Vérifier maintenant », relisez les nouveautés, puis recommencez."],
+    ["La mise à jour a échoué", "Rien n'a été changé. Le détail est dans sauvegardes/maj-dernier.txt sur la machine du serveur. Causes fréquentes : Internet coupé pendant le téléchargement, place insuffisante. Réessayez ; en terminal : ./maj.sh."],
     ["En terminal", "Les mêmes opérations existent en terminal : ./maj.sh, ./maj.sh etat, ./maj.sh retour."],
     ["Application Android Domowa", "Cette fenêtre met à jour le serveur. L'application Android se met à jour à part, depuis ses propres réglages."]
   ];
@@ -53,19 +60,41 @@
       desarmer(); fn();
     });
   }
+  // V1.9 révision 2 : chaque échec affiché a sa rubrique d'aide (« Que faire ? ») ; messages du serveur : modules/maj.mjs (motifs, refus, dernier résultat)
+  let cible = "";
+  const RUBRIQUES = [
+    [/Dépôt injoignable/, "La vérification dit « Dépôt injoignable »"],
+    [/[Ss]ignature/, "Signature refusée"],
+    [/modifiés à la main/, "Fichiers modifiés à la main"],
+    [/ne prolonge pas/, "Version publiée qui ne suit pas"],
+    [/Home Assistant|pas un clone|ne se met pas à jour depuis l'application/, "Installation mise à jour ailleurs"],
+    [/déjà en cours|appairage de hub|opération sur les pièces/, "Une opération est en cours"],
+    [/plus celle affichée|Aucune version disponible/, "La version proposée a changé"],
+    [/n'a pas passé le contrôle|Aucune version précédente/, "Et si la nouvelle version ne marche pas ?"],
+    [/a échoué|Lancement impossible|Confirmation requise/, "La mise à jour a échoué"]
+  ];
+  function rubrique(texte) { const r = RUBRIQUES.find((x) => x[0].test(texte || "")); return r ? r[1] : ""; }
+  function echec(box, texte, cls) {
+    const e = el("div", (cls || "hb-err") + " mj-echec"); e.appendChild(el("span", "mj-echtxt", texte));
+    const r = rubrique(texte);
+    if (r) { const b = el("button", "b-small mj-quefaire", "Que faire ?"); b.onclick = () => { cible = r; vue = "aide"; rendre(); }; e.appendChild(b); }
+    box.appendChild(e);
+  }
   function resultat(box) {
     const r = d && d.dernier;
     if (!r) return;
     if (r.resultat === "ok") box.appendChild(el("div", "hb-ok", "Dernière opération réussie" + (r.vers ? " : " + r.vers : "") + (r.le ? " (" + heure(r.le) + ")" : "") + "."));
-    else if (r.resultat === "retour_auto") box.appendChild(el("div", "hb-err", "La version " + (r.vers || "proposée") + " n'a pas passé le contrôle : la version " + (r.de || "précédente") + " a été remise automatiquement. Rien n'est perdu."));
-    else box.appendChild(el("div", "hb-err", r.message || "La dernière mise à jour a échoué. Rien n'a été changé."));
+    else if (r.resultat === "retour_auto") echec(box, "La version " + (r.vers || "proposée") + " n'a pas passé le contrôle : la version " + (r.de || "précédente") + " a été remise automatiquement. Rien n'est perdu.");
+    else echec(box, r.message || "La dernière mise à jour a échoué. Rien n'a été changé.");
   }
   function rendre() {
     if (!root) return;
     body.innerHTML = "";
     if (vue === "aide") {
       body.appendChild(bouton("b-small hb-retour", "← Retour", () => { vue = "main"; rendre(); }));
-      AIDE.forEach((a) => { body.appendChild(el("div", "hb-sec", a[0])); body.appendChild(el("div", "hb-p", a[1])); });
+      AIDE.forEach((a) => { body.appendChild(el("div", "hb-sec" + (a[0] === cible ? " mj-cible" : ""), a[0])); body.appendChild(el("div", "hb-p" + (a[0] === cible ? " mj-cible" : ""), a[1])); });
+      const c = body.querySelector(".hb-sec.mj-cible"); if (c && c.scrollIntoView) c.scrollIntoView({ block: "start" });
+      cible = "";
       return;
     }
     if (attente) {
@@ -82,8 +111,8 @@
       if (d.verifie_le) c.appendChild(ligne("Dernière vérification", heure(d.verifie_le)));
     }
     body.appendChild(c);
-    if (d.motif) body.appendChild(el("div", d.etat === "disponible" || d.gere_par !== "application" ? "hb-note" : "hb-note mj-motif", d.motif));
-    if (erreur) body.appendChild(el("div", "hb-err", erreur));
+    if (d.motif) echec(body, d.motif, d.etat === "disponible" || d.gere_par !== "application" ? "hb-note" : "hb-note mj-motif");
+    if (erreur) echec(body, erreur);
     resultat(body);
     if (d.gere_par !== "application") return;
     if (dispo() && d.disponible.notes && d.disponible.notes.length) {
@@ -136,7 +165,7 @@
     setTimeout(tour, 2000);
   }
 
-  APP.maj = { ouvrir: ouvrir, etat: () => d };
+  APP.maj = { ouvrir: ouvrir, etat: () => d, rubrique: rubrique, rubriques: () => AIDE.map((a) => a[0]) }; // rubrique, rubriques : essais (chaque échec a sa rubrique)
   const m = $("majBtn"); if (m) m.onclick = ouvrir;
   try { const f = sessionStorage.getItem("majFaite"); if (f) { sessionStorage.removeItem("majFaite"); setTimeout(() => APP.banner("Mise à jour faite : " + f + ".", "ok"), 1500); } } catch (e) { /* rien */ }
   setTimeout(() => lire(), 4000);                // première lecture après le chargement de la page

@@ -19,7 +19,7 @@
 .an-dot{width:22px;border-radius:7px}
 .an-etat{margin:-2px 0 8px;font-size:13px;color:#52d98a}
 .an-etat.susp{color:#ffd27a}
-.sapply.an-stop{background:linear-gradient(180deg,#4a1f24,#33161a);border:1px solid rgba(255,90,95,.45);border-radius:999px;font-weight:600;color:#ffb3b5;box-shadow:0 6px 14px rgba(0,0,0,.45)}
+.sapply.an-stop{background:linear-gradient(180deg,#4a1f24,#33161a);border:1px solid rgba(255,90,95,.45);border-radius:999px;font-weight:600;color:#ffb3b5;box-shadow:var(--relief-ombre)}
 /* Éditeur : tient dans la vue ; la liste des étapes et le formulaire défilent en eux-mêmes */
 #viewAnim>.an-ed{flex:1;min-height:0;display:flex;flex-direction:column}
 #viewAnim:has(>.an-ed){overflow:hidden}
@@ -52,7 +52,7 @@
 .an-mini{width:30px;height:30px;min-height:0;padding:0;border-radius:50%;background:#0d1117;border:1px solid #2c3442;color:#cfd8e6;font-size:15px;font-weight:500}
 .an-ajout{width:100%;margin:2px 0 0}
 .an-champ{margin:10px 10px 0}
-.an-lib{margin-bottom:6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.an-lib{margin-bottom:6px;font-size:12px;letter-spacing:var(--sec-espace);text-transform:uppercase;color:var(--muted)}
 .an-lampes{width:100%;min-height:44px;padding:6px 12px;text-align:left;font-size:14px;font-weight:400;line-height:1.35;border-radius:12px;background:#0d1117;border:1px solid #2c3442;color:#e9eef7}
 .an-seg{display:flex;flex-wrap:wrap;gap:6px}
 .an-segb{min-height:38px;padding:0 12px;font-size:14px;font-weight:500;border-radius:19px;background:#0d1117;border:1px solid #2c3442;color:#9fb0c8}
@@ -82,7 +82,7 @@
 .an-mic{flex:none;width:30px;display:flex;justify-content:center;color:#dbe6f7}
 /* Carte « Animations » de la ligne Actions de l'accueil (home.js, APP.homeActions) */
 .an-hcarte.actif{border-color:rgba(82,217,138,.55)}
-.an-hcarte.actif .hcount{color:#52d98a}
+.an-hcarte.actif .hcount{color:#52d98a;font-weight:500}
 @media (max-width:820px){.an-corps{flex-direction:column;overflow-y:auto}.an-etapes{width:auto;max-width:none;overflow:visible}.an-form{overflow:visible}.an-tete{flex-wrap:wrap}.an-lampe{width:100%}}
 /* V1.6 : groupes de la tête de l'éditeur (animations.js) : sans effet sur la tablette ; volets et pied : téléphone seulement */
 .an-g-anim,.an-g-act{display:contents}

@@ -20,6 +20,19 @@
 .ca-rev{flex:none;min-height:44px;padding:0 14px;border-radius:12px;background:linear-gradient(180deg,#1f2633,#141922);color:#ff8a8e;border:1px solid rgba(255,90,95,.45);font-size:15px;font-weight:500}
 .ca-rev.arme{background:#5a1c22;color:#fff;border-color:#ff5a5f}
 .ca-avert{color:#ffcf8a}
+.ca-lmode{align-items:center;padding:1px 0}
+.ca-lmode>.hb-val{flex:1}
+.ca-chg{position:relative;flex:none;min-height:32px;height:32px;margin:0 0 0 12px;padding:0 14px;font-size:14px}
+.ca-chg::after{content:"";position:absolute;inset:-6px -2px}
+.ca-arme{background:#2a4a7a;border-color:#cfe6ff}
+.ca-port{max-width:160px}
+.ca-echec{display:flex;align-items:center;gap:10px}
+.ca-echtxt{flex:1;min-width:0}
+.ca-quefaire{position:relative;flex:none;min-height:32px;height:32px;margin:0;padding:0 12px;font-size:14px}
+.ca-quefaire::after{content:"";position:absolute;inset:-6px -2px}
+.hb-sec.ca-cible{color:#cfe6ff}
+.hb-p.ca-cible{padding-left:10px;border-left:2px solid #5aa9ff}
+.ca-body>.hb-retour{align-self:flex-start}
 @media (max-width:820px){.ca-cols{grid-template-columns:minmax(0,1fr);gap:0;flex:none}.ca-col>.ca-liste{overflow:visible}}
 .tel .ca-panel{width:100%}
 .tel .ca-cols{grid-template-columns:minmax(0,1fr);gap:0;flex:none}

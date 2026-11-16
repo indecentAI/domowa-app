@@ -11,6 +11,7 @@
 - Interface : nouveau bouton d'action principal (Appliquer avec coche et chargement) et nouvelle surface des cartes, plus lisible.
 - Lave-linge : la fenêtre n'est plus redessinée sous un curseur tenu au doigt.
 - Reprise de qualité du code (écoute réseau, contrôle d'entrée, mise à jour, SmartThings, code inutile retiré), sans changement d'usage.
+- Révision 2 : le serveur s'ouvre aux autres appareils de la maison depuis l'application, sur toute machine : Appareils autorisés > « Ouvrir aux autres appareils… », sans redémarrage ; chaque échec a son aide (« Que faire ? ») ; textes plus réguliers, halos et ombres plus discrets.
 
 Détails : chaque publication porte aussi l'application (domowa-X.Y-N.apk signé, et son empreinte .sha256) ; la version du serveur est donnée par GET /api/status et GET /api/clients ; installer.sh etat, etape et controle servent à l'application (sans argument, la commande en terminal est inchangée) ; start.sh sans onglet avec DOMOWA_SANS_NAVIGATEUR=1 ; banc : assistant de l'application, faux Termux, mDNS, prévision de la publication.
 

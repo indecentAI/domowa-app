@@ -5,7 +5,7 @@
 .q-root.q-off .q-card{opacity:.4;pointer-events:none}
 .q-card>*{position:relative;z-index:1}
 .q-c1::before{content:"";position:absolute;left:0;right:0;top:0;height:60%;z-index:0;pointer-events:none;background:radial-gradient(ellipse at 50% 0,rgba(255,232,180,var(--ga,0)) 0,rgba(255,232,180,0) 70%)}
-.q-seg.sel.on{background:linear-gradient(#2f7a5a,#245a43);color:#fff;box-shadow:0 0 18px rgba(47,122,90,.55)}
+.q-seg.sel.on{background:linear-gradient(#2f7a5a,#245a43);color:#fff;box-shadow:0 0 10px rgba(47,122,90,.35)}
 .q-seg.sel.off{background:linear-gradient(#3a414d,#2b313b);color:#fff}
 .q-dialrow{display:flex;align-items:center;justify-content:space-between}
 .q-svg{width:100%;height:100%;overflow:visible;touch-action:none}
@@ -38,12 +38,12 @@
 .q-svg circle:nth-of-type(1){stroke-width:9px}
 .q-c1.q-dim .q-dialbox{opacity:.45}
 .q-c1.q-dim .q-title{color:#4d5563}
-.q-c1.q-dim .q-seg{color:#5f6877}
-.q-c1.q-dim .q-seg.sel{color:#8d96a5}
-.q-step{width:54px;height:54px;min-height:0;padding:0;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;color:#cdd5e3;background:linear-gradient(180deg,#242b39,#121720);border:1px solid rgba(255,255,255,.1);box-shadow:0 8px 18px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 4px rgba(0,0,0,.35)}
-.q-mode.sel{color:#fff;border-color:#cfe6ff;background:rgba(207,230,255,.1);box-shadow:0 0 0 1px #cfe6ff,0 0 28px 4px rgba(170,210,255,.6),0 6px 14px rgba(0,0,0,.5)}
-.q-pcard.sel{border-color:#cfe6ff;box-shadow:0 0 0 1px #cfe6ff,0 0 28px 4px rgba(170,210,255,.6),0 8px 16px rgba(0,0,0,.5)}
-.q-sw.sel{border-color:#cfe6ff;box-shadow:0 0 0 1px #cfe6ff,0 0 24px 4px rgba(170,210,255,.65),0 6px 12px rgba(0,0,0,.5)}
+.q-c1.q-dim .q-seg{color:var(--muted)}
+.q-c1.q-dim .q-seg.sel{color:#aab4c4}
+.q-step{width:54px;height:54px;min-height:0;padding:0;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;color:#cdd5e3;background:linear-gradient(180deg,#242b39,#121720);border:1px solid rgba(255,255,255,.1);box-shadow:var(--relief-ombre),inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 4px rgba(0,0,0,.35)}
+.q-mode.sel{color:#fff;border-color:#cfe6ff;background:rgba(207,230,255,.1);box-shadow:0 0 0 1px #cfe6ff,var(--sel-lueur),var(--relief-ombre)}
+.q-pcard.sel{border-color:#cfe6ff;box-shadow:0 0 0 1px #cfe6ff,var(--sel-lueur),var(--relief-ombre)}
+.q-sw.sel{border-color:#cfe6ff;box-shadow:0 0 0 1px #cfe6ff,var(--sel-lueur),var(--relief-ombre-petit)}
 .q-title{text-align:center;font-size:13px;font-weight:300;color:#6b7687;letter-spacing:.02em;display:none}
 .q-hint{text-align:center;color:var(--muted);font-size:12px;min-height:0;margin:0 0 4px}
 .q-hint:empty{display:none}
@@ -62,7 +62,7 @@
 .q-card:not(.q-c1) .q-step{width:44px;height:44px}
 .q-step svg{width:18px;height:18px}
 .q-mixed{color:#e8c777;text-align:center;min-height:6px;font-size:12px;margin-top:2px}
-.q-mode{flex:1;border-radius:26px;background:transparent;color:#8b97ab;display:flex;align-items:center;justify-content:center;font-weight:500;border:2px solid transparent;box-shadow:0 5px 12px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06);min-height:44px;font-size:14px}
+.q-mode{flex:1;border-radius:26px;background:transparent;color:#8b97ab;display:flex;align-items:center;justify-content:center;font-weight:500;border:2px solid transparent;box-shadow:var(--relief-ombre),inset 0 1px 0 rgba(255,255,255,.06);min-height:44px;font-size:14px}
 .q-mode svg{width:16px;height:16px;margin-right:6px}
 .q-wheel{display:inline-block;border-radius:50%;background:conic-gradient(#f33,#fd3,#3d6,#3df,#36f,#d3f,#f33);width:16px;height:16px;margin-right:6px}
 .q-ctl{margin-bottom:6px}
@@ -74,16 +74,16 @@
 .q-head.inline .q-val{flex:1;margin:0;padding-right:56px}
 .q-row{display:flex;align-items:center;margin-top:0}
 .q-rng{-webkit-appearance:none;appearance:none;flex:1;min-width:0;background:transparent;height:44px;margin:0 8px}
-.q-rng::-webkit-slider-runnable-track{background:#2b303b;box-shadow:0 0 12px rgba(130,170,255,.14);height:6px;border-radius:3px}
-.q-rng::-webkit-slider-thumb{-webkit-appearance:none;border-radius:50%;background:var(--tc,#fff);border:4px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.55),0 0 14px rgba(255,255,255,.25);width:22px;height:22px;margin-top:-8px;border-width:3px}
+.q-rng::-webkit-slider-runnable-track{background:#2b303b;box-shadow:0 0 8px rgba(130,170,255,.1);height:6px;border-radius:3px}
+.q-rng::-webkit-slider-thumb{-webkit-appearance:none;border-radius:50%;background:var(--tc,#fff);border:4px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4),0 0 8px rgba(255,255,255,.18);width:22px;height:22px;margin-top:-8px;border-width:3px}
 .q-pre{display:flex;margin-top:6px}
-.q-pcard{flex:1;display:flex;flex-direction:column;align-items:center;background:linear-gradient(#131923,#0f141c);border:1px solid rgba(140,165,210,.14);color:#f1f4fa;box-shadow:0 8px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06);min-height:74px;padding:8px 4px 6px;margin-right:8px;border-radius:16px}
+.q-pcard{flex:1;display:flex;flex-direction:column;align-items:center;background:linear-gradient(#131923,#0f141c);border:1px solid rgba(140,165,210,.14);color:#f1f4fa;box-shadow:var(--relief-ombre),inset 0 1px 0 rgba(255,255,255,.06);min-height:74px;padding:8px 4px 6px;margin-right:8px;border-radius:16px}
 .q-psph{display:block;border-radius:50%;width:24px;height:24px;margin-bottom:5px}
 .q-pn{font-weight:600;font-size:13px}
 .q-pk{color:#8b97ab;font-weight:400;margin-top:2px;font-size:12px}
 .q-quick{background:rgba(255,255,255,.02);border:1px solid rgba(140,165,210,.14);margin-top:2px;padding:8px 6px 2px;border-radius:16px}
 .q-qt{color:#f1f4fa;font-weight:500;font-size:13px;margin:0 2px 6px}
-.q-sw{position:relative;min-height:0;padding:0;border-radius:50%;background:#10151d;border:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 10px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.07);width:34px;height:34px}
+.q-sw{position:relative;min-height:0;padding:0;border-radius:50%;background:#10151d;border:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;box-shadow:var(--relief-ombre-petit),inset 0 1px 0 rgba(255,255,255,.07);width:34px;height:34px}
 .q-sw::after{content:"";position:absolute;inset:-5px;border-radius:50%}
 .q-sph{display:block;border-radius:50%;width:24px;height:24px}
 .q-cell{display:flex;justify-content:center;width:12.5%;margin-bottom:6px;position:relative}
@@ -92,7 +92,7 @@
 .q-csw{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
 .q-add{border:1px dashed rgba(207,230,255,.55);color:#cfe6ff;font-size:22px;font-weight:300;line-height:1}
 .q-add:disabled{opacity:.25}
-.q-x{position:absolute;right:-4px;top:-6px;width:26px;height:26px;min-height:0;padding:0;border-radius:50%;background:#e5484d;color:#fff;border:2px solid #0f131a;display:flex;align-items:center;justify-content:center;font-size:13px;line-height:1;z-index:3;box-shadow:0 3px 8px rgba(0,0,0,.5)}
+.q-x{position:absolute;right:-4px;top:-6px;width:26px;height:26px;min-height:0;padding:0;border-radius:50%;background:#e5484d;color:#fff;border:2px solid #0f131a;display:flex;align-items:center;justify-content:center;font-size:13px;line-height:1;z-index:3;box-shadow:var(--relief-ombre-petit)}
 .q-x::after{content:"";position:absolute;inset:-9px;border-radius:50%}
 .q-root{display:flex;flex-direction:column;min-height:100%}
 .q-c1{flex:none}
@@ -113,7 +113,7 @@
 .q-garde{width:100%;margin-top:6px}
 /* V1.6 : smartphone (classe tel) : en portrait, le panneau est une feuille qui monte du bas (tel.js, APP.telFeuille ; poignée .tf-poignee en tête) ;
    en paysage, colonne de droite à côté de la liste. */
-.tel .right{position:fixed;left:0;right:0;top:auto;bottom:0;z-index:46;width:auto;max-height:85%;margin:0;padding:0 calc(12px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));border-radius:22px 22px 0 0;background:var(--carte-fond);border-top:1px solid var(--carte-bord);box-shadow:0 -14px 40px rgba(0,0,0,.6);transform:translateY(105%);transition:transform .22s ease;overflow-y:auto}
+.tel .right{position:fixed;left:0;right:0;top:auto;bottom:0;z-index:46;width:auto;max-height:85%;margin:0;padding:0 calc(12px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));border-radius:22px 22px 0 0;background:var(--carte-fond);border-top:1px solid var(--carte-bord);box-shadow:0 -8px 24px rgba(0,0,0,.5);transform:translateY(105%);transition:transform .22s ease;overflow-y:auto}
 .tel .right.tf-ouverte{transform:none}
 /* Interface étape 2 : la feuille porte la surface des cartes (--carte-fond) ; ses cartes y sont plates (carte dans une carte). */
 @media (orientation:portrait){.tel .right .q-card{background:var(--carte-fond-2);box-shadow:none}}

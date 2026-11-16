@@ -265,12 +265,17 @@ function arbreEntier(rel) { // tous les fichiers d'un dossier publie en entier
   }
   return out;
 }
-function publier(liste, idx, dest) {
+// Refus de publier, avant toute lecture de l'arbre (V1.9 revision 2 : lance a la racine du depot de travail, la lecture parcourait banc/, dont les
+// copies changent pendant le banc : erreur au lieu du refus, vu deux fois au banc). Rend le dossier de publication (chemin absolu).
+function prealablePublier(dest) {
   if (!dest) fin('Usage : node outils/ia.mjs publier <dossier> (dossier absent ou vide, hors du projet)');
   dest = path.resolve(dest);
   if (dest === DIR || dest.startsWith(DIR + path.sep)) fin('REFUS : le dossier de publication doit etre hors du projet.');
   if (fs.existsSync(dest) && fs.readdirSync(dest).length) fin('REFUS : ' + dest + ' n\'est pas vide.');
   if (fs.existsSync(path.join(DIR, 'banc'))) fin('REFUS : a lancer sur une copie sans banc/ (comme tout ia.mjs).');
+  return dest;
+}
+function publier(liste, idx, dest) {
   check(liste, idx);
   if (process.exitCode) fin('Publication refusee : corriger d\'abord les problemes ci-dessus.');
   const version = fs.readFileSync(path.join(DIR, 'VERSION'), 'utf8').trim();
@@ -321,11 +326,12 @@ function release(liste, idx) {
 }
 
 const [cmd, ...args] = process.argv.slice(2);
+const destPublier = cmd === 'publier' ? prealablePublier(args[0]) : null;
 const liste = arbre('').map(lire);
 if (cmd === 'check') check(liste, texteIndex(liste));
 else if (cmd === 'pack') pack(args, liste, ecrireIndex(liste));
 else if (cmd === 'release') release(liste, ecrireIndex(liste));
-else if (cmd === 'publier') publier(liste, texteIndex(liste), args[0]);
+else if (cmd === 'publier') publier(liste, texteIndex(liste), destPublier);
 else if (!cmd) { const idx = ecrireIndex(liste); console.log('INDEX.md a jour (' + liste.length + ' fichiers).'); couts(liste, idx); }
 else fin('Usage : node outils/ia.mjs [pack zone... | check | release | publier <dossier>]');
 // FIN

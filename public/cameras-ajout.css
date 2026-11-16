@@ -1,7 +1,7 @@
 /* @zone cameras-ajout */
 /* cameras-ajout.css : bouton + du panneau des cameras (accueil) et fenetre d'ajout et de gestion des cameras. Charge apres cameras.css. */
 .hcamhead{display:flex;align-items:center;justify-content:space-between;margin:0 4px 10px}
-.hcamhead .hlabel{margin:0}
+.hcamhead .hlabel{flex:1 1 auto;min-width:0;margin:0 12px 0 0}
 .cj-plus{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;min-height:0;padding:0;border-radius:50%;background:#0d1117;border:2px solid #262c37;color:#e9eef7}
 .cj-vide{margin:0 4px;font-size:14px;color:var(--muted)}
 .cj-scrim{position:fixed;left:0;top:0;right:0;bottom:0;z-index:40;display:flex;align-items:center;justify-content:center;background:rgba(3,5,9,.7)}
@@ -10,7 +10,7 @@
 .cj-title{font-size:21px;font-weight:500}
 .cj-x{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;min-height:0;padding:0;border-radius:50%;background:#0d1117;border:2px solid #262c37;color:#e9eef7}
 .cj-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 18px 18px}
-.cj-sec{text-transform:uppercase;margin:16px 4px 8px;font-size:12px;letter-spacing:.12em;color:var(--muted)}
+.cj-sec{text-transform:uppercase;margin:16px 4px 8px;font-size:var(--sec-taille);letter-spacing:var(--sec-espace);color:var(--sec-couleur);font-weight:var(--sec-graisse)}
 .cj-bar{display:flex;align-items:center;margin:4px 0 6px}
 .cj-bar .b-main{margin-right:10px}
 .cj-status{margin:6px 4px 10px;font-size:14px;line-height:1.35;color:#9fb0c8}

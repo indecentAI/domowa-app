@@ -10,6 +10,12 @@
 .mj-pied button{min-height:44px}
 .mj-arme{outline:2px solid #ffd166;outline-offset:2px}
 .mj-motif{color:#ffcf8a}
+.mj-echec{display:flex;align-items:center;gap:10px}
+.mj-echtxt{flex:1;min-width:0}
+.mj-quefaire{position:relative;flex:none;min-height:32px;height:32px;margin:0;padding:0 12px;font-size:14px}
+.mj-quefaire::after{content:"";position:absolute;inset:-6px -2px}
+.hb-sec.mj-cible{color:#cfe6ff}
+.hb-p.mj-cible{padding-left:10px;border-left:2px solid #5aa9ff}
 .mj-attente{margin:10px 0 14px}
 .mj-barre{height:6px;border-radius:3px;background:linear-gradient(90deg,#1f2a3d 0,#5aa2ff 50%,#1f2a3d 100%);background-size:200% 100%;animation:mj-va 1.6s linear infinite}
 @keyframes mj-va{from{background-position:200% 0}to{background-position:0 0}}

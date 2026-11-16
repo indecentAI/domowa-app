@@ -10,7 +10,7 @@
 .hb-ics{display:flex}
 .hb-ic{flex:none;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;min-height:0;margin-left:8px;padding:0;border-radius:50%;background:#0d1117;border:2px solid #262c37;color:#e9eef7;font-size:20px}
 .hb-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 18px 18px}
-.hb-sec{text-transform:uppercase;margin:12px 4px 8px;font-size:12px;letter-spacing:.12em;color:var(--muted)}
+.hb-sec{text-transform:uppercase;margin:12px 4px 8px;font-size:var(--sec-taille);letter-spacing:var(--sec-espace);color:var(--sec-couleur);font-weight:var(--sec-graisse)}
 .hb-bloc{margin-bottom:10px;padding:10px 14px;border-radius:16px;background:var(--carte-fond-2);border:1px solid var(--carte-bord)}
 .hb-ligne{display:flex;justify-content:space-between;padding:6px 0;font-size:16px}
 .hb-lib{color:var(--muted)}
@@ -25,7 +25,7 @@
 .hb-deco{width:100%;margin-top:10px;background:linear-gradient(180deg,#1f2633,#141922);color:#ff8a8e;border:1px solid rgba(255,90,95,.45);font-weight:500;border-radius:16px}
 .hb-deco.arme{background:#5a1c22;color:#ffffff;border-color:#ff5a5f}
 .hb-trouve{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:50px;margin-top:8px;padding:0 14px;border-radius:14px;background:#0d1117;border:1px solid #262c37;color:#e9eef7;font-weight:400}
-.hb-trouve.sel{border-color:#cfe6ff;box-shadow:0 0 0 1px #cfe6ff,0 0 18px 2px rgba(170,210,255,.4)}
+.hb-trouve.sel{border-color:#cfe6ff;box-shadow:0 0 0 1px #cfe6ff}
 .hb-tadr{font-size:17px}
 .hb-tnom{margin-left:12px;font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hb-lab{display:block;margin:14px 2px 6px;font-size:14px;color:#9fb0c8}

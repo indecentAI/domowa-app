@@ -7,26 +7,26 @@ h1{margin:0 14px 0 0;font-size:24px;font-weight:600}
 .scrim.open{display:block}
 .mcount{color:var(--muted);font-size:15px}
 .mitem.sel .mcount{color:#fff}
-header{padding:10px 16px;display:flex;justify-content:space-between;align-items:center;flex:none;position:relative;z-index:2;background:linear-gradient(180deg,#151a24,#10141b);border-bottom:1px solid rgba(140,165,210,.14);box-shadow:0 8px 24px rgba(0,0,0,.45)}
+header{padding:10px 16px;display:flex;justify-content:space-between;align-items:center;flex:none;position:relative;z-index:2;background:linear-gradient(180deg,#151a24,#10141b);border-bottom:1px solid rgba(140,165,210,.14);box-shadow:0 4px 14px rgba(0,0,0,.4)}
 .where{margin:0 14px 0 6px;font-size:19px;font-weight:500;letter-spacing:.01em}
 .status{white-space:nowrap;padding:6px 12px;border-radius:16px;background:var(--card2);color:var(--muted);margin-right:12px;font-size:13px;font-weight:500;border:1px solid rgba(255,255,255,.08)}
 .stamp{font-size:12px;color:var(--muted)}
-.hbtn{width:48px;height:48px;min-height:0;padding:0;margin:0 6px 0 0;border-radius:50%;color:var(--text);display:flex;align-items:center;justify-content:center;flex:none;background:linear-gradient(180deg,#242b39,#121720);border:1px solid rgba(255,255,255,.1);box-shadow:0 6px 14px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.09)}
+.hbtn{width:48px;height:48px;min-height:0;padding:0;margin:0 6px 0 0;border-radius:50%;color:var(--text);display:flex;align-items:center;justify-content:center;flex:none;background:linear-gradient(180deg,#242b39,#121720);border:1px solid rgba(255,255,255,.1);box-shadow:var(--relief-ombre),inset 0 1px 0 rgba(255,255,255,.09)}
 .scrim{display:none;position:fixed;left:0;top:0;right:0;bottom:0;z-index:20;background:rgba(3,5,9,.62)}
 .menu{position:fixed;left:0;top:0;bottom:0;width:270px;max-width:80%;z-index:21;transform:translateX(-105%);transition:transform .2s;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px;background:linear-gradient(180deg,#12161e,#0e1218);border-right:1px solid rgba(140,165,210,.14)}
-.menu.open{transform:none;box-shadow:14px 0 40px rgba(0,0,0,.55)}
-.mlabel{text-transform:uppercase;margin:16px 8px 6px;font-size:12px;letter-spacing:.1em;color:var(--muted)}
+.menu.open{transform:none;box-shadow:10px 0 24px rgba(0,0,0,.5)}
+.mlabel{text-transform:uppercase;margin:16px 8px 6px;font-size:var(--sec-taille);letter-spacing:var(--sec-espace);color:var(--sec-couleur);font-weight:var(--sec-graisse)}
 .mitem{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;background:transparent;color:var(--text);min-height:50px;margin-bottom:2px;font-size:17px;font-weight:400;border:1px solid transparent;border-radius:14px}
-.mitem.sel{background:rgba(207,230,255,.09);color:#fff;border-color:#cfe6ff;box-shadow:0 0 0 1px #cfe6ff,0 0 22px 3px rgba(170,210,255,.45)}
-.mitem:active{border-color:#cfe6ff;box-shadow:0 0 0 1px #cfe6ff,0 0 24px 3px rgba(170,210,255,.5)}
+.mitem.sel{background:rgba(207,230,255,.09);color:#fff;border-color:#cfe6ff;box-shadow:0 0 0 1px #cfe6ff,var(--sel-lueur)}
+.mitem:active{border-color:#cfe6ff;box-shadow:0 0 0 1px #cfe6ff,var(--sel-lueur)}
 /* V1.6 : menu « ⋯ » de l'en-tête (navigation.js) : Actualiser, Plein écran, Affichage ; ancré sous le bouton, au-dessus des vues */
 .hr{position:relative;display:flex;align-items:center}
 #plusBtn{margin:0 10px 0 0}
-.pmenu{position:absolute;right:0;top:calc(100% + 10px);z-index:30;width:320px;padding:8px;border-radius:18px;background:linear-gradient(180deg,#171c26,#10141b);border:1px solid rgba(140,165,210,.2);box-shadow:0 18px 40px rgba(0,0,0,.6)}
+.pmenu{position:absolute;right:0;top:calc(100% + 10px);z-index:30;width:320px;padding:8px;border-radius:18px;background:linear-gradient(180deg,#171c26,#10141b);border:1px solid rgba(140,165,210,.2);box-shadow:var(--flottant-ombre)}
 .pitem{display:flex;align-items:center;width:100%;min-height:48px;margin:0 0 4px;padding:0 14px;border-radius:12px;background:transparent;color:var(--text);font-size:16px;font-weight:400;text-align:left}
 .pitem.hidden{display:none} /* V1.9 : #fsBtn et #apkBtn selon l'APK (sinon display:flex l'emporte sur .hidden) */
 .pitem:active{background:rgba(207,230,255,.09)}
-.plab{margin:10px 8px 6px;text-transform:uppercase;font-size:12px;letter-spacing:.1em;color:var(--muted)}
+.plab{margin:10px 8px 6px;text-transform:uppercase;font-size:var(--sec-taille);letter-spacing:var(--sec-espace);color:var(--sec-couleur);font-weight:var(--sec-graisse)}
 .paff{display:flex;gap:6px}
 .paffb{flex:1;min-width:0;min-height:44px;padding:0 6px;border-radius:12px;font-size:13px;font-weight:500;background:#0d1117;border:1px solid #262c37;color:#c9d4e6}
 .paffb.sel{color:#fff;border-color:#cfe6ff;box-shadow:0 0 0 1px #cfe6ff}

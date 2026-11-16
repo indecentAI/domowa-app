@@ -25,7 +25,7 @@ function afficher(c) {
 const [cmd, a1, a2] = process.argv.slice(2);
 if (!cmd || cmd === 'etat') afficher(lireConfig());
 else if (cmd === 'local' || cmd === 'distant') {
-  if (await enMarche()) fin('Le serveur est en marche : l\'arrêter d\'abord (bash stop.sh, ou le service), puis relancer cette commande.');
+  if (await enMarche()) fin('Le serveur est en marche : changer le mode dans l\'application (menu « ⋯ » > Appareils autorisés), ou l\'arrêter d\'abord (bash stop.sh, ou le service), puis relancer cette commande.');
   if (cmd === 'local') { ecrireConfig({ mode: 'local' }); console.log('Mode local enregistré. Les appareils autorisés sont gardés (donnees/clients.json) mais ne peuvent plus se connecter.'); }
   else {
     const dispo = adressesMachine();

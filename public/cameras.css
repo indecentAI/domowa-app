@@ -8,7 +8,7 @@
 .chead{display:flex;align-items:center;justify-content:space-between;padding:12px 16px}
 .cname{font-size:19px;font-weight:500}
 .cstate{display:flex;align-items:center;font-size:13px;color:var(--muted)}
-.cdot{width:9px;height:9px;margin-right:6px;border-radius:50%;background:#e0525f;box-shadow:0 0 6px rgba(224,82,95,.7)}
+.cdot{width:9px;height:9px;margin-right:6px;border-radius:50%;background:#e0525f;box-shadow:0 0 4px rgba(224,82,95,.5)}
 .cdot.hidden{display:none}
 /* V1.7 : caméra hors ligne (GET /api/cameras) : nom atténué, motif sous l'en-tête, lecture inactive */
 .ccard.chors .cname{color:#b7c0cf}
@@ -26,12 +26,12 @@
 .cvol::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-6px;border:0;border-radius:50%;background:#fff}
 .cq{font:600 14px/1 Outfit,sans-serif}
 .cview .cq{position:absolute;right:10px;top:10px;width:40px;height:40px;margin:0;background:rgba(13,17,23,.6);border-color:rgba(255,255,255,.28)}
-.cview .cq.on{color:#fff;border-color:#fff;box-shadow:0 0 14px rgba(255,255,255,.4)}
+.cview .cq.on{color:#fff;border-color:var(--actif-contour);box-shadow:var(--halo-blanc)}
 .cbtn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;min-height:0;padding:0;margin-right:10px;vertical-align:middle;border-radius:50%;background:#0d1117;border:2px solid #262c37;color:#e9eef7}
-.cbtn.on{color:#52d98a;border-color:#52d98a;box-shadow:0 0 14px rgba(82,217,138,.4)}
+.cbtn.on{color:#52d98a;border-color:#52d98a;box-shadow:var(--halo-vert)}
 .cbtn.off{color:#e0525f;border-color:#7a2630;box-shadow:none}
 .cvol+.cbtn{margin-left:auto}
-.cbtn.cpz.on{color:#fff;border-color:#fff;box-shadow:0 0 14px rgba(255,255,255,.4)}
+.cbtn.cpz.on{color:#fff;border-color:var(--actif-contour);box-shadow:var(--halo-blanc)}
 .cpadbox{position:absolute;right:10px;bottom:10px}
 .cpad{display:grid;grid-template-columns:repeat(3,42px);grid-template-rows:repeat(3,42px);gap:2px;touch-action:none;-webkit-user-select:none;user-select:none}
 .carr{width:42px;height:42px;min-height:0;padding:0;border-radius:50%;background:rgba(13,17,23,.6);border:2px solid rgba(255,255,255,.28);color:#e9eef7;touch-action:none;-webkit-touch-callout:none}

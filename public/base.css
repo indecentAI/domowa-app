@@ -16,15 +16,21 @@ html{margin:0;height:100%;overflow:hidden}
 .view{display:flex;padding:12px 12px 24px;align-items:flex-start;flex:1;min-height:0;overflow:hidden}
 #viewLights{align-items:stretch}
 :root{--bg:#0a0d13;--card:#10141b;--card2:#171c26;--line:rgba(140,165,210,.16);--muted:#8a97ad;--text:#e9eef7;--accent:#4da3ff;
- --carte-fond:linear-gradient(180deg,#212c42,#182033);--carte-haut:#212c42;--carte-fond-2:#161e2f;--carte-bord:transparent;--carte-ombre:0 10px 22px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.05);--fenetre-plein:linear-gradient(180deg,#141922,#0f131a)}
+ --carte-fond:linear-gradient(180deg,#212c42,#182033);--carte-haut:#212c42;--carte-fond-2:#161e2f;--carte-bord:transparent;--carte-ombre:0 6px 14px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05);--fenetre-plein:linear-gradient(180deg,#141922,#0f131a);
+ --relief-ombre:0 4px 10px rgba(0,0,0,.4);--relief-ombre-petit:0 2px 6px rgba(0,0,0,.4);--flottant-ombre:0 10px 24px rgba(0,0,0,.5);
+ --sel-lueur:0 0 10px rgba(170,210,255,.3);--halo-blanc:0 0 8px rgba(255,255,255,.25);--halo-vert:0 0 6px rgba(82,217,138,.3);--halo-ambre:0 0 8px rgba(255,220,150,.3);--actif-contour:rgba(255,255,255,.85);
+ --sec-couleur:#a3b1c7;--sec-graisse:500;--sec-taille:12px;--sec-espace:.1em;--sec-trait:var(--line)}
 /* Surface des cartes (interface étape 2) : --carte-fond (surface bleu nuit plus claire que le fond, sans contour : --carte-bord transparent sur 1 px, dimensions gardées), --carte-ombre (ombre sombre seule et reflet du haut),
-   --carte-fond-2 (carte dans une carte : plate, sans ombre), --carte-haut (haut de la surface : poignée de la feuille du smartphone), --fenetre-plein (fenêtre plein écran du smartphone : fond d'avant, ce n'est pas une carte). --muted : texte atténué, 4,5:1 au moins sur la surface. */
+   --carte-fond-2 (carte dans une carte : plate, sans ombre), --carte-haut (haut de la surface : poignée de la feuille du smartphone), --fenetre-plein (fenêtre plein écran du smartphone : fond d'avant, ce n'est pas une carte). --muted : texte atténué, 4,5:1 au moins sur la surface.
+   Typographie (interface étape 3) : titres de section en majuscules (--sec-couleur, plus claire que --muted et plus sombre que --text ; --sec-graisse, --sec-taille, --sec-espace), trait de 1 px après les titres de l'accueil (--sec-trait).
+   Effets lumineux et ombres (interface étape 4) : --relief-ombre (bouton en relief, une seule ombre portée, plus son reflet inset), --relief-ombre-petit (bouton rond de moins de 40 px), --flottant-ombre (menu, bandeau),
+   --sel-lueur (lueur courte qui accompagne l'anneau de sélection #cfe6ff), --halo-blanc, --halo-vert, --halo-ambre (état actif : halo court, l'état reste porté par la bordure ou le fond), --actif-contour (contour blanc d'un cercle actif). */
 input{font-family:"Outfit",Roboto,Arial,sans-serif}
 body{margin:0;font-size:18px;overflow:hidden;display:flex;flex-direction:column;height:100dvh;font-family:"Outfit",Roboto,Arial,sans-serif;background:#0a0d13 radial-gradient(ellipse at 50% -15%,#171e2c 0,#0a0d13 62%);color:#e9eef7}
 ::-webkit-scrollbar{width:0;height:0}
-.b-light{margin-right:10px;background:linear-gradient(180deg,#1f2633,#141922);color:#e9eef7;border:1px solid rgba(255,255,255,.09);font-weight:500;border-radius:16px;box-shadow:0 6px 14px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.07);min-height:46px;font-size:15px}
-.b-small{margin-right:8px;background:linear-gradient(180deg,#1f2633,#141922);color:#e9eef7;border:1px solid rgba(255,255,255,.09);font-weight:500;box-shadow:0 6px 14px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.07);min-height:44px;font-size:14px;border-radius:14px}
-.b-warn{background:linear-gradient(180deg,#4a3913,#33270d);color:#ffd27a;border:1px solid rgba(255,190,70,.4);font-weight:500;font-size:15px;min-height:46px;border-radius:16px;box-shadow:0 6px 14px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,220,140,.15)}
+.b-light{margin-right:10px;background:linear-gradient(180deg,#1f2633,#141922);color:#e9eef7;border:1px solid rgba(255,255,255,.09);font-weight:500;border-radius:16px;box-shadow:var(--relief-ombre),inset 0 1px 0 rgba(255,255,255,.07);min-height:46px;font-size:15px}
+.b-small{margin-right:8px;background:linear-gradient(180deg,#1f2633,#141922);color:#e9eef7;border:1px solid rgba(255,255,255,.09);font-weight:500;box-shadow:var(--relief-ombre),inset 0 1px 0 rgba(255,255,255,.07);min-height:44px;font-size:14px;border-radius:14px}
+.b-warn{background:linear-gradient(180deg,#4a3913,#33270d);color:#ffd27a;border:1px solid rgba(255,190,70,.4);font-weight:500;font-size:15px;min-height:46px;border-radius:16px;box-shadow:var(--relief-ombre),inset 0 1px 0 rgba(255,220,140,.15)}
 .b-main{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(180deg,rgba(77,163,255,.26),rgba(66,140,240,.21));color:#eef5ff;border:1px solid rgba(120,180,255,.13);font-weight:600;border-radius:999px;box-shadow:0 1px 3px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.06);transition:background .15s,box-shadow .15s,transform .08s}
 /* Bouton d'action principal (interface étape 1) : pilule en verre bleuté quasi plat ; survol à la souris seulement (pas de survol collant au toucher) ; appui plus sombre et enfoncé ;
    désactivé gris neutre (opacité 1, texte #8a96ab) ; chargement : aria-busy="true", anneau .b-anneau et libellé « Chargement… » (posés par le script, ex. Appliquer de scenes.js) ; icône ronde .b-ico (Appliquer). */
@@ -39,7 +45,7 @@ body{margin:0;font-size:18px;overflow:hidden;display:flex;flex-direction:column;
 @keyframes b-tourne{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.b-anneau{animation-duration:2.4s}}
 button:active{filter:brightness(1.15)}
-.banner{position:fixed;left:50%;bottom:20px;width:max-content;max-width:min(560px,calc(100vw - 24px));margin:0;padding:12px 18px;border-radius:14px;border:1px solid rgba(255,255,255,.12);font-size:15px;line-height:1.35;z-index:1000;box-shadow:0 10px 28px rgba(0,0,0,.55);cursor:pointer;padding-right:44px;opacity:0;transform:translate(-50%,24px);transition:opacity .25s ease,transform .25s ease}
+.banner{position:fixed;left:50%;bottom:20px;width:max-content;max-width:min(560px,calc(100vw - 24px));margin:0;padding:12px 18px;border-radius:14px;border:1px solid rgba(255,255,255,.12);font-size:15px;line-height:1.35;z-index:1000;box-shadow:var(--flottant-ombre);cursor:pointer;padding-right:44px;opacity:0;transform:translate(-50%,24px);transition:opacity .25s ease,transform .25s ease}
 .banner.show{opacity:1;transform:translate(-50%,0)}
 .banner::after{content:"\00d7";position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:20px;opacity:.7}
 .ccard>.banner{bottom:96px}
