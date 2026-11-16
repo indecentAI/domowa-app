@@ -45,9 +45,9 @@
 .q-pcard.sel{border-color:#cfe6ff;box-shadow:0 0 0 1px #cfe6ff,0 0 28px 4px rgba(170,210,255,.6),0 8px 16px rgba(0,0,0,.5)}
 .q-sw.sel{border-color:#cfe6ff;box-shadow:0 0 0 1px #cfe6ff,0 0 24px 4px rgba(170,210,255,.65),0 6px 12px rgba(0,0,0,.5)}
 .q-title{text-align:center;font-size:13px;font-weight:300;color:#6b7687;letter-spacing:.02em;display:none}
-.q-hint{text-align:center;color:#7d8ba3;font-size:12px;min-height:0;margin:0 0 4px}
+.q-hint{text-align:center;color:var(--muted);font-size:12px;min-height:0;margin:0 0 4px}
 .q-hint:empty{display:none}
-.q-card{position:relative;overflow:hidden;background:linear-gradient(180deg,#12161e 0,#0f131a 100%);border:1px solid rgba(140,165,210,.14);box-shadow:0 14px 30px rgba(0,0,0,.45);padding:10px 12px;margin:0 0 8px;border-radius:24px}
+.q-card{position:relative;overflow:hidden;background:var(--carte-fond);border:1px solid var(--carte-bord);box-shadow:var(--carte-ombre);padding:10px 12px;margin:0 0 8px;border-radius:24px}
 .q-segs{display:flex;max-width:100%;background:#0e1218;border:1px solid rgba(255,255,255,.07);border-radius:28px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5);width:200px;margin:6px auto 8px;padding:3px}
 .q-seg{flex:1;border-radius:24px;background:transparent;color:#8b97ab;display:flex;align-items:center;justify-content:center;font-weight:500;min-height:44px;font-size:14px}
 .q-seg svg{width:16px;height:16px;margin-right:6px}
@@ -67,7 +67,7 @@
 .q-wheel{display:inline-block;border-radius:50%;background:conic-gradient(#f33,#fd3,#3d6,#3df,#36f,#d3f,#f33);width:16px;height:16px;margin-right:6px}
 .q-ctl{margin-bottom:6px}
 .q-lab{color:#f1f4fa;font-weight:500;display:flex;align-items:center;font-size:13px}
-.q-unitl{display:block;color:#7d8ba3;font-weight:400;font-size:12px}
+.q-unitl{display:block;color:var(--muted);font-weight:400;font-size:12px}
 .q-val{text-align:center;color:#f1f4fa;font-weight:400;font-size:17px}
 .q-val.big{font-size:22px;margin:2px 0 0}
 .q-head.inline .q-lab{display:block;flex:none;width:56px}
@@ -113,8 +113,10 @@
 .q-garde{width:100%;margin-top:6px}
 /* V1.6 : smartphone (classe tel) : en portrait, le panneau est une feuille qui monte du bas (tel.js, APP.telFeuille ; poignée .tf-poignee en tête) ;
    en paysage, colonne de droite à côté de la liste. */
-.tel .right{position:fixed;left:0;right:0;top:auto;bottom:0;z-index:46;width:auto;max-height:85%;margin:0;padding:0 calc(12px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));border-radius:22px 22px 0 0;background:linear-gradient(180deg,#141922,#0d1117);border-top:1px solid rgba(140,165,210,.2);box-shadow:0 -14px 40px rgba(0,0,0,.6);transform:translateY(105%);transition:transform .22s ease;overflow-y:auto}
+.tel .right{position:fixed;left:0;right:0;top:auto;bottom:0;z-index:46;width:auto;max-height:85%;margin:0;padding:0 calc(12px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));border-radius:22px 22px 0 0;background:var(--carte-fond);border-top:1px solid var(--carte-bord);box-shadow:0 -14px 40px rgba(0,0,0,.6);transform:translateY(105%);transition:transform .22s ease;overflow-y:auto}
 .tel .right.tf-ouverte{transform:none}
+/* Interface étape 2 : la feuille porte la surface des cartes (--carte-fond) ; ses cartes y sont plates (carte dans une carte). */
+@media (orientation:portrait){.tel .right .q-card{background:var(--carte-fond-2);box-shadow:none}}
 @media (orientation:landscape){
  .tel .right{position:static;z-index:auto;width:46%;max-width:420px;max-height:none;padding:8px 8px 12px 0;border:0;border-radius:0;background:transparent;box-shadow:none;transform:none;transition:none}
 }

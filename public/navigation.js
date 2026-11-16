@@ -86,7 +86,6 @@
   pile.push(ici());
   try { window.history.replaceState({ dw: 0 }, ""); } catch (e) {}
   garde();
-  APP.historique = { pile: () => pile.slice() };
   // V1.9, dans l'APK : l'application est prévenue chaque fois que la page sait, ou ne sait plus, traiter le bouton Retour (fenêtre, menu ou écran
   // précédent) ; sinon le Retour revient à l'application (assistant, sortie). Recalculé à chaque changement de vue et de page (fenêtres ouvertes ou fermées).
   if (APP.apk && APP.apk.present) {

@@ -207,7 +207,6 @@
       });
     };
   }
-  function render() { if (S.view === "form") renderForm(); else renderMain(); }
 
   // ---------- ouverture et fermeture ----------
   function closeModal() {

@@ -14,7 +14,6 @@ export const COURBES = ['lineaire', 'acceleree', 'ralentie', 'douce'];
 // Corps de requete d'une animation (routes de modules/animations.mjs) : aux limites (40 etapes de 20 lampes, identifiants de 80 caracteres), environ 80 Ko ;
 // la taille par defaut du serveur (4 Ko) refusait des 10 etapes de 8 lampes (essai : banc/unitaires/animations.test.mjs).
 export const CORPS_ANIMATION = 128 * 1024;
-export const ANIM_ID_RE = /^[a-z0-9]{1,20}$/;
 const err = (m) => new HttpError(400, m);
 const dixieme = (v) => Math.round(v * 10) / 10;
 function nombre(v, min, max, nom) {

@@ -51,11 +51,12 @@
     c.appendChild(dots);
     c.appendChild(el("div", "tsub", s.lights.length + " appareil" + (s.lights.length > 1 ? "s" : "")));
     var row = el("div", "srow");
-    var a = el("button", "sapply", "Appliquer");
+    var a = el("button", "sapply b-main", "");
+    libelleAppliquer(a, enCours === s.id);
     var d = el("button", "sdel", "");
     d.innerHTML = ICON_TRASH;
     d.title = "Supprimer"; d.setAttribute("aria-label", "Supprimer");
-    a.onclick = function () { applyScene(s); };
+    a.onclick = function () { applyScene(s, a); };
     d.onclick = function () { deleteScene(s); };
     row.appendChild(a); row.appendChild(d);
     c.appendChild(row);
@@ -151,11 +152,22 @@
     document.body.appendChild(wrap);
   }
 
-  function applyScene(s) {
+  // Interface étape 1 : bouton « Appliquer » (coche .b-ico) et son état de chargement (aria-busy, anneau .b-anneau, « Chargement… » ; base.css .b-main)
+  var ICON_OK = '<span class="b-ico" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>';
+  function libelleAppliquer(b, charge) {
+    if (charge) { b.setAttribute("aria-busy", "true"); b.innerHTML = '<span class="b-anneau" aria-hidden="true"></span><span>Chargement…</span>'; }
+    else { b.removeAttribute("aria-busy"); b.innerHTML = ICON_OK + "<span>Appliquer</span>"; }
+  }
+
+  // scénario en cours d'envoi depuis son bouton : une liste reconstruite pendant l'envoi (lecture des scénarios) garde l'état de chargement
+  var enCours = null;
+  function applyScene(s, bouton) {
     if (APP.busy) return;
     APP.setBusy(true);
+    if (bouton) { enCours = s.id; libelleAppliquer(bouton, true); }
     APP.api("POST", "/api/scenarios/" + s.id + "/apply", null, function (err, r) {
       APP.setBusy(false);
+      if (bouton) { enCours = null; var b = document.querySelector("#sceneList .sapply[aria-busy]"); if (b) libelleAppliquer(b, false); }
       if (err && !(r && r.failed)) { APP.banner(err, "err"); APP.refresh(); return; }
       if (r && r.devices) APP.devices = r.devices;
       var items = [], i, l, st;

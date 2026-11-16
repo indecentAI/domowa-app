@@ -329,7 +329,7 @@
     c.appendChild(el("div", "tsub", [plur(a.etapes.length, "étape"), plur(lampes.size, "lampe"), (a.boucle ? "en boucle, cycle " : "") + duree(h.cycle)].join(" · ") + (a.reset ? " · retour au départ" : "")));
     if (r) c.appendChild(el("div", "an-etat" + (r.etat === "suspendue" ? " susp" : ""), r.etat === "suspendue" ? "Suspendue : " + r.motif : "En cours"));
     const row = el("div", "srow");
-    const go = bouton(r ? "sapply an-stop" : "sapply", r ? "Arrêter" : "Lancer", () => poster("/api/animations/" + a.id + "/" + (r ? "arreter" : "lancer"), {}, r ? "« " + a.nom + " » arrêtée." : "« " + a.nom + " » lancée."));
+    const go = bouton(r ? "sapply an-stop" : "sapply b-main", r ? "Arrêter" : "Lancer", () => poster("/api/animations/" + a.id + "/" + (r ? "arreter" : "lancer"), {}, r ? "« " + a.nom + " » arrêtée." : "« " + a.nom + " » lancée."));
     go.disabled = envoi;
     row.appendChild(go);
     const del = bouton("sdel", "", () => { if (confirm("Supprimer l'animation « " + a.nom + " » ?")) poster("/api/animations/" + a.id + "/supprimer", {}, "Animation supprimée."); });

@@ -1,7 +1,7 @@
 /* @zone electromenager */
 /* st-compte.css : fenêtre Compte SmartThings et fenêtre de détail (préfixe sc-), carte de groupe SmartThings et tuiles compactes des appareils (catégories, « Tous les appareils »). Construites par st-compte.js. */
 .sc-scrim{position:fixed;left:0;top:0;right:0;bottom:0;z-index:40;display:flex;align-items:center;justify-content:center;background:rgba(3,5,9,.7)}
-.sc-panel{display:flex;flex-direction:column;width:600px;max-width:94%;max-height:92%;border-radius:24px;background:linear-gradient(180deg,#141922,#0f131a);border:1px solid rgba(140,165,210,.2);box-shadow:0 18px 40px rgba(0,0,0,.6)}
+.sc-panel{display:flex;flex-direction:column;width:600px;max-width:94%;max-height:92%;border-radius:24px;background:var(--carte-fond);border:1px solid var(--carte-bord);box-shadow:var(--carte-ombre)}
 .sc-panel.sc-large{width:1000px;max-width:96%}
 .sc-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 8px}
 .sc-titre{font-size:21px;font-weight:500}
@@ -9,16 +9,16 @@
 .sc-tete{flex:1;display:flex;align-items:center;min-width:0;margin:0 12px 0 14px}
 .sc-ic{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;min-height:0;margin-left:8px;padding:0;border-radius:50%;background:#0d1117;border:2px solid #262c37;color:#e9eef7;font-size:20px}
 .sc-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 18px 18px}
-.sc-sec{text-transform:uppercase;margin:18px 4px 8px;font-size:12px;letter-spacing:.12em;color:#7d8ba3}
-.sc-bloc{padding:10px 14px;border-radius:16px;background:#10141b;border:1px solid rgba(140,165,210,.14)}
+.sc-sec{text-transform:uppercase;margin:18px 4px 8px;font-size:12px;letter-spacing:.12em;color:var(--muted)}
+.sc-bloc{padding:10px 14px;border-radius:16px;background:var(--carte-fond-2);border:1px solid var(--carte-bord)}
 .sc-ligne{display:flex;justify-content:space-between;padding:6px 0;font-size:16px}
-.sc-lib{color:#7d8ba3}
+.sc-lib{color:var(--muted)}
 .sc-val{margin-left:12px;text-align:right}
 .sc-val.ok{color:#52d98a}
 .sc-val.attention{color:#ffd27a}
 .sc-val.ko{color:#ff8a8e}
 .sc-val.hors{color:#ffb15c}
-.sc-note{margin:6px 0;font-size:13px;line-height:1.4;color:#7d8ba3}
+.sc-note{margin:6px 0;font-size:13px;line-height:1.4;color:var(--muted)}
 .sc-lab{display:block;margin:12px 2px 6px;font-size:14px;color:#9fb0c8}
 .sc-in{width:100%;height:48px;padding:0 14px;border-radius:12px;border:1px solid #262c37;background:#0d1117;color:#e9eef7;font-size:17px}
 .sc-go{width:100%;margin-top:14px}
@@ -34,26 +34,26 @@
 .sc-err{margin:14px 0 0;padding:10px 14px;border-radius:12px;background:#3a1a1c;color:#ffb3b5;font-size:14px;line-height:1.4}
 .sc-retour{margin:4px 0 0}
 .sc-p{margin:6px 0;font-size:15px;line-height:1.45;word-break:break-word}
-.sc-groupe{width:100%;max-width:820px;margin:0 0 12px;padding:14px 16px 4px;border-radius:26px;background:linear-gradient(180deg,#121720,#0d1117);border:1px solid var(--line);box-shadow:0 12px 26px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.04)}
+.sc-groupe{width:100%;max-width:820px;margin:0 0 12px;padding:14px 16px 4px;border-radius:26px;background:var(--carte-fond);border:1px solid var(--carte-bord);box-shadow:var(--carte-ombre)}
 .sc-gtete{display:flex;align-items:center;padding:0 0 12px 4px;margin-bottom:12px;border-bottom:1px solid var(--line)}
 .sc-gnom{display:flex;align-items:baseline;min-width:0;flex:1}
 .sc-gtitre{font-size:20px;font-weight:500}
 .sc-gsous{margin-left:10px;font-size:15px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sc-getat{display:flex;align-items:center;flex:none;margin:0 14px;font-size:15px}
-.sc-pastille{width:12px;height:12px;margin-right:8px;border-radius:50%;background:#7d8ba3}
+.sc-pastille{width:12px;height:12px;margin-right:8px;border-radius:50%;background:var(--muted)}
 .sc-pastille.ok{background:#52d98a;box-shadow:0 0 6px 2px rgba(82,217,138,.75)}
 .sc-pastille.ko{background:#ff5a5f;box-shadow:0 0 6px 2px rgba(255,90,95,.75)}
 .sc-pastille.hors{background:#f0a03c;box-shadow:0 0 6px 2px rgba(240,160,60,.7)} /* V1.7 : compte autorisé, cloud injoignable */
 .sc-gtexte{color:#e9eef7}
-.sc-user{display:inline-flex;align-items:center;justify-content:center;flex:none;width:48px;height:48px;min-height:0;padding:0;border-radius:50%;background:#0d1117;border:2px solid #262c37;color:#7d8ba3;transition:box-shadow .3s,border-color .3s,color .3s}
+.sc-user{display:inline-flex;align-items:center;justify-content:center;flex:none;width:48px;height:48px;min-height:0;padding:0;border-radius:50%;background:#0d1117;border:2px solid #262c37;color:var(--muted);transition:box-shadow .3s,border-color .3s,color .3s}
 .sc-user.on{color:#ffffff;border-color:rgba(255,255,255,.85);box-shadow:0 0 14px 3px rgba(255,255,255,.45)}
 .sc-gnote{margin:-4px 4px 10px;font-size:12px;color:#ffb15c}
 .sc-gcorps{display:flex;flex-wrap:wrap;align-items:flex-start}
 .sc-tous{margin-top:18px}
 .sc-fam{width:100%;margin-bottom:10px}
-.sc-famnom{text-transform:uppercase;margin:0 4px 8px;font-size:12px;letter-spacing:.12em;color:#7d8ba3}
+.sc-famnom{text-transform:uppercase;margin:0 4px 8px;font-size:12px;letter-spacing:.12em;color:var(--muted)}
 .sc-apps{display:flex;flex-wrap:wrap}
-.sc-app{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;width:260px;max-width:100%;min-height:0;margin:0 10px 10px 0;padding:12px 14px;border-radius:18px;background:#10141b;border:1px solid rgba(140,165,210,.14);text-align:left;font-weight:400}
+.sc-app{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;width:260px;max-width:100%;min-height:0;margin:0 10px 10px 0;padding:12px 14px;border-radius:18px;background:var(--carte-fond-2);border:1px solid var(--carte-bord);text-align:left;font-weight:400}
 .sc-app.perime{opacity:.65}
 .sc-apphaut{display:flex;align-items:center;justify-content:space-between;width:100%}
 .sc-appnom{flex:1 1 auto;min-width:0;font-size:16px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -65,7 +65,7 @@
 .sc-appdet{max-width:100%;margin-top:7px;font-size:12px;font-weight:300;color:#8a97ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sc-appbarre{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(77,163,255,.14)}
 .sc-appprog{display:block;height:100%;background:#4da3ff;box-shadow:0 0 6px rgba(77,163,255,.55)}
-.sc-actu{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;width:34px;height:34px;min-height:0;margin-left:8px;padding:0;border:0;border-radius:50%;background:transparent;color:#7d8ba3;opacity:.8}
+.sc-actu{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;width:34px;height:34px;min-height:0;margin-left:8px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--muted);opacity:.8}
 .sc-actu::after{content:"";position:absolute;inset:-5px;border-radius:50%}
 .sc-actu:disabled{opacity:.8}
 .sc-actu.tourne svg{animation:sc-tourne .9s linear infinite}
@@ -79,7 +79,7 @@
 .tel .sc-groupe{padding:12px 12px 12px}
 /* V1.6 : smartphone (classe tel) : fenêtre Compte, fenêtres de détail et du lave-linge en plein écran */
 .tel .sc-scrim{align-items:stretch;justify-content:stretch}
-.tel .sc-panel,.tel .sc-panel.sc-large{width:100%;max-width:none;height:100%;max-height:none;border:0;border-radius:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.tel .sc-panel,.tel .sc-panel.sc-large{width:100%;max-width:none;height:100%;max-height:none;border:0;border-radius:0;background:var(--fenetre-plein);box-shadow:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 .tel .sc-head{padding:10px 14px 8px}
 .tel .sc-head .sc-titre{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tel .sc-head .pc-pas{flex:none;max-width:none}

@@ -121,20 +121,30 @@ var APP = window.APP = {
 
   // Crochets ordonnes (qualite 2026-11-11) : chaque fichier ajoute sa partie avec un ordre explicite ; execution par ordre croissant
   // (a ordre egal : ordre d'ajout). L'ordre ne depend plus de celui des scripts dans index.html (il remplace les enveloppes de fonctions).
-  function crochets() {
+  // Qualite 2026-11-13 : chaque crochet est isole (une exception dans l'un n'empeche plus les suivants ni la partie de base de APP.showTab) ;
+  // l'erreur va dans la console du navigateur, une fois par crochet (nom du crochet et ordre).
+  function crochets(nom) {
     var liste = [];
     return {
       ajouter: function (fn, ordre) {
-        liste.push({ fn: fn, o: ordre || 50, i: liste.length });
+        liste.push({ fn: fn, o: ordre || 50, i: liste.length, signale: false });
         liste.sort(function (a, b) { return a.o - b.o || a.i - b.i; });
       },
-      lancer: function (arg) { for (var i = 0; i < liste.length; i++) liste[i].fn(arg); }
+      lancer: function (arg) {
+        for (var i = 0; i < liste.length; i++) {
+          try { liste[i].fn(arg); } catch (e) {
+            if (liste[i].signale) continue;
+            liste[i].signale = true;
+            if (typeof console !== "undefined" && console.error) console.error("Crochet " + nom + " (ordre " + liste[i].o + ") en échec :", e);
+          }
+        }
+      }
     };
   }
 
   // Actualisation : appareils ON/OFF (GET /api/devices), puis les crochets APP.surActualisation(fn, ordre), toujours appeles, meme si la lecture
   // des appareils est sautee (glisser, commande en cours) : pieces-liste.js 10 (GET /api/pieces/liste), animations.js 20 (GET /api/animations).
-  var actualisations = crochets();
+  var actualisations = crochets("APP.surActualisation");
   APP.surActualisation = actualisations.ajouter;
   function lireAppareils() {
     if (APP.dragging || APP.busy) return;
@@ -158,13 +168,13 @@ var APP = window.APP = {
 
   // Rendu : chaque fichier ajoute sa partie avec APP.onRender(fn, ordre), executee par ordre croissant
   // (pieces 10, menu 20, bulles 30, carte SmartThings 35, appareils independants de la piece 36, selection 40, piece de la selection 45, panneau des lumieres 90).
-  var rendus = crochets();
+  var rendus = crochets("APP.onRender");
   APP.onRender = rendus.ajouter;
   APP.render = function () { rendus.lancer(); };
 
   // Changement de vue : les crochets APP.surVue(fn(name), ordre) d'abord (animations.js 10, st-familles.js 20, electromenager.js 30, cameras.js 40,
   // home.js 50), puis la partie de base (#viewLights, #viewScenes ; scenarios relus a l'ouverture de leur vue).
-  var vues = crochets();
+  var vues = crochets("APP.surVue");
   APP.surVue = vues.ajouter;
   APP.showTab = function (name) {
     vues.lancer(name);

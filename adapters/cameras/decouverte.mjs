@@ -4,6 +4,7 @@
 // Seules les adresses privees des sous-reseaux locaux de la tablette sont acceptees (pas de SSRF).
 // Utilisation : const job = lancer(); liste(job) donne les resultats au fil de l'eau ; job.annuler() ; await job.promesse.
 // Sources remplacables (essais unitaires, qualite 2026-11-11) : lancer({sources, balayage}) ; chaque source recoit le job et y ajoute ses resultats par ajoute().
+// Lecture des reponses (qualite 2026-11-13) : lireOnvif, lireMdns, lireSsdp, fonctions pures essayees sur des reponses types (banc/unitaires/decouverte.test.mjs).
 import fs from 'node:fs';
 import net from 'node:net';
 import http from 'node:http';
@@ -60,6 +61,39 @@ export function ajoute(job, ip, source, infos) {
 }
 const attendre = (ms, signal) => new Promise((res) => { const t = setTimeout(res, ms); signal.addEventListener('abort', () => { clearTimeout(t); res(); }, { once: true }); });
 
+// ---------- lecture des reponses (fonctions pures) ----------
+// ONVIF (bibliotheque onvif, resolve: false) : probeMatches.probeMatch (objet ou liste), XAddrs et scopes (texte ou {_}) ;
+// port de l'adresse de service qui pointe vers l'expediteur (80 par defaut), nom et modele tires des scopes onvif://www.onvif.org/name|hardware/.
+// -> infos pour ajoute(), ou null (reponse sans correspondance)
+export function lireOnvif(data, adresse) {
+  const m = premier(data && data.probeMatches && data.probeMatches.probeMatch);
+  if (!m || !adresse) return null;
+  let port = null;
+  for (const u of txt(m.XAddrs).split(/\s+/)) { try { const U = new URL(u); if (U.hostname === adresse) { port = Number(U.port) || 80; break; } } catch (e) { /* adresse ignoree */ } }
+  const o = {};
+  for (const s of txt(m.scopes).split(/\s+/)) {
+    const k = /^onvif:\/\/www\.onvif\.org\/(name|hardware)\/(.+)$/.exec(s);
+    if (k) { let v = k[2]; try { v = decodeURIComponent(v); } catch (e) { /* garde tel quel */ } o[k[1]] = v.replace(/_/g, ' '); }
+  }
+  return { proto: 'onvif', onvifPort: port, modele: o.hardware, nom: o.name, texte: txt(m.scopes) };
+}
+// mDNS (bonjour-service) : premiere adresse IPv4 ; _rtsp._tcp toujours retenu, _http._tcp seulement si l'adresse est deja connue ou si le nom evoque une camera.
+// connu(ip) -> booleen. -> {ip, infos} ou null
+export function lireMdns(type, s, connu) {
+  const ip = ((s && s.addresses) || []).find((a) => estIPv4(a));
+  if (!ip) return null;
+  const t = [s.name, s.host].join(' ');
+  if (type === 'rtsp') return { ip, infos: { proto: 'rtsp', rtspPort: s.port, nom: s.name, texte: t } };
+  if (connu(ip) || MOTIF_CAMERA.test(t)) return { ip, infos: { nom: s.name, texte: t } };
+  return null;
+}
+// SSDP (node-ssdp) : en-tetes SERVER, ST, USN ; retenu si l'adresse est deja connue ou si le texte evoque une camera. -> infos ou null
+export function lireSsdp(h, adresse, connu) {
+  const t = [h.SERVER, h.ST, h.USN].join(' ');
+  if (adresse && (connu(adresse) || MOTIF_CAMERA.test(t))) return { proto: 'ssdp', texte: t };
+  return null;
+}
+
 // ---------- source 1 : ONVIF WS-Discovery ----------
 let onvifPret = false;
 function wsd(job) {
@@ -69,16 +103,8 @@ function wsd(job) {
     let fini = false;
     const sur = (data, rinfo) => {
       try {
-        const m = premier(data && data.probeMatches && data.probeMatches.probeMatch);
-        if (!m || !rinfo) return;
-        let port = null;
-        for (const u of txt(m.XAddrs).split(/\s+/)) { try { const U = new URL(u); if (U.hostname === rinfo.address) { port = Number(U.port) || 80; break; } } catch (e) { /* adresse ignoree */ } }
-        const o = {};
-        for (const s of txt(m.scopes).split(/\s+/)) {
-          const k = /^onvif:\/\/www\.onvif\.org\/(name|hardware)\/(.+)$/.exec(s);
-          if (k) { let v = k[2]; try { v = decodeURIComponent(v); } catch (e) { /* garde tel quel */ } o[k[1]] = v.replace(/_/g, ' '); }
-        }
-        ajoute(job, rinfo.address, 'onvif', { proto: 'onvif', onvifPort: port, modele: o.hardware, nom: o.name, texte: txt(m.scopes) });
+        const infos = lireOnvif(data, rinfo && rinfo.address);
+        if (infos) ajoute(job, rinfo.address, 'onvif', infos);
       } catch (e) { /* reponse illisible */ }
     };
     const fin = () => { if (fini) return; fini = true; try { D.removeListener('device', sur); } catch (e) { /* rien */ } resolve(); };
@@ -98,11 +124,8 @@ function mdns(job) {
       ['rtsp', 'http'].forEach((type) => {
         const nav = B.find({ type }, (s) => {
           try {
-            const ip = (s.addresses || []).find((a) => estIPv4(a));
-            if (!ip) return;
-            const t = [s.name, s.host].join(' ');
-            if (type === 'rtsp') ajoute(job, ip, 'mdns', { proto: 'rtsp', rtspPort: s.port, nom: s.name, texte: t });
-            else if (job.resultats.has(ip) || MOTIF_CAMERA.test(t)) ajoute(job, ip, 'mdns', { nom: s.name, texte: t });
+            const r = lireMdns(type, s, (ip) => job.resultats.has(ip));
+            if (r) ajoute(job, r.ip, 'mdns', r.infos);
           } catch (e) { /* annonce illisible */ }
         });
         navs.push(nav);
@@ -120,8 +143,8 @@ function ssdp(job) {
     const fin = () => { try { c.stop(); } catch (e) { /* rien */ } resolve(); };
     c.on('response', (h, code, rinfo) => {
       try {
-        const t = [h.SERVER, h.ST, h.USN].join(' ');
-        if (rinfo && (job.resultats.has(rinfo.address) || MOTIF_CAMERA.test(t))) ajoute(job, rinfo.address, 'ssdp', { proto: 'ssdp', texte: t });
+        const infos = lireSsdp(h, rinfo && rinfo.address, (ip) => job.resultats.has(ip));
+        if (infos) ajoute(job, rinfo.address, 'ssdp', infos);
       } catch (e) { /* reponse illisible */ }
     });
     try { c.search('ssdp:all'); } catch (e) { erreur(job, 'SSDP : ' + (e && e.message)); return fin(); }

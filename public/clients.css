@@ -11,12 +11,12 @@
 .ca-code{padding:10px 14px 4px}
 .ca-chiffres{margin:8px 0 2px;font-variant-numeric:tabular-nums;letter-spacing:.08em}
 .ca-col>.ca-liste{flex:0 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.ca-client{display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px 8px 8px 14px;border-radius:14px;background:#10141b;border:1px solid rgba(140,165,210,.14)}
+.ca-client{display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px 8px 8px 14px;border-radius:14px;background:var(--carte-fond-2);border:1px solid var(--carte-bord)}
 .ca-txt{flex:1;min-width:0}
 .ca-nom{display:flex;align-items:center;font-size:16px}
 .ca-nomt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ca-ici{flex:none;margin-left:8px;padding:2px 8px;border-radius:10px;background:#143023;color:#9ff0c0;font-size:12px}
-.ca-vu{margin-top:2px;font-size:13px;color:#7d8ba3}
+.ca-vu{margin-top:2px;font-size:13px;color:var(--muted)}
 .ca-rev{flex:none;min-height:44px;padding:0 14px;border-radius:12px;background:linear-gradient(180deg,#1f2633,#141922);color:#ff8a8e;border:1px solid rgba(255,90,95,.45);font-size:15px;font-weight:500}
 .ca-rev.arme{background:#5a1c22;color:#fff;border-color:#ff5a5f}
 .ca-avert{color:#ffcf8a}

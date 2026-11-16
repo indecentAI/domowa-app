@@ -4,6 +4,10 @@
   var $ = APP.$, el = APP.el, VUE = "electro";
   var washers = [], panne = null, existe = false, ouverte = false, timer = null, rev = 0;
   var envoi = null, arme = null, armeT = null; // envoi : id en cours de commande ; arme : Arret en attente de confirmation (5 s)
+  // Qualite 2026-11-14 : curseur tenu au doigt (geste) : la fenetre n'est pas reconstruite (relecture des 15 s, rotation), sinon le curseur glisse
+  // disparait sous le doigt ; la reconstruction demandee pendant le geste (aRefaire) est faite des que le doigt se leve.
+  var geste = false, aRefaire = false;
+  function finGeste() { if (!geste) return; geste = false; if (aRefaire) { aRefaire = false; majDetail(); } }
  var ETATS = { pret: "Prêt", en_cours: "En cours", pause: "En pause", hors_ligne: "Hors ligne" };
   var PHASES = { wash: "Lavage", rinse: "Rinçage", spin: "Essorage" };
 
@@ -146,9 +150,10 @@
     ech.onpointerdown = function (e) {
       if (envoi !== null || b.className.indexOf("inactif") >= 0) return;
       try { ech.setPointerCapture(e.pointerId); } catch (x) { /* sans capture */ }
+      geste = true;
       depuis(e);
       ech.onpointermove = depuis;
-      ech.onpointerup = ech.onpointercancel = function () { ech.onpointermove = null; };
+      ech.onpointerup = ech.onpointercancel = ech.onlostpointercapture = function () { ech.onpointermove = null; finGeste(); };
       if (e.preventDefault) e.preventDefault();
     };
     return { type: type, b: b, ech: ech, plein: plein, bout: bout, sous: sous, moins: moins, plus: plus, h: hEch };
@@ -425,13 +430,14 @@
   function ouvrirDetail(id) {
     if (!APP.stCompte) return;
     detailId = id;
-    if (!fen) { choixSel = null; fen = APP.stCompte.fenetre("", function () { fen = null; detailId = null; arme = null; choixSel = null; clearTimeout(armeT); if (!ouverte) arreterLecture(); }, true); }
+    if (!fen) { choixSel = null; fen = APP.stCompte.fenetre("", function () { fen = null; detailId = null; arme = null; choixSel = null; geste = false; aRefaire = false; clearTimeout(armeT); if (!ouverte) arreterLecture(); }, true); }
     majDetail();
     if (fen) { demarrerLecture(); charger(); }
   }
   function majDetail() {
     var w = null, i;
     if (!fen) return;
+    if (geste) { aRefaire = true; return; } // curseur tenu : reconstruction au lever du doigt (finGeste)
     for (i = 0; i < washers.length; i++) if (washers[i].id === detailId) w = washers[i];
     if (!w) { fen.fermer(); return; }
     fen.titre(w.name);

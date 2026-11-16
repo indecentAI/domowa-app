@@ -1,19 +1,20 @@
-// @zone distant | Mode du serveur (V1.8) : donnees/serveur.json {v: 1, mode: local | distant, adresse (IPv4 privee), port} (absent = local ; invalide : mode local, fichier jamais reecrit), certificat TLS de l'ecoute reseau (donnees/tls/, cree par openssl, recree seulement si l'adresse change), etat de l'ecoute reseau (etat, declarer) lu par les routes.
+// @zone distant | Mode du serveur (V1.8) : donnees/serveur.json {v: 1, mode: local | distant, adresse (IPv4 privee), port} (absent = local ; invalide : mode local, fichier jamais reecrit), certificat TLS de l'ecoute reseau (donnees/tls/, cree par openssl, recree seulement si l'adresse change), ouverture de l'ecoute reseau (ouvrirEcouteReseau : nouvel essai toutes les 30 s si l'adresse est absente), etat de l'ecoute reseau (etat, declarer) lu par les routes.
 // L'ecoute locale 127.0.0.1:8080 (HTTP, sans appairage) existe toujours ; l'ecoute reseau (HTTPS, jeton exige : core/acces.mjs) seulement en mode distant.
 // L'appartenance de l'adresse a la machine est verifiee par l'ouverture de l'ecoute elle-meme (EADDRNOTAVAIL) : Android peut refuser la liste des interfaces.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import os from 'node:os';
+import https from 'node:https';
 import { execFileSync } from 'node:child_process';
 import { DONNEES } from './outils.mjs';
+import { privee } from './ipv4.mjs';
 
 export const PORT_DEFAUT = 8443;
 export const FICHIER = 'serveur.json';
 const TLS = () => path.join(DONNEES, 'tls');
-const estIPv4 = (s) => typeof s === 'string' && /^\d{1,3}(\.\d{1,3}){3}$/.test(s) && s.split('.').every((x) => Number(x) <= 255);
-// Meme regle que privee() de core/reseau.mjs (recopiee : ce fichier sert aussi aux scripts, sans charger le registre des adaptateurs)
-export function privee(ip) { if (!estIPv4(ip)) return false; const p = ip.split('.').map(Number); return p[0] === 10 || (p[0] === 172 && p[1] >= 16 && p[1] <= 31) || (p[0] === 192 && p[1] === 168); }
+// privee() : meme definition que core/reseau.mjs (core/ipv4.mjs, sans dependance : ce fichier sert aussi aux scripts, sans charger le registre des adaptateurs)
+export { privee };
 export const portValide = (p) => Number.isInteger(p) && p >= 1024 && p <= 65535;
 
 // Contenu de serveur.json -> {mode: 'local'} | {mode: 'distant', adresse, port} ; null si invalide.
@@ -90,6 +91,61 @@ export function certificat(adresse) {
 }
 // Empreinte du certificat en place pour cette adresse (scripts ; null si absent)
 export const empreinteDe = (adresse) => { const c = lireCertificat(adresse); return c ? c.empreinte : null; };
+
+// Ecoute reseau du mode distant (qualite 2026-11-14 : extraite de server.mjs pour etre essayee sans reseau ; comportement inchange).
+// config : resultat de lireConfig(). Dependances : traiter (gestionnaire des requetes de l'ecoute reseau), reglerReseau (core/http.mjs), journal (log),
+// diagnostic() -> {connexion(), echecTls(e)} (core/portier.mjs) ; remplacables pour les essais : creer (https.createServer), certificat, declarer,
+// afficher (console.log : ligne lue dans server.log, sans adresse), attendre (setTimeout), annoncer({adresse, port}) (V1.9 : core/annonce.mjs, appele a l'ouverture).
+// Mode local : rien n'est ouvert. Echec du certificat : motif, journal, ecoute fermee. Adresse pas encore celle de la machine (EADDRNOTAVAIL : Wi-Fi pas
+// encore connecte, sortie de veille) : nouvel essai toutes les 30 s, sans limite ; autre echec (port pris...) : pas de nouvel essai. Journal au premier
+// echec seulement (code, jamais l'adresse) ; l'ouverture est affichee avec le nombre d'essais. Une fois ouverte, l'ecoute survit a une coupure du Wi-Fi.
+export const REESSAI_RESEAU = 30000;
+export function motifEcoute(code) {
+  if (code === 'EADDRNOTAVAIL') return 'L\'adresse choisie n\'est pas celle de cette machine pour l\'instant (Wi-Fi connecté ?) : nouvel essai toutes les 30 s.';
+  if (code === 'EADDRINUSE') return 'Le port choisi est déjà pris.';
+  return 'L\'accès réseau n\'a pas pu s\'ouvrir.';
+}
+export function ouvrirEcouteReseau(config, d) {
+  const o = { certificat, declarer, afficher: (...x) => console.log(...x), attendre: (f, ms) => setTimeout(f, ms), creer: (opts, h) => https.createServer(opts, h), annoncer: () => {}, ...d };
+  if (config.invalide) o.journal('serveur.json illisible ou invalide : mode local (fichier laissé tel quel ; le refaire : node scripts/serveur.mjs)');
+  if (config.mode !== 'distant') return null;
+  o.declarer({ mode: 'distant', adresse: config.adresse, port: config.port });
+  const suivi = { essais: 0, serveur: null };
+  let c;
+  const ouvrir = () => {
+    suivi.essais++;
+    const reseau = o.creer({ key: c.key, cert: c.cert, minVersion: 'TLSv1.2' }, o.traiter);
+    suivi.serveur = reseau;
+    reseau.on('error', (e) => {
+      const absente = e.code === 'EADDRNOTAVAIL', motif = motifEcoute(e.code);
+      o.declarer({ ecoute: false, motif }); o.reglerReseau(null);
+      if (suivi.essais === 1) o.journal('mode distant : écoute réseau impossible (' + (e.code || e.name) + ') : ' + motif + ' Si l\'adresse a changé : node scripts/serveur.mjs');
+      try { reseau.close(); } catch (x) { /* jamais ouverte */ }
+      if (absente) o.attendre(ouvrir, REESSAI_RESEAU);
+    });
+    // Diagnostic (jamais d'adresse) : premiere connexion recue, negociations TLS en echec (code seul, une ligne par code et par minute au plus).
+    const diag = o.diagnostic();
+    reseau.on('connection', () => diag.connexion());
+    reseau.on('tlsClientError', (e) => diag.echecTls(e));
+    reseau.listen(config.port, config.adresse, () => {
+      o.reglerReseau(config.adresse, config.port);
+      o.declarer({ ecoute: true, empreinte: c.empreinte, motif: null });
+      o.annoncer({ adresse: config.adresse, port: config.port }); // V1.9 : annonce mDNS (recherche de l'APK) tant que l'ecoute est ouverte ; echec : journal, rien d'autre
+      o.afficher('Accès réseau prêt (HTTPS, port ' + config.port + ')' + (suivi.essais > 1 ? ' après ' + suivi.essais + ' essais.' : '.'));
+    });
+  };
+  // Comme avant l'extraction : une erreur synchrone du premier essai (certificat, creation de l'ecoute) ferme l'acces reseau avec ce motif.
+  try {
+    c = o.certificat(config.adresse);
+    if (c.cree) o.journal('mode distant : certificat créé (donnees/tls/)');
+    ouvrir();
+  } catch (e) {
+    o.declarer({ ecoute: false, motif: 'Le certificat n\'a pas pu être créé (openssl est-il installé ?).' });
+    o.journal('mode distant : certificat impossible (' + ((e && (e.code || e.name)) || 'inconnu') + ') : accès réseau fermé');
+    return null;
+  }
+  return suivi;
+}
 
 // Etat de l'ecoute reseau, pose par server.mjs au demarrage, lu par les routes (modules/appairage.mjs, GET /api/status). Sans secret.
 // {mode, ecoute (l'ecoute reseau est ouverte), adresse, port, url, empreinte, motif (texte si l'ecoute a echoue)}

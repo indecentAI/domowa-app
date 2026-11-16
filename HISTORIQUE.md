@@ -1,5 +1,19 @@
 # HISTORIQUE.md - évolutions (inutile pour coder)
 
+## V1.9 - Application Android « Domowa »
+- Application Android « Domowa » (Android 7 et plus), à installer depuis la page Releases du dépôt public : l'application s'ouvre en plein écran, sans avertissement de certificat ni barre du navigateur.
+- Se connecter à un serveur de la maison : il est trouvé seul sur le Wi-Fi ; comparer une fois son empreinte, puis taper le code d'« Autoriser un appareil ».
+- Ou installer le serveur sur l'appareil : l'application guide l'installation de Termux (F-Droid), puis installe le serveur une étape à la fois. Un serveur déjà installé est gardé tel quel (données, version, mode).
+- À chaque ouverture, l'application démarre au besoin le serveur de l'appareil ; « Réparer » refait seulement ce qui manque, sans rien effacer.
+- Réglages de l'application (menu « ⋯ » ou onglet Plus) : serveur, empreinte, versions, « Version … disponible » › « Télécharger » pour mettre l'application à jour, Diagnostic, Changer de serveur.
+- Plein écran d'une caméra dans l'application (Retour pour en sortir).
+- Serveur partagé : il s'annonce sur le Wi-Fi (adresse et port seulement) pour que l'application le trouve.
+- Interface : nouveau bouton d'action principal (Appliquer avec coche et chargement) et nouvelle surface des cartes, plus lisible.
+- Lave-linge : la fenêtre n'est plus redessinée sous un curseur tenu au doigt.
+- Reprise de qualité du code (écoute réseau, contrôle d'entrée, mise à jour, SmartThings, code inutile retiré), sans changement d'usage.
+
+Détails : chaque publication porte aussi l'application (domowa-X.Y-N.apk signé, et son empreinte .sha256) ; la version du serveur est donnée par GET /api/status et GET /api/clients ; installer.sh etat, etape et controle servent à l'application (sans argument, la commande en terminal est inchangée) ; start.sh sans onglet avec DOMOWA_SANS_NAVIGATEUR=1 ; banc : assistant de l'application, faux Termux, mDNS, prévision de la publication.
+
 ## V1.8 - Installation, mise à jour et serveur partagé
 - Installation en une commande (Termux ou Linux) depuis un dépôt public de distribution qui ne reçoit que les versions terminées, signées : paquets manquants installés, Node 20 au moins, signature vérifiée, contrôle, raccourcis Maison et Maison-stop, question « local ou distant », démarrage. Rien n'est jamais installé par-dessus une installation existante.
 - Mise à jour depuis l'application : menu « ⋯ » (ou onglet Plus) > « Mise à jour », point vert quand une version est disponible, nouveautés, « Mettre à jour » en deux appuis, redémarrage et rechargement de la page seuls, retour automatique si la nouvelle version ne passe pas le contrôle, « Revenir à … » à la demande. ./maj.sh suit les versions publiées (signature vérifiée avant toute application) ; ./maj.sh public fait passer une ancienne installation au dépôt public, ./maj.sh retour la ramène.
@@ -8,6 +22,7 @@
 - Réglages d'installation : dossier des données choisi par DOMOWA_DONNEES, scripts utilisables depuis n'importe quel dossier, Node 20 exigé (message clair en dessous).
 - Pas encore disponibles (faute de matériel pour les valider) : service Linux à démarrage automatique (prêt sur une branche) et app Home Assistant.
 - Banc de test : dépôt public simulé (publication signée, installation, mise à jour, bascule, signature refusée), mise à jour depuis l'application sous un faux service, phase « distant » (deux écoutes, appairage, révocation, origines étrangères), captures tablette et smartphone.
+- Révision 1 (16/11/2026) : première publication, avec la première version de l'application Android (1.8).
 - Révision 2 (16/11/2026) : l'application Android ouvre un serveur neuf, sans hub (avant : « Le serveur de cet appareil ne répond pas ») ; installation depuis l'application : Node trop ancien mis à jour par l'étape des paquets ; « Réparer » contrôle aussi une installation existante, sans rien changer.
 
 ## V1.7 - États hors ligne (caméras, SmartThings)

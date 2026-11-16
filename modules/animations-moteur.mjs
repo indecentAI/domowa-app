@@ -1,17 +1,17 @@
-// @zone animations | Moteur des animations (V1.5, serveur, en memoire seulement : rien ne reprend apres un redemarrage) : lancer, arreter, liberer (commande manuelle sur une lampe animee), toutArreter (Tout OFF), etat. File unique de changements (envois) : 4 ecritures au hub par seconde au plus (un envoi = 1 a 3 ecritures d'une valeur chacune, decouper(), parties l'une apres l'autre et reservees ensemble), un envoi a la fois par lampe, 0,5 s au moins entre deux envois a une lampe, envoi en retard abandonne (sans rattrapage).
+// @zone animations | Moteur des animations (V1.5, serveur, en memoire seulement : rien ne reprend apres un redemarrage) : lancer, arreter, liberer (commande manuelle sur une lampe animee), toutArreter (Tout OFF), etat. File unique de changements (envois, core/file.mjs) : 4 ecritures au hub par seconde au plus (un envoi = 1 a 3 ecritures d'une valeur chacune, decouper(), parties l'une apres l'autre et reservees ensemble), un envoi a la fois par lampe, 0,5 s au moins entre deux envois a une lampe, envoi en retard abandonne (sans rattrapage).
 // Pannes : lampe injoignable ou refusee par le hub -> ignoree et signalee, l'animation continue ; hub injoignable -> animation suspendue et signalee, sonde toutes les 5 s, reprise
 // sans rattrapage, arret apres 5 min. Lampe passee OFF hors de l'application (relue toutes les 5 s) -> retiree. Commandes : animer() du registre (contrat animer de l'adaptateur).
 import { log, borne } from '../core/outils.mjs';
 import { HttpError, describe } from '../core/http.mjs';
 import { lister, animer, peutAnimer, invalider } from '../core/appareils.mjs';
 import { estOnOff } from '../core/modele.mjs';
+import { creerFile } from '../core/file.mjs';
 import { LIMITES, verifier, compiler, retour, decouper } from './animations-plan.mjs';
 
 const PLAFOND = LIMITES.plafond, ECART = LIMITES.ecart * 1000, CONTROLE = 5000, PANNE_MAX = 5 * 60 * 1000, DELAI_ENVOI = 5000;
 const runs = new Map(); // cle (id de l'animation, ou « essai ») -> marche
 const finies = []; // 5 dernieres marches terminees (affichage)
-const vol = new Set(), dernier = new Map(), finEnvoi = new Map(); // lampes en cours d'envoi ; instant du dernier envoi et de sa reponse, par lampe
-let fenetre = [], file = [], pompeT = null, controleT = null; // fenetre : [{t}] ecritures de la derniere seconde (t : instant reel d'envoi, reserve a l'avance)
+let controleT = null;
 const appareils = new Map(); // id -> appareil du registre (derniere lecture)
 
 // Une lampe animable : ON/OFF avec luminosite, couleur ou blanc, et adaptateur qui sait animer (les prises sont ignorees)
@@ -20,34 +20,14 @@ const etatDe = (d) => ({ on: d.state.on, level: d.state.level, mode: d.state.col
 const nomDe = (id) => (appareils.get(id) || {}).name || id;
 const tolerance = (ms) => Math.min(1000, Math.max(300, ms / 2));
 
-function pompe() {
-  clearTimeout(pompeT); pompeT = null;
-  const now = Date.now();
-  fenetre = fenetre.filter((x) => now - x.t < 1000);
-  file = file.filter((c) => { if (c.limite >= now) return true; if (c.run) c.run.sautees++; return false; });
-  file.sort((a, b) => a.due - b.due);
-  let attente = Infinity;
-  for (const c of file.slice()) {
-    if (c.due > now) { attente = Math.min(attente, c.due - now); break; }
-    const n = decouper(c.cible, c.ms).length;
-    if (fenetre.length + n > PLAFOND) { attente = Math.min(attente, Math.min(...fenetre.map((x) => x.t)) + 1000 - now); break; }
-    if (vol.has(c.lampe)) continue; // la fin de l'envoi relance la pompe
-    const d = dernier.get(c.lampe);
-    if (d !== undefined && now - d < ECART) { attente = Math.min(attente, d + ECART - now); continue; }
-    file.splice(file.indexOf(c), 1);
-    envoyer(c, now);
-  }
-  if (file.length && attente < Infinity) pompeT = setTimeout(pompe, Math.max(10, attente + 1));
-}
-// Les ecritures d'un envoi partent l'une apres l'autre (la suivante a la reponse de la precedente) ; chacune garde sa place dans la fenetre,
-// datee de son envoi reel. Une ecriture refusee : les suivantes ne partent pas.
-function envoyer(c, now) {
-  const d = appareils.get(c.lampe), parts = decouper(c.cible, c.ms), places = parts.map(() => ({ t: now }));
-  vol.add(c.lampe); dernier.set(c.lampe, now); fenetre.push(...places);
+// Les ecritures d'un envoi partent l'une apres l'autre (la suivante a la reponse de la precedente) ; chacune garde sa place dans la fenetre
+// de la file, datee de son envoi reel (marquer). Une ecriture refusee : les suivantes ne partent pas.
+function envoyer(c, marquer) {
+  const d = appareils.get(c.lampe), parts = decouper(c.cible, c.ms);
   const r = c.run;
-  (async () => {
+  return (async () => {
     for (let i = 0; i < parts.length; i++) {
-      places[i].t = Date.now();
+      marquer(i);
       await borne(() => animer(d, parts[i].cible, parts[i].ms), DELAI_ENVOI);
       if (r) { r.envoyees++; if (parts[i].cible.on !== undefined) r.attenduOn.set(c.lampe, parts[i].cible.on); }
     }
@@ -55,17 +35,21 @@ function envoyer(c, now) {
     if (!r || runs.get(r.cle) !== r) return;
     if (e && e.appareil) ignorer(r, c.lampe, e.motif || 'refusée par le hub');
     else suspendre(r, (describe(e) || [0, 'Hub injoignable.'])[1]);
-  }).finally(() => { vol.delete(c.lampe); finEnvoi.set(c.lampe, Date.now()); pompe(); });
+  });
 }
+// File unique des changements (core/file.mjs) : plafond de 4 ecritures par seconde, un envoi a la fois par lampe, 0,5 s entre deux envois a une lampe,
+// envoi en retard abandonne (compte dans sautees de son animation).
+const file = creerFile({ plafond: PLAFOND, ecart: ECART, cleDe: (c) => c.lampe, ecritures: (c) => decouper(c.cible, c.ms).length, envoyer, abandon: (c) => { if (c.run) c.run.sautees++; } });
 
 function etatsActifs(r, source) { const m = new Map(); for (const id of r.lampes) if (source.has(id)) m.set(id, source.get(id)); return m; }
 function planifier(r, apres) {
+  const l = [];
   for (const c of r.cmds) {
     const due = r.T0 + Math.round(c.t * 1000);
     if (due < apres || !r.lampes.has(c.lampe)) continue;
-    file.push({ due, limite: due + tolerance(c.ms), run: r, lampe: c.lampe, cible: c.cible, ms: c.ms });
+    l.push({ due, limite: due + tolerance(c.ms), run: r, lampe: c.lampe, cible: c.cible, ms: c.ms });
   }
-  pompe();
+  file.ajouter(l);
 }
 function cycle(r, T0) {
   const x = compiler(r.anim, etatsActifs(r, r.etats));
@@ -78,13 +62,13 @@ function finCycle(r) {
   if (runs.get(r.cle) !== r || r.etat !== 'en_cours') return;
   // Sans boucle : fin quand les dernieres commandes (OFF d'une etape OFF au dernier instant...) sont parties ou abandonnees
   if (!r.anim.boucle) {
-    if ((file.some((c) => c.run === r) || [...r.lampes].some((id) => vol.has(id))) && Date.now() < r.T0 + r.cycleMs + 2000) { r.timer = setTimeout(() => finCycle(r), 100); return; }
+    if ((file.contient((c) => c.run === r) || [...r.lampes].some((id) => file.occupe(id))) && Date.now() < r.T0 + r.cycleMs + 2000) { r.timer = setTimeout(() => finCycle(r), 100); return; }
     terminer(r, 'fin', r.anim.reset, null); return;
   }
   r.etats = r.etatsFin;
   cycle(r, Math.max(Date.now(), r.T0 + r.cycleMs));
 }
-function retirerFile(pred) { file = file.filter((c) => !pred(c)); }
+const retirerFile = (pred) => file.retirer(pred);
 
 function ignorer(r, id, motif) {
   if (!r.lampes.has(id)) return;
@@ -129,8 +113,7 @@ function terminer(r, raison, reset, motif) {
   log('animation', JSON.stringify(r.nom), ': arrêtée (' + raison + ')', reset ? 'avec retour à l\'état de départ' : '');
   if (reset) {
     const now = Date.now();
-    for (const x of retour(etatsActifs(r, r.initial))) file.push({ due: now, limite: now + 10000, run: null, lampe: x.lampe, cible: x.cible, ms: x.ms });
-    pompe();
+    file.ajouter(retour(etatsActifs(r, r.initial)).map((x) => ({ due: now, limite: now + 10000, run: null, lampe: x.lampe, cible: x.cible, ms: x.ms })));
   }
   if (!runs.size) { clearInterval(controleT); controleT = null; }
 }
@@ -149,7 +132,7 @@ async function controle() {
       const d = l.find((x) => x.id === id);
       if (!d) ignorer(r, id, 'introuvable');
       else if (!d.reachable) ignorer(r, id, 'injoignable');
-      else if (r.attenduOn.get(id) === true && d.state.on === false && !vol.has(id) && (finEnvoi.get(id) || 0) < tLecture) ignorer(r, id, 'passée OFF hors de l\'application');
+      else if (r.attenduOn.get(id) === true && d.state.on === false && !file.occupe(id) && file.finDe(id) < tLecture) ignorer(r, id, 'passée OFF hors de l\'application');
     }
   }
 }

@@ -1,11 +1,9 @@
-// @zone socle | Adresses IPv4 du reseau local : estIPv4, privee (10/8, 172.16/12, 192.168/16), reseaux() (sous-reseaux prives de la tablette ; repli sur le /24 des hubs declares si Android refuse la liste des interfaces), adresseLocale(ip). Ne connait aucune marque.
+// @zone socle | Adresses IPv4 du reseau local : estIPv4, privee (10/8, 172.16/12, 192.168/16 ; definies dans core/ipv4.mjs), reseaux() (sous-reseaux prives de la tablette ; repli sur le /24 des hubs declares si Android refuse la liste des interfaces), adresseLocale(ip). Ne connait aucune marque.
 import os from 'node:os';
 import { adressesHubs } from './appareils.mjs';
+import { estIPv4, vers, privee } from './ipv4.mjs';
+export { estIPv4, vers, depuis, privee } from './ipv4.mjs'; // fonctions pures (core/ipv4.mjs), reexportees pour les modules existants
 
-export function estIPv4(s) { return typeof s === 'string' && /^\d{1,3}(\.\d{1,3}){3}$/.test(s) && s.split('.').every((x) => Number(x) <= 255); }
-export const vers = (ip) => { const p = ip.split('.').map(Number); return p[0] * 16777216 + p[1] * 65536 + p[2] * 256 + p[3]; };
-export const depuis = (n) => [Math.floor(n / 16777216) % 256, Math.floor(n / 65536) % 256, Math.floor(n / 256) % 256, n % 256].join('.');
-export function privee(ip) { if (!estIPv4(ip)) return false; const p = ip.split('.').map(Number); return p[0] === 10 || (p[0] === 172 && p[1] >= 16 && p[1] <= 31) || (p[0] === 192 && p[1] === 168); }
 // Sous-reseaux IPv4 prives de la tablette : { ip, base, masque, base24 }. Repli (Android peut refuser os.networkInterfaces) : le /24 de chaque hub
 // declare (contrat hub.adresses(), adaptateurs deja charges) ; jusqu'en V1.2 etape 5 : le /24 de HUB_IP (config.mjs).
 export function reseaux() {

@@ -2,7 +2,8 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{height:100%}
 body{margin:0;min-height:100%;display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));font-family:Roboto,Arial,sans-serif;font-size:17px;background:#0a0d13 radial-gradient(ellipse at 50% -15%,#171e2c 0,#0a0d13 62%);color:#e9eef7}
-.ap-carte{width:100%;max-width:460px;padding:22px 22px 24px;border-radius:24px;background:linear-gradient(180deg,#141922,#0f131a);border:1px solid rgba(140,165,210,.2);box-shadow:0 18px 40px rgba(0,0,0,.6)}
+/* Interface étape 2 : surface des cartes recopiée de :root de base.css (--carte-fond, --carte-bord, --carte-ombre), aucune feuille commune n'étant servie ici : à changer avec elles. */
+.ap-carte{width:100%;max-width:460px;padding:22px 22px 24px;border-radius:24px;background:linear-gradient(180deg,#212c42,#182033);border:1px solid transparent;box-shadow:0 10px 22px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.05)}
 .ap-titre{margin:0 0 10px;font-size:23px;font-weight:500}
 .ap-etape{margin:0 0 6px;font-size:13px;color:#9aa6bb;letter-spacing:.02em}
 .ap-p{margin:0 0 10px;font-size:15px;line-height:1.45}
