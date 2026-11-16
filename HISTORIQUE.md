@@ -8,6 +8,7 @@
 - Réglages d'installation : dossier des données choisi par DOMOWA_DONNEES, scripts utilisables depuis n'importe quel dossier, Node 20 exigé (message clair en dessous).
 - Pas encore disponibles (faute de matériel pour les valider) : service Linux à démarrage automatique (prêt sur une branche) et app Home Assistant.
 - Banc de test : dépôt public simulé (publication signée, installation, mise à jour, bascule, signature refusée), mise à jour depuis l'application sous un faux service, phase « distant » (deux écoutes, appairage, révocation, origines étrangères), captures tablette et smartphone.
+- Révision 2 (16/11/2026) : l'application Android ouvre un serveur neuf, sans hub (avant : « Le serveur de cet appareil ne répond pas ») ; installation depuis l'application : Node trop ancien mis à jour par l'étape des paquets ; « Réparer » contrôle aussi une installation existante, sans rien changer.
 
 ## V1.7 - États hors ligne (caméras, SmartThings)
 - Caméras : une caméra injoignable (éteinte, hors du Wi-Fi, ou cet appareil sur un autre réseau) s'affiche « Hors ligne » avec le motif, lecture inactive, sur l'accueil et dans la fenêtre Caméras ; elle repasse en ligne seule. Vérification légère : simple connexion au port RTSP (2 s au plus, sans identifiants), adresses locales seulement, toutes les 30 s tant que l'accueil est affiché, jamais pendant une lecture.

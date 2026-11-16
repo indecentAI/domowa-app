@@ -114,11 +114,11 @@ Un paquet = CLAUDE.md + INDEX.md + fichiers de la ou des zones demandees.
 - public/tel.css 1.4k : version smartphone (V1.6, classe « tel » sur <html>, posée par version.js ; sans effet sur la tablette) : e...
 - public/tel.js 2.5k : Version smartphone (V1.6, classe « tel » posée par version.js ; inactif sur tablette) : barre d'onglets #on... E: APP.telFeuille
 
-## distant (~14.9k tok)
+## distant (~15.1k tok)
 - core/acces.mjs 2.5k : Appareils autorises a joindre l'ecoute reseau (V1.8, mode distant) : code d'appairage (8 chiffres, usage un... E: COOKIE MAX_CLIENTS nomValide jetonDe cookie cookieEfface creerAcces acces I: outils.mjs http.mjs
 - core/annonce.mjs 1.3k : V1.9 : annonce mDNS du serveur en mode distant (pour la recherche de l'APK) : _domowa._tcp sur l'adresse ch... E: SERVICE INSTANCE HOTE SERVICES TTL NOMS reponse annonce demarrer I: outils.mjs
 - core/serveur.mjs 1.9k : Mode du serveur (V1.8) : donnees/serveur.json {v: 1, mode: local | distant, adresse (IPv4 privee), port} (a... E: PORT_DEFAUT FICHIER privee portValide valider lireConfig ecrireConfig adressesMachine certificat empreinteDe etat declarer I: outils.mjs
-- modules/appairage.mjs 737 : Routes du mode distant (V1.8) : POST /api/appairage {code, nom} (ecoute reseau, sans jeton : pose le cookie... R: POST /appairage /appairage/code /clients/:id/revoquer ; GET /clients E: routes I: ../core/http.mjs ../core/acces.mjs ../core/serveur.mjs
+- modules/appairage.mjs 890 : Routes du mode distant (V1.8) : POST /api/appairage {code, nom} (ecoute reseau, sans jeton : pose le cookie... R: POST /appairage /appairage/code /clients/:id/revoquer ; GET /clients E: routes I: ../core/http.mjs ../core/acces.mjs ../core/serveur.mjs ../core/outils.mjs
 - public/appairage.css 675 : page d'appairage (V1.8, préfixe ap-, autonome : aucune autre feuille ni police n'est servie à un appareil s...
 - public/appairage.html 535 : Page d'appairage (V1.8, autonome : seule page servie par l'écoute réseau à un appareil sans jeton, avec app...
 - public/appairage.js 779 : Page d'appairage (V1.8, autonome, sans APP) : saisie du code à 8 chiffres (espace toléré) et du nom de l'ap...
@@ -127,16 +127,16 @@ Un paquet = CLAUDE.md + INDEX.md + fichiers de la ou des zones demandees.
 - scripts/appairage.mjs 695 : Code d'appairage en terminal (V1.8, machine sans ecran), serveur demarre en mode distant : node scripts/app... I: ../config.mjs
 - scripts/serveur.mjs 1.3k : Mode du serveur (V1.8), serveur arrete : node scripts/serveur.mjs (etat) | distant [adresse] [port] (ouvre ... I: ../config.mjs ../core/serveur.mjs
 
-## distribution (~17.0k tok)
-- distribution/installer.sh 5.0k : Installation en une commande (Termux ou Linux) depuis le depot public : paquets manquants, Node 20 au moins...
+## distribution (~17.2k tok)
+- distribution/installer.sh 5.2k : Installation en une commande (Termux ou Linux) depuis le depot public : paquets manquants, Node 20 au moins...
 - maj.sh (voir socle)
 - modules/maj.mjs 3.1k : Mise a jour depuis l'application (V1.8) : GET /api/maj (version installee, version disponible, dernier resu... R: GET /maj ; POST /maj/verifier /maj/appliquer /maj/retour E: gerePar lireEtiquette lireInfo lireNotes routes I: ../core/http.mjs ../core/outils.mjs animations-moteur.mjs pieces-creation.mjs hubs.mjs
 - outils/publier.sh 1.5k : Publie un arbre public (node outils/ia.mjs publier <arbre>) dans le depot de distribution : un commit par p...
 - public/maj.css 444 : fenêtre « Mise à jour » (V1.8, préfixe mj-, construite par maj.js ; cadre et éléments communs : classes hb-...
 - public/maj.js 3.0k : Fenêtre « Mise à jour » (V1.8, préfixe mj-, cadre hb- de hubs.css) : version installée, version disponible ... E: APP.maj
 
-## apk (~856 tok)
-- public/apk.js 856 : Lien avec l'application Android (V1.9) : sans effet hors de l'APK (APP.apk.present faux, aucun écouteur). D... E: APP.apk
+## apk (~902 tok)
+- public/apk.js 902 : Lien avec l'application Android (V1.9) : sans effet hors de l'APK (APP.apk.present faux, aucun écouteur). D... E: APP.apk
 
 ## diagnostic (~1.5k tok)
 scripts/camera-test.mjs 1.1k, scripts/decouverte-test.mjs 389

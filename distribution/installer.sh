@@ -34,7 +34,15 @@ installe() { [ -d "$DEST/.git" ] && [ -f "$DEST/server.mjs" ]; }
 f_paquets() {
   if [ -n "${INSTALLER_SANS_PAQUETS:-}" ]; then :
   elif termux; then
-    local P=""; a git || P="$P git"; a node || P="$P nodejs-lts"; a curl || P="$P curl"; a openssl || P="$P openssl-tool"; a ffmpeg || P="$P ffmpeg"
+    local P="" NV; a git || P="$P git"; a node || P="$P nodejs-lts"; a curl || P="$P curl"; a openssl || P="$P openssl-tool"; a ffmpeg || P="$P ffmpeg"
+    # Node present mais trop ancien (V1.9, revision v1.8-2 ; vu sur le smartphone le 16/11/2026 : node_ancien, corrige a la main par
+    # pkg upgrade nodejs-lts) : son paquet (nodejs-lts ou nodejs) est remis ici, pkg install le met a jour ; f_node revérifie ensuite.
+    if a node; then
+      NV=$(node -p 'process.versions.node.split(".")[0]' 2> /dev/null | tail -1)
+      if [ "${NV:-0}" -lt "$NODE_MIN" ] 2> /dev/null; then
+        if dpkg -s nodejs-lts > /dev/null 2>&1; then P="$P nodejs-lts"; elif dpkg -s nodejs > /dev/null 2>&1; then P="$P nodejs"; fi
+      fi
+    fi
     if [ -n "$P" ]; then
       dire "Paquets Termux :$P"; info paquets "${P# }"
       # Sans terminal (APK) : aucune question de dpkg (fichiers de configuration gardes)
