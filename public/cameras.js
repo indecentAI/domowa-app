@@ -2,8 +2,14 @@
 // V1.7 : etat de joignabilite (GET /api/cameras, etat et motif) relu toutes les 30 s tant que l'accueil est affiche ; hors ligne : « Hors ligne », motif, lecture inactive ; cartes mises a jour sans reconstruction (un flux en cours n'est pas coupe).
 // V1.9 : flux partage entre les appareils (adapters/cameras/diffusion.mjs) : chaque carte a son identifiant de lecteur (v) ; le bouton SD/HD envoie choix=1 (relance le flux pour tous) ;
 // le bouton affiche la qualite reellement servie (diffusion.qualite de GET /api/cameras, relue des que l'image arrive puis toutes les 30 s), qui peut etre celle choisie par un autre appareil.
+// Etape cam-fleches : fleches d'orientation masquees au demarrage du flux, bouton rond central « Revenir au centre » (move {dir: centre}), toucher bref = pas fixe (PAS_MS).
+// Etape cam-vignette : quitter l'accueil pendant un flux ne l'arrete plus : la carte qui joue passe en vignette flottante (#camFlot, hors des vues) par-dessus les autres ecrans
+// (nom, etat, image, bouton « Plein ecran » et croix « Fermer » = arret du flux, comme le mini-lecteur de YouTube ; en plein ecran, toutes les commandes de la carte) ; retour a l'accueil : elle reprend sa place dans la colonne, sans coupure (deplacement du noeud dans la meme tache).
+// Etape cam-mse : lecture par MediaSource (cameras-direct.js, APP.camDirect) pour rester pres du direct (rattrapage doux, saut rare sur une image cle) ;
+// repli sur la lecture directe de l'adresse (lecteur nu) si MediaSource manque ou si le format est refuse, garde pour cette carte et cette qualite jusqu'au rechargement.
+// Attribut data-lecture de la balise video : direct | nu (essais, diagnostic).
 (function () {
-  var $ = APP.$, el = APP.el, box = $("homeCams"), cards = [], loaded = false, loading = false, visible = true; // visible : accueil affiche (premier ecran ; home.js l affiche avant ce script)
+  var $ = APP.$, el = APP.el, box = $("homeCams"), cards = [], loaded = false, loading = false, visible = true, flot = null; // visible : accueil affiche (premier ecran ; home.js l affiche avant ce script)
   var MAX_ESSAIS = 3;
   var SV = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
   var ICON_PLAY = SV + '<polygon points="7 4 20 12 7 20 7 4" fill="currentColor"/></svg>';
@@ -34,6 +40,8 @@
       on = fsEl() === cards[i].root;
       cards[i].fs.innerHTML = on ? ICON_FS_OFF : ICON_FS_ON;
       cards[i].fs.setAttribute("aria-label", on ? "Quitter le plein écran" : "Plein écran");
+      cards[i].plein.innerHTML = cards[i].fs.innerHTML; // bouton de la vignette (etape cam-vignette-plein)
+      cards[i].plein.setAttribute("aria-label", (on ? "Quitter le plein \u00e9cran : " : "Plein \u00e9cran : ") + cards[i].name);
     }
   }
   function toggleFs(c) {
@@ -64,20 +72,39 @@
     c.qb.setAttribute("aria-label", hd ? "Qualité haute définition" : "Qualité standard");
   }
   // Mouvement : appui = la caméra tourne, relâchement = arrêt. L'arrêt part après la fin de la commande de mouvement (ordre garanti).
+  // Étape cam-fleches : un toucher bref fait un pas fixe (la caméra tourne au moins PAS_MS après l'accord de la commande, environ 5 fois le pas d'avant) ; appui tenu plus longtemps : arrêt au relâchement, comme avant.
+  // Arrêt immédiat (vite) : flux arrêté, flèches masquées, retour au centre.
+  var PAS_MS = 800;
   function sendMove(c, dir, cb) { APP.api("POST", "/api/cameras/" + encodeURIComponent(c.id) + "/move", { dir: dir }, cb); }
+  function finMouvement(c) {
+    if (c.pasTimer) { clearTimeout(c.pasTimer); c.pasTimer = null; }
+    c.dir = null; c.wantStop = false; c.vite = false;
+    sendMove(c, "stop", function () {});
+  }
+  function arreterApres(c) { // relâché, commande acceptée : arrêt à la fin du pas
+    var reste = c.vite ? 0 : c.pasFin - now();
+    if (reste <= 0) { finMouvement(c); return; }
+    if (!c.pasTimer) c.pasTimer = setTimeout(function () { c.pasTimer = null; if (c.dir) finMouvement(c); }, reste);
+  }
   function pressArrow(c, dir) {
     if (c.dir) return;
-    c.dir = dir; c.inflight = true; c.wantStop = false;
+    c.dir = dir; c.inflight = true; c.wantStop = false; c.vite = false; c.pasFin = 0;
     sendMove(c, dir, function (err) {
-      c.inflight = false;
-      if (err) APP.banner(c.name + " : " + err, "warn");
-      if (c.wantStop || err) { c.wantStop = false; c.dir = null; sendMove(c, "stop", function () {}); }
+      c.inflight = false; c.pasFin = now() + PAS_MS;
+      if (err) { APP.banner(c.name + " : " + err, "warn"); finMouvement(c); return; }
+      if (c.wantStop) arreterApres(c);
     });
   }
-  function releaseArrow(c, dir) {
+  function releaseArrow(c, dir, vite) {
     if (c.dir !== dir) return;
-    if (c.inflight) { c.wantStop = true; return; }
-    c.dir = null; sendMove(c, "stop", function () {});
+    c.wantStop = true; if (vite) c.vite = true;
+    if (!c.inflight) arreterApres(c);
+  }
+  function centrer(c) {
+    if (c.centreEnCours) return;
+    if (c.dir) releaseArrow(c, c.dir, true);
+    c.centreEnCours = true;
+    sendMove(c, "centre", function (err) { c.centreEnCours = false; if (err) APP.banner(c.name + " : " + err, "warn"); });
   }
   function arrow(c, a) {
     var b = el("button", "carr c" + a[0], "");
@@ -87,6 +114,14 @@
     b.onpointerup = function () { releaseArrow(c, a[0]); };
     b.onpointercancel = function () { releaseArrow(c, a[0]); };
     b.onlostpointercapture = function () { releaseArrow(c, a[0]); };
+    b.oncontextmenu = function (e) { e.preventDefault(); };
+    return b;
+  }
+  function boutonCentre(c) {
+    var b = el("button", "carr ccentre", "");
+    b.innerHTML = SV + '<circle cx="12" cy="12" r="3.5" fill="currentColor"/><circle cx="12" cy="12" r="8"/></svg>';
+    b.setAttribute("aria-label", "Revenir au centre");
+    b.onclick = function () { centrer(c); };
     b.oncontextmenu = function (e) { e.preventDefault(); };
     return b;
   }
@@ -103,11 +138,38 @@
     c.vol.value = on ? String(c.v.volume) : "0"; // son coupe : curseur a 0 (le volume choisi reste en memoire pour la reprise)
     c.vol.style.setProperty("--p", Math.round(Number(c.vol.value) * 100) + "%"); // partie blanche de la piste (cameras.css)
   }
+  // Vignette flottante (etape cam-vignette) : conteneur #camFlot cree au premier besoin, ajoute au body (hors des vues masquees) ;
+  // la carte est deplacee d'un bloc (appendChild : meme tache, la lecture ne s'interrompt pas), une place vide garde son rang dans la colonne.
+  function conteneur() {
+    if (!flot) { flot = el("div", "cflot", ""); flot.id = "camFlot"; flot.setAttribute("role", "region"); flot.setAttribute("aria-label", "Cam\u00e9ra en cours"); document.body.appendChild(flot); }
+    return flot;
+  }
+  function flotter(c) {
+    if (c.flot || !c.root.parentNode) return;
+    if (c.dir) releaseArrow(c, c.dir, true);
+    c.place = el("div", "cplace hidden", "");
+    c.root.parentNode.insertBefore(c.place, c.root);
+    conteneur().appendChild(c.root);
+    c.flot = true; c.root.classList.add("cvign");
+  }
+  function rentrer(c) {
+    if (!c.flot) return;
+    c.flot = false; c.root.classList.remove("cvign");
+    if (c.place && c.place.parentNode) c.place.parentNode.replaceChild(c.root, c.place);
+    else if (c.root.parentNode) c.root.parentNode.removeChild(c.root); // colonne reconstruite entre-temps : carte retiree
+    c.place = null;
+  }
+  // Coupe la lecture en cours (lecteur MediaSource compris) et vide la balise.
+  function couper(c) {
+    if (c.direct) { c.direct.arreter(); c.direct = null; }
+    c.v.playbackRate = 1; c.v.removeAttribute("src"); c.v.load();
+  }
   function stop(c, msg) {
+    rentrer(c);
     c.live = false; c.wait = false; c.servie = null; qLabel(c);
-    if (c.dir) { c.wantStop = true; releaseArrow(c, c.dir); }
+    if (c.dir) releaseArrow(c, c.dir, true);
     if (c.timer) { clearTimeout(c.timer); c.timer = null; }
-    c.v.pause(); c.v.removeAttribute("src"); c.v.load();
+    c.v.pause(); couper(c);
     if (fsEl() === c.root) fsExit();
     show(c, false); setState(c, msg || "");
     repos(c);
@@ -123,25 +185,40 @@
   }
   function majEtat(c, cam) {
     c.hl = cam.etat === "hors_ligne"; c.motifTxt = APP.lieu(cam.motif || "Cam\u00e9ra injoignable.");
-    c.root.className = c.hl ? "ccard chors" : "ccard";
+    c.root.classList.toggle("chors", c.hl); // classList : la classe cvign d'une vignette est gardee (relecture repondue apres la sortie de l'accueil)
     if (c.live && c.ok) { c.servie = cam.diffusion && (cam.diffusion.qualite === "hd" || cam.diffusion.qualite === "sd") ? cam.diffusion.qualite : null; qLabel(c); }
     if (!c.live) show(c, false);
     repos(c);
   }
   function stopAll() { var i; for (i = 0; i < cards.length; i++) if (cards[i].live) stop(cards[i], ""); }
   // Ouvre (ou rouvre) la connexion au flux ; le serveur remplace l'ancienne connexion de ce lecteur (v) ; choix : qualite choisie (relance le flux pour tous).
-  function open(c, msg, choix) {
-    var p;
-    c.wait = false; c.ok = false; c.lastT = 0; c.moved = now(); c.since = c.moved;
-    setState(c, msg);
-    c.v.removeAttribute("src"); c.v.load();
-    c.v.src = "/api/cameras/" + encodeURIComponent(c.id) + "/stream?t=" + now() + "&v=" + c.vid + (c.hd && c.q === "hd" ? "&q=hd" : "") + (choix ? "&choix=1" : "");
-    p = c.v.play();
+  function adresse(c, choix) { return "/api/cameras/" + encodeURIComponent(c.id) + "/stream?t=" + now() + "&v=" + c.vid + (c.hd && c.q === "hd" ? "&q=hd" : "") + (choix ? "&choix=1" : ""); }
+  function jouer(c) {
+    var p = c.v.play();
     if (p && p.catch) p.catch(function (e) {
       if (!c.live || !e || e.name !== "NotAllowedError") return;
       c.v.muted = true; soundLabel(c);
       var q = c.v.play(); if (q && q.catch) q.catch(function () { if (c.live) stop(c, "Lecture refusée par Chrome."); });
     });
+  }
+  function open(c, msg, choix) {
+    var cle = c.hd && c.q === "hd" ? "hd" : "sd", d;
+    c.wait = false; c.ok = false; c.lastT = 0; c.moved = now(); c.since = c.moved;
+    setState(c, msg);
+    couper(c);
+    if (!c.nu[cle] && APP.camDirect && APP.camDirect.dispo()) {
+      c.v.setAttribute("data-lecture", "direct");
+      d = c.direct = APP.camDirect.lecteur(c.v, adresse(c, choix), {
+        panne: function () { if (c.direct === d) reconnect(c); },
+        repli: function () { // format non lisible par MediaSource : lecture directe de l'adresse (meme lecteur v : le serveur remplace la demande)
+          if (c.direct !== d || !c.live) return;
+          c.direct = null; c.nu[cle] = true;
+          c.v.setAttribute("data-lecture", "nu"); c.v.removeAttribute("src"); c.v.load();
+          c.v.src = adresse(c, choix); jouer(c);
+        }
+      });
+    } else { c.v.setAttribute("data-lecture", "nu"); c.v.src = adresse(c, choix); }
+    jouer(c);
   }
   function reconnect(c) {
     if (!c.live || c.wait) return;
@@ -162,16 +239,26 @@
   }
   function start(c) {
     c.live = true; c.tries = 0; c.v.muted = false; if (c.v.volume === 0) c.v.volume = 0.5;
+    c.padOn = false; ptzLabel(c); // fleches masquees a chaque demarrage du flux
     soundLabel(c); show(c, true);
     open(c, "Connexion…");
   }
   function build(cam) {
-    var c = { id: cam.id, name: cam.name, ptz: cam.ptz !== false, dir: null, inflight: false, wantStop: false, hd: !!cam.hd, q: cam.hd ? loadQ(cam.id) : "sd", live: false, wait: false, tries: 0, ok: false, lastT: 0, moved: 0, since: 0, timer: null, servie: null, vid: lecteur() }, head, view, pad, i;
-    c.padOn = true;
- c.root = el("div", "ccard");
+    var c = { flot: false, place: null, id: cam.id, name: cam.name, ptz: cam.ptz !== false, dir: null, inflight: false, wantStop: false, vite: false, pasFin: 0, pasTimer: null, centreEnCours: false, hd: !!cam.hd, q: cam.hd ? loadQ(cam.id) : "sd", live: false, wait: false, tries: 0, ok: false, lastT: 0, moved: 0, since: 0, timer: null, servie: null, vid: lecteur(), direct: null, nu: { sd: false, hd: false } }, head, view, pad, i;
+    c.padOn = false; // étape cam-fleches : flèches masquées au démarrage du flux (bouton d'orientation pour les afficher)
+    c.root = el("div", "ccard");
     head = el("div", "chead"); head.appendChild(el("span", "cname", cam.name));
     c.state = el("span", "cstate", ""); c.dot = el("span", "cdot hidden", ""); c.stxt = el("span", "", "");
     c.state.appendChild(c.dot); c.state.appendChild(c.stxt); head.appendChild(c.state);
+    c.plein = el("button", "cplein", ""); // plein ecran depuis la vignette (visible en vignette seulement, cameras.css)
+    c.plein.innerHTML = ICON_FS_ON; c.plein.setAttribute("aria-label", "Plein \u00e9cran : " + cam.name);
+    c.plein.onclick = function () { toggleFs(c); };
+    head.appendChild(c.plein);
+    c.ferme = el("button", "cfermer", ""); // croix de la vignette flottante (visible en vignette seulement, cameras.css) : arret du flux
+    c.ferme.innerHTML = SV + '<path d="M6 6l12 12M18 6L6 18"/></svg>';
+    c.ferme.setAttribute("aria-label", "Fermer : " + cam.name);
+    c.ferme.onclick = function () { stop(c, ""); };
+    head.appendChild(c.ferme);
     c.motif = el("div", "cmotif hidden", ""); c.hl = false; c.motifTxt = "";
     view = el("div", "cview"); c.view = view;
     c.v = el("video", "cvideo"); c.v.setAttribute("playsinline", "");
@@ -181,6 +268,7 @@
     view.appendChild(c.v);
     c.pad = el("div", "cpadbox hidden"); pad = el("div", "cpad");
     for (i = 0; i < ARROWS.length; i++) pad.appendChild(arrow(c, ARROWS[i]));
+    pad.appendChild(boutonCentre(c));
     c.pad.appendChild(pad); view.appendChild(c.pad);
     c.btns = el("div", "cbtns");
     c.pp = el("button", "cbtn on", ""); c.pp.onclick = function () { if (c.live) stop(c, ""); else if (!c.hl) start(c); };
@@ -197,7 +285,7 @@
     c.pz = el("button", "cbtn cpz", "");
  c.pz.onclick = function () {
  c.padOn = !c.padOn;
- if (!c.padOn && c.dir) releaseArrow(c, c.dir);
+ if (!c.padOn && c.dir) releaseArrow(c, c.dir, true);
  ptzLabel(c); show(c, c.live);
  };
  c.fs = el("button", "cbtn", ""); c.fs.onclick = function () { toggleFs(c); };
@@ -256,7 +344,7 @@
     });
   }
   setInterval(relire, 30000);
-  // Une fois par seconde, pour chaque flux : le temps de lecture avance-t-il ? Lecteur nu : aucun saut, aucun changement de vitesse.
+  // Une fois par seconde, pour chaque flux : le temps de lecture avance-t-il ? (Rattrapage du direct : cameras-direct.js ; le lecteur nu ne saute jamais.)
   // Sinon « Image figée… » puis reconnexion (3 essais). Si le temps recule (boucle), reconnexion aussitôt.
   setInterval(function () {
     var i, c, n = now(), t, age;
@@ -280,7 +368,14 @@
   document.addEventListener("visibilitychange", function () { if (document.hidden) stopAll(); else relire(); });
   document.addEventListener("fullscreenchange", fsIcons);
   document.addEventListener("webkitfullscreenchange", fsIcons);
-  APP.surVue(function (name) { visible = name === "home"; if (!visible) stopAll(); else if (loaded) relire(); else load(); }, 40);
+  // Etape cam-vignette : hors de l'accueil, les flux en cours passent en vignette (plus d'arret) ; retour a l'accueil : remis dans la colonne
+  APP.surVue(function (name) {
+    var i;
+    visible = name === "home";
+    for (i = 0; i < cards.length; i++) { if (!visible && cards[i].live) flotter(cards[i]); else if (visible) rentrer(cards[i]); }
+    if (!visible) return;
+    if (loaded) relire(); else load();
+  }, 40);
   load();
 })();
 // FIN

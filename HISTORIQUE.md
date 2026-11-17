@@ -5,13 +5,13 @@
 - Se connecter à un serveur de la maison : il est trouvé seul sur le Wi-Fi ; comparer une fois son empreinte, puis taper le code d'« Autoriser un appareil ».
 - Ou installer le serveur sur l'appareil : l'application guide l'installation de Termux (F-Droid), puis installe le serveur une étape à la fois. Un serveur déjà installé est gardé tel quel (données, version, mode).
 - À chaque ouverture, l'application démarre au besoin le serveur de l'appareil ; « Réparer » refait seulement ce qui manque, sans rien effacer.
-- Réglages de l'application (menu « ⋯ » ou onglet Plus) : serveur, empreinte, versions, « Version … disponible » › « Télécharger » pour mettre l'application à jour, Diagnostic, Changer de serveur.
-- Plein écran d'une caméra dans l'application (Retour pour en sortir).
+- Réglages de l'application (menu « ⋯ » ou onglet Plus) : serveur, empreinte, versions, « Version … disponible » › « Télécharger » pour mettre l'application à jour, Diagnostic, Changer de serveur ; plein écran d'une caméra (Retour pour en sortir).
 - Serveur partagé : il s'annonce sur le Wi-Fi (adresse et port seulement) pour que l'application le trouve.
 - Interface : nouveau bouton d'action principal (Appliquer avec coche et chargement) et nouvelle surface des cartes, plus lisible.
 - Reprise de qualité du code (écoute réseau, contrôle d'entrée, mise à jour, SmartThings, code inutile retiré), sans changement d'usage ; lave-linge : la fenêtre n'est plus redessinée sous un curseur tenu au doigt.
 - Révision 2 : le serveur s'ouvre aux autres appareils de la maison depuis l'application, sur toute machine : Appareils autorisés > « Ouvrir aux autres appareils… », sans redémarrage ; chaque échec a son aide (« Que faire ? ») ; textes plus réguliers, halos et ombres plus discrets.
 - Révision 3 : accueil personnalisable (menu « ⋯ » ou Plus > Organiser l'accueil) : cartes à glisser ou par ‹ ›, rubriques, cartes et caméras masquables, commun à tous les appareils ; flux d'une caméra partagé entre appareils ; application Android bord à bord (encoche).
+- Révision 4 : caméras plus proches du direct (environ 1 s de retard au lieu de 3 à 5, rattrapage sans saccade) ; la caméra reste en vignette quand on quitte l'accueil (Plein écran, Fermer) ; flèches : un toucher fait un pas, bouton « Revenir au centre ».
 
 Détails : chaque publication porte aussi l'application (domowa-X.Y-N.apk signé, et son empreinte .sha256) ; la version du serveur est donnée par GET /api/status et GET /api/clients ; installer.sh etat, etape et controle servent à l'application (sans argument, la commande en terminal est inchangée) ; start.sh sans onglet avec DOMOWA_SANS_NAVIGATEUR=1 ; banc : assistant de l'application, faux Termux, mDNS, prévision de la publication.
 

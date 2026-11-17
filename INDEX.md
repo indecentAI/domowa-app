@@ -87,16 +87,17 @@ Un paquet = CLAUDE.md + INDEX.md + fichiers de la ou des zones demandees.
 - public/accueil.css 3.6k : page d'accueil (V1.5) : rubriques Pièces / Actions / Catégories (4 au plus), une ligne de cartes chacune, d...
 - public/home.js 5.4k : Accueil : rubriques Pieces / Actions / Categories (4 au plus), une ligne de cartes chacune a defilement hor... E: APP.homeFavoris APP.homePieces APP.homeRafraichir APP.homeActions APP.renderHome
 
-## cameras (~18.6k tok)
-- adapters/cameras/cameras.mjs 2.9k : flux des caméras RTSP (Tapo) converti par ffmpeg en MP4 fragmenté H.264 + AAC, lu par une balise <video>. R: GET /cameras /cameras/:id/stream ; POST /cameras/:id/move E: cameras cheminHd routes nomDe I: ../../core/http.mjs ../../core/modele.mjs ../../core/outils.mjs cameras-gestion.mjs sonde.mjs diffusion.mjs mp4.mjs onvif.mjs
+## cameras (~26.4k tok)
+- adapters/cameras/cameras.mjs 3.4k : flux des caméras RTSP (Tapo) converti par ffmpeg en MP4 fragmenté H.264 + AAC, lu par une balise <video>. R: GET /cameras /cameras/:id/stream ; POST /cameras/:id/move E: cameras cheminHd routes nomDe I: ../../core/http.mjs ../../core/modele.mjs ../../core/outils.mjs cameras-gestion.mjs sonde.mjs diffusion.mjs mp4.mjs onvif.mjs
 - adapters/cameras/diffusion.mjs 3.1k : Flux partagé d'une caméra (V1.9) : un seul ffmpeg (une seule session RTSP) par caméra, sa sortie MP4 fragme... E: MAX_FLUX MAX_APPAREILS DEMARRAGE_MS SILENCE_MS RETARD_MAX RETARD_FIN_MS creerDiffusions I: ../../core/http.mjs mp4.mjs
 - adapters/cameras/index.mjs 346 : Adaptateur cameras IP : chaque camera de donnees/cameras.json devient un appareil de type camera (caps stre... E: lister rangement appliquer routes I: cameras.mjs sonde.mjs
 - adapters/cameras/manifest.json 70 : Manifeste : Cameras IP : flux RTSP via ffmpeg, PTZ ONVIF, recherche ONVIF/mDNS/SSDP/scan ; donnees/cameras.json et donnees/camera-secrets/
 - adapters/cameras/mp4.mjs 1.7k : Lecture du MP4 fragmenté produit par ffmpeg (V1.9, flux partagé) : découpage de la sortie en boîtes de prem... E: SORTIE BOITE_MAX creerDecoupeur pisteVideo imageCle
-- adapters/cameras/onvif.mjs 2.9k : Appels ONVIF vers une caméra (SOAP 1.2, en-tête WS-Security UsernameToken à condensé ; adressage WS-Address... E: ONVIF_PORT NS ACTIONS enveloppe soap xaddr capacites CORPS lireSujets lireAbonnement lireMessages lireErreur
+- adapters/cameras/onvif.mjs 3.5k : Appels ONVIF vers une caméra (SOAP 1.2, en-tête WS-Security UsernameToken à condensé ; adressage WS-Address... E: ONVIF_PORT NS ACTIONS enveloppe soap xaddr capacites CORPS lireSujets lireAbonnement lireMessages lireCentre lireErreur
 - adapters/cameras/sonde.mjs 1.2k : Joignabilite des cameras (V1.7) : connexion TCP seule au port RTSP (2 s au plus ; aucune requete RTSP, aucu... E: DELAI MOTIFS connecter creerSonde sonde I: ../../core/reseau.mjs ../../core/outils.mjs
-- public/cameras.css 1.3k : panneau des caméras de l'accueil (colonne de droite, une carte par caméra). Masqué (.hidden) s'il n'y a auc...
-- public/cameras.js 5.1k : Cartes camera de l'accueil (#homeCams) : lecteur, EN DIRECT, reconnexion 3 essais, son, volume, plein ecran... E: APP.camerasReload
+- public/cameras-direct.js 4.2k : Lecture d'un flux de caméra par MediaSource (étape cam-mse) : le client reçoit lui-même le MP4 fragmenté du... E: APP.camDirect
+- public/cameras.css 1.8k : panneau des caméras de l'accueil (colonne de droite, une carte par caméra). Masqué (.hidden) s'il n'y a auc...
+- public/cameras.js 7.0k : Cartes camera de l'accueil (#homeCams) : lecteur, EN DIRECT, reconnexion 3 essais, son, volume, plein ecran... E: APP.camerasReload
 
 ## cameras-ajout (~13.7k tok)
 - adapters/cameras/cameras-gestion.mjs 4.5k : gestion des cameras (recherche, ajout, renommage, suppression) et secrets par camera. R: POST /cameras/discover /cameras/discover/cancel /cameras/add /cameras/:id/rename|delete ; GET /cameras/discover /cameras/list E: PATH_RE secretDe nomDe routesGestion I: ../../core/http.mjs ../../core/modele.mjs ../../core/outils.mjs decouverte.mjs sonde.mjs

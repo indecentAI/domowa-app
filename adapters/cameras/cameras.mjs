@@ -2,7 +2,8 @@
 // cameras.mjs : flux des caméras RTSP (Tapo) converti par ffmpeg en MP4 fragmenté H.264 + AAC, lu par une balise <video>.
 // Routes : GET /api/cameras (id, nom, ptz, hd, etat en_ligne|hors_ligne|inconnu, motif (V1.7, sonde.mjs), diffusion {qualite: sd|hd, appareils} | null (V1.9) ; sans IP ni mot de passe ; nom = title, sinon user du secret, sinon name),
 // GET /api/cameras/:id/stream[?q=hd][&v=<lecteur>][&choix=1] (lecture seule ; HD si path_hd ; flux partagé entre les appareils : diffusion.mjs),
-// POST /api/cameras/:id/move {dir: left|right|up|down|stop} : mouvement de la caméra par ONVIF (port 2020), liste fermée, vitesse fixe, arrêt automatique de sécurité.
+// POST /api/cameras/:id/move {dir: left|right|up|down|stop|centre} : mouvement de la caméra par ONVIF (port 2020), liste fermée, vitesse fixe, arrêt automatique de sécurité ;
+// centre (V1.9, étape cam-fleches) : GetNodes lu une fois (cache des services), AbsoluteMove au milieu de l'espace de position absolue déclaré, sinon GotoHomePosition si HomeSupported, sinon 409.
 // Recherche, ajout et secrets : cameras-gestion.mjs ; adaptateur (modele commun, routes) : index.mjs. Routes au format du routeur (core/routeur.mjs : routes = [[methode, chemin, async (c) => objet]],
 // checkWrite automatique sur POST) ; le flux repond lui-meme sur c.res (aucun objet renvoye).
 // Données : donnees/cameras.json (id, name, host, path, ptz, title?, path_hd?, rtsp_port?, onvif_port?), donnees/camera-secrets/<id>.json (user, pwd). Aucun mot de passe dans les réponses, les erreurs ni le journal.
@@ -16,7 +17,7 @@ import { PATH_RE, secretDe, nomDe, routesGestion } from './cameras-gestion.mjs';
 import { sonde, REPOS } from './sonde.mjs';
 import { creerDiffusions } from './diffusion.mjs';
 import { SORTIE } from './mp4.mjs';
-import { NS, soap, xaddr, capacites, CORPS } from './onvif.mjs'; // appels SOAP vers la caméra (V1.9 : partagés avec le diagnostic des événements)
+import { NS, soap, xaddr, capacites, CORPS, lireCentre } from './onvif.mjs'; // appels SOAP vers la caméra (V1.9 : partagés avec le diagnostic des événements)
 
 export { nomDe };
 
@@ -24,7 +25,7 @@ export { nomDe };
 const HORLOGE = false; // true : horodatage par l'horloge de la tablette (à essayer si microcoupures ou son décalé)
 const VITESSE = 0.5; // vitesse normalisée (0 à 1) ; si une direction est inversée sur une autre caméra, changer le signe ici
 const DIRS = { left: [-VITESSE, 0], right: [VITESSE, 0], up: [0, VITESSE], down: [0, -VITESSE] };
-const infosCache = new Map(); // id caméra -> { host, media, ptz, token, t }
+const infosCache = new Map(); // id caméra -> { host, media, ptz, token, noeud, centre (undefined : GetNodes pas encore lu), t }
 const files = new Map(); // id caméra -> dernière commande en cours (les commandes d'une caméra partent dans l'ordre)
 
 export function cameras() {
@@ -51,20 +52,35 @@ async function onvifInfos(cam, sec) {
   if (prof.status !== 200) throw new Error('GetProfiles HTTP ' + prof.status);
   const m = /Profiles[^>]*\stoken="([^"]+)"/.exec(prof.body);
   if (!m) throw new Error('aucun profil');
-  const infos = { host: cam.host, media, ptz, token: m[1], t: Date.now() };
+  const n = /<(?:[\w-]+:)?NodeToken>\s*([^<\s]+)\s*</.exec(prof.body.slice(m.index)); // nœud PTZ du profil (PTZConfiguration), pour le retour au centre
+  const infos = { host: cam.host, media, ptz, token: m[1], noeud: n ? n[1] : null, centre: undefined, t: Date.now() };
   infosCache.set(cam.id, infos);
   return infos;
 }
+const PROFIL = (i) => '<tptz:ProfileToken>' + i.token + '</tptz:ProfileToken>';
+const SANS_CENTRE = 'Cette caméra ne sait pas revenir au centre.';
+async function centre(cam, sec, i) {
+  if (i.centre === undefined) {
+    const r = await soap(cam, sec, i.ptz, '<tptz:GetNodes xmlns:tptz="' + NS.tptz + '"/>');
+    if (r.status !== 200) throw new Error('GetNodes HTTP ' + r.status);
+    i.centre = lireCentre(r.body, i.noeud);
+  }
+  if (!i.centre) throw new HttpError(409, SANS_CENTRE); // capacité absente : ni redécouverte ni nouvel essai
+  const a = i.centre.absolu;
+  return a
+    ? '<tptz:AbsoluteMove xmlns:tptz="' + NS.tptz + '" xmlns:tt="' + NS.tt + '">' + PROFIL(i) + '<tptz:Position><tt:PanTilt x="' + a.x + '" y="' + a.y + '" space="' + a.espace.replace(/[<>&"]/g, '') + '"/></tptz:Position></tptz:AbsoluteMove>'
+    : '<tptz:GotoHomePosition xmlns:tptz="' + NS.tptz + '">' + PROFIL(i) + '</tptz:GotoHomePosition>';
+}
 async function commande(cam, sec, dir) {
   const i = await onvifInfos(cam, sec);
-  const corps = dir === 'stop'
+  const corps = dir === 'centre' ? await centre(cam, sec, i) : dir === 'stop'
     ? '<tptz:Stop xmlns:tptz="' + NS.tptz + '"><tptz:ProfileToken>' + i.token + '</tptz:ProfileToken><tptz:PanTilt>true</tptz:PanTilt><tptz:Zoom>true</tptz:Zoom></tptz:Stop>'
     : '<tptz:ContinuousMove xmlns:tptz="' + NS.tptz + '" xmlns:tt="' + NS.tt + '"><tptz:ProfileToken>' + i.token + '</tptz:ProfileToken><tptz:Velocity><tt:PanTilt x="' + DIRS[dir][0] + '" y="' + DIRS[dir][1] + '"/></tptz:Velocity><tptz:Timeout>PT3S</tptz:Timeout></tptz:ContinuousMove>';
   const r = await soap(cam, sec, i.ptz, corps);
   if (r.status !== 200) throw new Error('PTZ HTTP ' + r.status);
 }
 async function avecReprise(cam, fn) {
-  try { return await fn(); } catch (e) { infosCache.delete(cam.id); return await fn(); } // adresse ou profil périmés : une redécouverte, un seul nouvel essai
+  try { return await fn(); } catch (e) { if (e instanceof HttpError) throw e; infosCache.delete(cam.id); return await fn(); } // adresse ou profil périmés : une redécouverte, un seul nouvel essai
 }
 async function commandeAvecReprise(cam, sec, dir) { await avecReprise(cam, () => commande(cam, sec, dir)); }
 function enfiler(id, fn) {
@@ -110,10 +126,11 @@ async function mouvement(c) {
   const body = await c.corps();
   const cam = trouver(c.m[1]);
   if (cam.ptz === false) throw new HttpError(400, 'Cette caméra ne pivote pas.');
-  if (typeof body.dir !== 'string' || !(body.dir === 'stop' || Object.prototype.hasOwnProperty.call(DIRS, body.dir))) throw new HttpError(400, 'Direction invalide (left, right, up, down ou stop).');
+  if (typeof body.dir !== 'string' || !(body.dir === 'stop' || body.dir === 'centre' || Object.prototype.hasOwnProperty.call(DIRS, body.dir))) throw new HttpError(400, 'Direction invalide (left, right, up, down, stop ou centre).');
   const sec = secret(cam);
   try { await enfiler(cam.id, () => commandeAvecReprise(cam, sec, body.dir)); }
   catch (e) {
+    if (e instanceof HttpError) { log('camera', cam.id, 'mouvement', body.dir, 'refusé :', e.message); throw e; }
     const masque = String(e.message).split(sec.pwd).join('***').split(sec.user).join('***');
     log('camera', cam.id, 'mouvement', body.dir, 'refusé :', masque.slice(0, 200));
     throw new HttpError(502, 'La caméra n\'a pas accepté la commande de mouvement.');

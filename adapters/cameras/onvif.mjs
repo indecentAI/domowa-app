@@ -1,4 +1,4 @@
-// @zone cameras | Appels ONVIF vers une caméra (SOAP 1.2, en-tête WS-Security UsernameToken à condensé ; adressage WS-Addressing pour le service d'événements, exigé par l'ONVIF Core Specification) et lecture des réponses du service d'événements (V1.9 : sujets de GetEventProperties, adresse d'un abonnement CreatePullPointSubscription, messages de PullMessages). Appel vers la caméra seulement (adresse de service refusée si l'hôte n'est pas celui de la caméra). Lecture des réponses par une analyse simple des balises (aucune bibliothèque) ; calculs purs essayés par banc/unitaires/onvif.test.mjs.
+// @zone cameras | Appels ONVIF vers une caméra (SOAP 1.2, en-tête WS-Security UsernameToken à condensé ; adressage WS-Addressing pour le service d'événements, exigé par l'ONVIF Core Specification) et lecture des réponses du service d'événements (V1.9 : sujets de GetEventProperties, adresse d'un abonnement CreatePullPointSubscription, messages de PullMessages) ; retour au centre d'après GetNodes du service PTZ (lireCentre). Appel vers la caméra seulement (adresse de service refusée si l'hôte n'est pas celui de la caméra). Lecture des réponses par une analyse simple des balises (aucune bibliothèque) ; calculs purs essayés par banc/unitaires/onvif.test.mjs.
 import http from 'node:http';
 import crypto from 'node:crypto';
 
@@ -115,6 +115,32 @@ export function lireMessages(xml) {
     l.push(msg);
   }
   return l;
+}
+// Retour au centre d'après GetNodesResponse du service PTZ (ptz.wsdl, tt:PTZNode) : nœud de jeton noeud (celui du profil), sinon le premier ;
+// espace de position absolue déclaré (AbsolutePanTiltPositionSpace : le générique d'abord) -> {absolu: {x, y, espace}} au milieu de XRange et YRange ;
+// sinon HomeSupported vrai -> {maison: true} (GotoHomePosition) ; sinon null (la caméra ne sait pas revenir au centre).
+export function lireCentre(xml, noeud) {
+  const noeuds = [], re = /<(?:[\w-]+:)?PTZNode\b([^>]*)>([\s\S]*?)<\/(?:[\w-]+:)?PTZNode>/g;
+  let m;
+  while ((m = re.exec(String(xml)))) { const t = /\stoken\s*=\s*"([^"]*)"/.exec(m[1]); noeuds.push({ token: t ? texte(t[1]) : null, corps: m[2] }); }
+  const n = noeuds.find((x) => noeud && x.token === noeud) || noeuds[0];
+  if (!n) return null;
+  const espaces = [], rs = /<(?:[\w-]+:)?AbsolutePanTiltPositionSpace>([\s\S]*?)<\/(?:[\w-]+:)?AbsolutePanTiltPositionSpace>/g;
+  const nb = (b, axe, borne) => {
+    const r = new RegExp('<(?:[\\w-]+:)?' + axe + 'Range>([\\s\\S]*?)</(?:[\\w-]+:)?' + axe + 'Range>').exec(b);
+    const v = r && new RegExp('<(?:[\\w-]+:)?' + borne + '>\\s*([-+0-9.eE]+)\\s*<').exec(r[1]);
+    return v ? Number(v[1]) : NaN;
+  };
+  while ((m = rs.exec(n.corps))) {
+    const u = /<(?:[\w-]+:)?URI>\s*([^<\s]+)\s*</.exec(m[1]);
+    const e = { espace: u ? texte(u[1]) : null, x: [nb(m[1], 'X', 'Min'), nb(m[1], 'X', 'Max')], y: [nb(m[1], 'Y', 'Min'), nb(m[1], 'Y', 'Max')] };
+    if (e.espace && [...e.x, ...e.y].every(Number.isFinite) && e.x[0] <= e.x[1] && e.y[0] <= e.y[1]) espaces.push(e);
+  }
+  const e = espaces.find((x) => /PositionGenericSpace$/.test(x.espace)) || espaces[0];
+  const milieu = (r) => Math.round((r[0] + r[1]) / 2 * 1000) / 1000;
+  if (e) return { absolu: { x: milieu(e.x), y: milieu(e.y), espace: e.espace } };
+  if (/<(?:[\w-]+:)?HomeSupported>\s*true\s*</.test(n.corps)) return { maison: true };
+  return null;
 }
 // Message d'erreur SOAP (Fault) lisible : code et raison, sans adresse ; null s'il n'y en a pas.
 export function lireErreur(xml) {
