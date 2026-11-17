@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- @zone socle | Structure de la page (header, menu « ⋯ » #plusMenu (dont #majBtn, #clientsBtn et #apkBtn : V1.9, dans l'APK seulement), #banner, #viewHome, #viewLights, #viewScenes, #viewAnim, #viewElectro, #viewSt, #viewAppareils et #viewPlus (téléphone), #menu, #onglets) et ordre de chargement CSS/scripts ; version.js en tête (classe tel ou tab). -->
+<!-- @zone socle | Structure de la page (header, menu « ⋯ » #plusMenu (dont #accOrgBtn : V1.9 révision 3, #majBtn, #clientsBtn et #apkBtn : V1.9, dans l'APK seulement), #banner, #viewHome, #viewLights, #viewScenes, #viewAnim, #viewElectro, #viewSt, #viewAppareils et #viewPlus (téléphone), #menu, #onglets) et ordre de chargement CSS/scripts ; version.js en tête (classe tel ou tab). -->
 <html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script src="version.js"></script>
@@ -26,7 +26,7 @@
 <header>
  <div class="hl"><button id="menuBtn" class="hbtn" title="Menu" aria-label="Menu"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><button id="homeBtn" class="hbtn" title="Accueil" aria-label="Accueil"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></button><span id="where" class="where"></span><div id="status" class="status">Connexion…</div><div id="stamp" class="stamp"></div></div>
  <div class="hr"><button id="plusBtn" class="hbtn" title="Plus" aria-label="Plus : actualiser, plein écran, affichage" aria-haspopup="true" aria-expanded="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button><button id="alloff" class="b-warn">Tout OFF</button>
-  <div id="plusMenu" class="pmenu hidden" role="menu"><button id="refresh" class="pitem" role="menuitem">Actualiser</button><div id="pmStamp" class="pstamp"></div><button id="fsBtn" class="pitem" role="menuitem">Plein écran</button><button id="majBtn" class="pitem" role="menuitem">Mise à jour</button><button id="clientsBtn" class="pitem" role="menuitem">Appareils autorisés</button><button id="apkBtn" class="pitem hidden" role="menuitem">Réglages de l'application</button><div class="plab">Affichage</div><div id="affichage" class="paff"></div></div></div>
+  <div id="plusMenu" class="pmenu hidden" role="menu"><button id="refresh" class="pitem" role="menuitem">Actualiser</button><div id="pmStamp" class="pstamp"></div><button id="fsBtn" class="pitem" role="menuitem">Plein écran</button><button id="accOrgBtn" class="pitem" role="menuitem">Organiser l'accueil</button><button id="majBtn" class="pitem" role="menuitem">Mise à jour</button><button id="clientsBtn" class="pitem" role="menuitem">Appareils autorisés</button><button id="apkBtn" class="pitem hidden" role="menuitem">Réglages de l'application</button><div class="plab">Affichage</div><div id="affichage" class="paff"></div></div></div>
 </header>
 <div id="banner" class="banner hidden"></div>
 <div id="viewHome" class="view"><div id="homeMain" class="hmain"></div><div id="homeCams" class="hcams hidden"></div></div>
@@ -57,6 +57,7 @@
 <script src="menu.js"></script>
 <script src="scenes.js"></script>
 <script src="home.js"></script>
+<script src="accueil-org.js"></script>
 <script src="cameras.js"></script>
 <script src="cameras-ajout.js"></script>
 <script src="st-compte.js"></script>

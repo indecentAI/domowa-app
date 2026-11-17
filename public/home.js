@@ -1,4 +1,4 @@
-// @zone accueil | Accueil : rubriques Pieces / Actions / Categories (4 au plus), une ligne de cartes chacune a defilement horizontal (fondu, fleches, position gardee) ; cartes de piece (boutons KINDS ampoule/prise via roomPower), crayon et appui long (APP.homeEdite), carte « + » (APP.homePieces), carte Scenarios (favoris en icones, tous : la carte s'elargit), cartes d'actions en plus (APP.homeActions, V1.5 : Animations, meme forme : APP.homeFavoris), categories (dont exterieures : APP.nav.vue) ; crochet de vue APP.surVue (ordre 50).
+// @zone accueil | Accueil : rubriques Pieces / Actions / Categories (4 au plus), une ligne de cartes chacune a defilement horizontal (fondu, fleches, position gardee) ; cartes de piece (boutons KINDS ampoule/prise via roomPower), crayon et appui long (APP.homeEdite), carte « + » (APP.homePieces), carte Scenarios (favoris en icones, tous : la carte s'elargit), cartes d'actions en plus (APP.homeActions(fabrique, cle), V1.5 : Animations, meme forme : APP.homeFavoris), categories (dont exterieures : APP.nav.vue) ; V1.9 revision 3 : ordre et mode « Organiser l'accueil » par APP.accueilOrg (accueil-org.js : trier, decorer, barre) ; crochet de vue APP.surVue (ordre 50).
 (function () {
   var $ = APP.$, el = APP.el, last = "";
 
@@ -9,6 +9,7 @@
       $("viewLights").className = "view hidden";
       $("viewScenes").className = "view hidden";
       h.className = "view";
+      if (APP.accueilOrg) APP.accueilOrg.poser(); // V1.9 revision 3 : classes horg (mode Organiser) et hcam-masq (cameras masquees)
       majDefils();
       return;
     }
@@ -24,7 +25,7 @@
   function majDefil(x) {
     var l = x.line, max = l.scrollWidth - l.clientWidth, g = l.scrollLeft > 2, d = l.scrollLeft < max - 2;
     l.className = "hline" + (g ? " fg" : "") + (d ? " fd" : "");
-    x.row.className = "hrow" + (max > 2 ? " hdeborde" : "");
+    x.row.classList.toggle("hdeborde", max > 2); // classe seule : horg-rmasq (rubrique masquee, V1.9 revision 3) est gardee
     x.prec.disabled = !g; x.suiv.disabled = !d;
   }
   function majDefils() { var i; for (i = 0; i < lignes.length; i++) majDefil(lignes[i]); }
@@ -49,9 +50,10 @@
     w.appendChild(b);
     return w;
   }
-  function row(title, cards, emptyMsg) {
+  function row(title, cards, emptyMsg, cle) {
     var s = el("div", "hrow"), line = el("div", "hline"), lab = el("div", "hlabel", title), fl = el("span", "hfleches", ""), x, i;
     s.setAttribute("data-rubrique", title); // V1.6 : sur le téléphone, la rubrique Catégories est dans l'onglet Appareils (accueil.css)
+    if (cle) s.setAttribute("data-cle", cle); // V1.9 revision 3 : cle de la rubrique (pieces, actions, categories : accueil-org.js)
     x = { titre: title, row: s, line: line, prec: fleche(-1, line), suiv: fleche(1, line) };
     fl.appendChild(x.prec); fl.appendChild(x.suiv); lab.appendChild(fl);
     s.appendChild(lab);
@@ -227,26 +229,49 @@
   var fabPieces = null;
   APP.homePieces = function (fab) { fabPieces = fab; last = ""; APP.renderHome(); };
   APP.homeRafraichir = function () { last = ""; APP.renderHome(); };
-  // Cartes d'actions en plus dans la ligne Actions, apres « Scénarios » (V1.5 : Animations ; fabrique de animations.js : fn() -> element .hwrap)
+  // Cartes d'actions en plus dans la ligne Actions, apres « Scénarios » (V1.5 : Animations ; fabrique de animations.js : fn() -> element .hwrap ;
+  // V1.9 revision 3 : cle de la carte, gardee dans l'ordre enregistre de l'accueil)
   var fabActions = [];
-  APP.homeActions = function (fab) { fabActions.push(fab); last = ""; APP.renderHome(); };
+  APP.homeActions = function (fab, cle) { fabActions.push({ fab: fab, cle: cle || "action-" + fabActions.length }); last = ""; APP.renderHome(); };
+  // Element de rubrique (V1.9 revision 3) : {cle, nom, w} ; ordre de l'utilisateur et commandes du mode « Organiser » par APP.accueilOrg (accueil-org.js)
+  function ranger(rub, items) {
+    var org = APP.accueilOrg, o = items, i, ws = [];
+    if (org) { o = org.trier(rub, items); if (org.actif()) org.decorer(rub, o); }
+    for (i = 0; i < o.length; i++) { o[i].w.setAttribute("data-cle", o[i].cle); ws.push(o[i].w); }
+    return ws;
+  }
 
   APP.renderHome = function () {
     var box = $("homeMain");
     if (!box || (APP.view || "home") !== "home") return;
-    var md = APP.nav.model(), sig = JSON.stringify(md) + "#" + scnSig(), rooms = [], cats = [], i;
+    var org = APP.accueilOrg, md = APP.nav.model(), sig = JSON.stringify(md) + "#" + scnSig() + "#" + (org ? org.sig() : ""), rooms = [], cats = [], act, i;
+    if (org && org.glisse()) { last = ""; return; } // V1.9 revision 3 : carte tenue au doigt (mode Organiser) : reconstruction faite au lever
     if (sig === last && box.firstChild) { updatePower(); updateScn(); return; }
     last = sig; pw = {}; sb = []; lignes = [];
-    for (i = 0; i < md.rooms.length; i++) rooms.push(mkRoom(md.rooms[i]));
-    if (fabPieces) rooms.push(fabPieces());
-    for (i = 0; i < md.cats.length; i++) cats.push(mkCat(md.cats[i]));
-    for (i = 0; i < md.ext.length; i++) cats.push(mkExt(md.ext[i]));
+    for (i = 0; i < md.rooms.length; i++) rooms.push({ cle: md.rooms[i].key, nom: md.rooms[i].label, w: mkRoom(md.rooms[i]) });
+    rooms = ranger("pieces", rooms);
+    if (fabPieces) rooms.push(fabPieces()); // carte « + » : toujours au bout
+    for (i = 0; i < md.cats.length; i++) cats.push({ cle: md.cats[i].key, nom: md.cats[i].label, w: mkCat(md.cats[i]) });
+    for (i = 0; i < md.ext.length; i++) cats.push({ cle: md.ext[i].key, nom: md.ext[i].label, w: mkExt(md.ext[i]) });
+    cats = ranger("categories", cats);
+    act = [{ cle: "scenarios", nom: "Scénarios", w: mkScenes() }];
+    for (i = 0; i < fabActions.length; i++) act.push({ cle: fabActions[i].cle, nom: "", w: fabActions[i].fab() });
+    for (i = 1; i < act.length; i++) act[i].nom = (act[i].w.querySelector(".hname") || {}).textContent || act[i].cle;
+    act = ranger("actions", act);
     box.innerHTML = "";
-    box.appendChild(row("Pièces", rooms, "Aucune pièce."));
-    var act = [mkScenes()];
-    for (i = 0; i < fabActions.length; i++) act.push(fabActions[i]());
-    box.appendChild(row("Actions", act, ""));
-    box.appendChild(row("Catégories", cats, "Aucun appareil."));
+    if (org && org.actif()) box.appendChild(org.barre());
+    // V1.9 revision 3 : rubriques dans l'ordre choisi ; rubrique masquee absente hors du mode Organiser (dans le mode : grisee, « Masquée »)
+    var rangs = { pieces: ["Pièces", rooms, "Aucune pièce."], actions: ["Actions", act, ""], categories: ["Catégories", cats, "Aucun appareil."] };
+    var ordreR = org ? org.rubriques() : [{ cle: "pieces" }, { cle: "actions" }, { cle: "categories" }], n = 0, r, x;
+    for (i = 0; i < ordreR.length; i++) {
+      x = ordreR[i]; r = rangs[x.cle];
+      if (x.masquee && !org.actif()) continue;
+      var rw = row(r[0], r[1], r[2], x.cle);
+      if (x.masquee) { rw.className += " horg-rmasq"; rw.firstChild.insertBefore(el("span", "horg-etat", "Masquée"), rw.firstChild.firstChild.nextSibling); }
+      box.appendChild(rw);
+      if (!(APP.tel && x.cle === "categories")) n++; // sur le telephone, Categories est dans l'onglet Appareils
+    }
+    if (!n && org && !org.actif()) box.appendChild(org.vide());
     for (i = 0; i < lignes.length; i++) lignes[i].line.scrollLeft = positions[lignes[i].titre] || 0;
     updatePower();
     updateScn();

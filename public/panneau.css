@@ -118,5 +118,5 @@
 /* Interface étape 2 : la feuille porte la surface des cartes (--carte-fond) ; ses cartes y sont plates (carte dans une carte). */
 @media (orientation:portrait){.tel .right .q-card{background:var(--carte-fond-2);box-shadow:none}}
 @media (orientation:landscape){
- .tel .right{position:static;z-index:auto;width:46%;max-width:420px;max-height:none;padding:8px 8px 12px 0;border:0;border-radius:0;background:transparent;box-shadow:none;transform:none;transition:none}
+ .tel .right{position:static;z-index:auto;width:46%;max-width:420px;max-height:none;padding:8px calc(8px + env(safe-area-inset-right)) 12px 0;border:0;border-radius:0;background:transparent;box-shadow:none;transform:none;transition:none}
 }

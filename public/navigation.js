@@ -1,4 +1,4 @@
-// @zone socle | Navigation commune aux deux versions (V1.6) : menu « ⋯ » de l'en-tête (#plusBtn, #plusMenu : Actualiser, Plein écran, Affichage ; V1.9 dans l'APK : Plein écran masqué, « Réglages de l'application » #apkBtn, état du Retour signalé par APP.apk.retour), réglage « Affichage » (APP.affichage : Automatique / Smartphone / Tablette, localStorage « affichage », page rechargée), fermeture de la fenêtre du dessus (APP.fermerDessus : touche Échap, bouton Retour d'Android) et retour à l'écran précédent (pile des vues, crochet APP.surVue 60, history.pushState).
+// @zone socle | Navigation commune aux deux versions (V1.6) : menu « ⋯ » de l'en-tête (#plusBtn, #plusMenu : Actualiser, Plein écran, Affichage ; V1.9 dans l'APK : Plein écran masqué, « Réglages de l'application » #apkBtn, état du Retour signalé par APP.apk.retour), réglage « Affichage » (APP.affichage : Automatique / Smartphone / Tablette, localStorage « affichage », page rechargée), fermeture de la fenêtre du dessus (APP.fermerDessus : touche Échap, bouton Retour d'Android ; V1.9 révision 3 : puis un mode d'écran, APP.modesDessus) et retour à l'écran précédent (pile des vues, crochet APP.surVue 60, history.pushState).
 (function () {
   const $ = APP.$, el = APP.el;
   APP.tel = !!(window.APP_VERSION && window.APP_VERSION.tel);
@@ -44,10 +44,15 @@
   // Fenêtre du dessus : le menu « ⋯ », puis la dernière fenêtre ouverte (voile .hb-scrim, .sc-scrim, .cj-scrim ou .tf-voile, fermée comme par un appui
   // sur le voile : une fenêtre qui refuse de se fermer, envoi en cours ou appairage, le refuse ici aussi), puis le menu latéral. Rend true si quelque chose était ouvert.
   const visible = (e) => e.getClientRects().length > 0 && !e.classList.contains("hidden");
+  // V1.9 révision 3 : mode d'écran quitté de même, après les fenêtres et avant le menu latéral (« Organiser l'accueil ») : liste APP.modesDessus de
+  // {actif(), quitter()}, remplie par les scripts chargés avant comme après celui-ci
+  const modes = APP.modesDessus = APP.modesDessus || [];
   APP.fermerDessus = function () {
     if (ouvert()) { menuPlus(false); return true; }
     const L = [...document.querySelectorAll(".hb-scrim, .sc-scrim, .cj-scrim, .tf-voile")].filter(visible);
     if (L.length) { const v = L[L.length - 1]; if (v.onclick) v.onclick({ target: v }); return true; }
+    const m = modes.find((x) => x.actif());
+    if (m) { m.quitter(); return true; }
     if ($("scrim").classList.contains("open")) { $("scrim").click(); return true; }
     return false;
   };
@@ -89,7 +94,7 @@
   // V1.9, dans l'APK : l'application est prévenue chaque fois que la page sait, ou ne sait plus, traiter le bouton Retour (fenêtre, menu ou écran
   // précédent) ; sinon le Retour revient à l'application (assistant, sortie). Recalculé à chaque changement de vue et de page (fenêtres ouvertes ou fermées).
   if (APP.apk && APP.apk.present) {
-    const peut = () => ouvert() || [...document.querySelectorAll(".hb-scrim, .sc-scrim, .cj-scrim, .tf-voile")].some(visible) || $("scrim").classList.contains("open") || pile.length > 1;
+    const peut = () => ouvert() || [...document.querySelectorAll(".hb-scrim, .sc-scrim, .cj-scrim, .tf-voile")].some(visible) || modes.some((x) => x.actif()) || $("scrim").classList.contains("open") || pile.length > 1;
     let t = null;
     const signaler = () => { if (t) return; t = setTimeout(() => { t = null; APP.apk.retour(peut()); }, 100); };
     APP.surVue(signaler, 61);

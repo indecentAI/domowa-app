@@ -7,5 +7,5 @@ case "${DOMOWA_DONNEES:-}" in /*) DON=$DOMOWA_DONNEES ;; *) DON=donnees ;; esac
 [ -d "$DON" ] || exit 0
 mkdir -p sauvegardes && chmod 700 sauvegardes
 f="sauvegardes/donnees-$(date +%Y%m%d-%H%M%S).tgz"
-tar czf "$f" -C "$DON" $(cd "$DON" && ls scenarios.json layout.json colors.json cameras.json animations.json animations-v2.json pieces.json pieces-creees.json dirigera.json 2>/dev/null) && echo "Sauvegarde : $f"
+tar czf "$f" -C "$DON" $(cd "$DON" && ls scenarios.json layout.json colors.json cameras.json animations.json animations-v2.json pieces.json pieces-creees.json dirigera.json accueil.json 2>/dev/null) && echo "Sauvegarde : $f"
 ls -1t sauvegardes/donnees-*.tgz | tail -n +11 | xargs -r rm -f

@@ -1,5 +1,7 @@
 // @zone cameras | Cartes camera de l'accueil (#homeCams) : lecteur, EN DIRECT, reconnexion 3 essais, son, volume, plein ecran, pave PTZ, SD/HD, bouton +.
 // V1.7 : etat de joignabilite (GET /api/cameras, etat et motif) relu toutes les 30 s tant que l'accueil est affiche ; hors ligne : « Hors ligne », motif, lecture inactive ; cartes mises a jour sans reconstruction (un flux en cours n'est pas coupe).
+// V1.9 : flux partage entre les appareils (adapters/cameras/diffusion.mjs) : chaque carte a son identifiant de lecteur (v) ; le bouton SD/HD envoie choix=1 (relance le flux pour tous) ;
+// le bouton affiche la qualite reellement servie (diffusion.qualite de GET /api/cameras, relue des que l'image arrive puis toutes les 30 s), qui peut etre celle choisie par un autre appareil.
 (function () {
   var $ = APP.$, el = APP.el, box = $("homeCams"), cards = [], loaded = false, loading = false, visible = true; // visible : accueil affiche (premier ecran ; home.js l affiche avant ce script)
   var MAX_ESSAIS = 3;
@@ -18,6 +20,7 @@
  var ARROWS = [["up", "Haut", "M6 15l6-6 6 6"], ["left", "Gauche", "M15 6l-6 6 6 6"], ["right", "Droite", "M9 6l6 6-6 6"], ["down", "Bas", "M6 9l6 6 6-6"]];
 
   function now() { return new Date().getTime(); }
+  function lecteur() { var t = "", i; for (i = 0; i < 12; i++) t += "abcdefghijklmnopqrstuvwxyz0123456789".charAt(Math.floor(Math.random() * 36)); return t; } // identifiant du lecteur d'une carte (aucun secret)
   // En-tête : l'état s'affiche dans c.stxt ; le point rouge (c.dot) précède « EN DIRECT ».
   function setState(c, t) {
     if (c.stxt.textContent !== t) c.stxt.textContent = t;
@@ -53,8 +56,9 @@
   // Qualité choisie (SD ou HD), mémorisée par caméra ; sans localStorage la caméra reste en SD.
   function loadQ(id) { try { return window.localStorage.getItem("cam-q-" + id) === "hd" ? "hd" : "sd"; } catch (e) { return "sd"; } }
   function saveQ(id, q) { try { window.localStorage.setItem("cam-q-" + id, q); } catch (e) {} }
+  function servie(c) { return c.live && c.servie ? c.servie : c.q; } // qualite affichee : celle du flux en cours si connue
   function qLabel(c) {
-    var hd = c.q === "hd";
+    var hd = servie(c) === "hd";
     c.qb.className = "cbtn cq" + (hd ? " on" : "");
     c.qb.textContent = hd ? "HD" : "SD";
     c.qb.setAttribute("aria-label", hd ? "Qualité haute définition" : "Qualité standard");
@@ -100,7 +104,7 @@
     c.vol.style.setProperty("--p", Math.round(Number(c.vol.value) * 100) + "%"); // partie blanche de la piste (cameras.css)
   }
   function stop(c, msg) {
-    c.live = false; c.wait = false;
+    c.live = false; c.wait = false; c.servie = null; qLabel(c);
     if (c.dir) { c.wantStop = true; releaseArrow(c, c.dir); }
     if (c.timer) { clearTimeout(c.timer); c.timer = null; }
     c.v.pause(); c.v.removeAttribute("src"); c.v.load();
@@ -120,17 +124,18 @@
   function majEtat(c, cam) {
     c.hl = cam.etat === "hors_ligne"; c.motifTxt = APP.lieu(cam.motif || "Cam\u00e9ra injoignable.");
     c.root.className = c.hl ? "ccard chors" : "ccard";
+    if (c.live && c.ok) { c.servie = cam.diffusion && (cam.diffusion.qualite === "hd" || cam.diffusion.qualite === "sd") ? cam.diffusion.qualite : null; qLabel(c); }
     if (!c.live) show(c, false);
     repos(c);
   }
   function stopAll() { var i; for (i = 0; i < cards.length; i++) if (cards[i].live) stop(cards[i], ""); }
-  // Ouvre (ou rouvre) la connexion au flux ; le serveur ferme l'ancienne connexion de la même caméra.
-  function open(c, msg) {
+  // Ouvre (ou rouvre) la connexion au flux ; le serveur remplace l'ancienne connexion de ce lecteur (v) ; choix : qualite choisie (relance le flux pour tous).
+  function open(c, msg, choix) {
     var p;
     c.wait = false; c.ok = false; c.lastT = 0; c.moved = now(); c.since = c.moved;
     setState(c, msg);
     c.v.removeAttribute("src"); c.v.load();
-    c.v.src = "/api/cameras/" + encodeURIComponent(c.id) + "/stream?t=" + now() + (c.hd && c.q === "hd" ? "&q=hd" : "");
+    c.v.src = "/api/cameras/" + encodeURIComponent(c.id) + "/stream?t=" + now() + "&v=" + c.vid + (c.hd && c.q === "hd" ? "&q=hd" : "") + (choix ? "&choix=1" : "");
     p = c.v.play();
     if (p && p.catch) p.catch(function (e) {
       if (!c.live || !e || e.name !== "NotAllowedError") return;
@@ -141,9 +146,9 @@
   function reconnect(c) {
     if (!c.live || c.wait) return;
     if (c.tries >= MAX_ESSAIS && c.q === "hd") {
-      c.q = "sd"; c.tries = 0; qLabel(c);
+      c.q = "sd"; c.servie = null; c.tries = 0; qLabel(c);
       APP.banner(c.name + " : haute définition indisponible, retour en qualité standard.", "warn");
-      open(c, "Connexion…");
+      open(c, "Connexion…", true);
       return;
     }
     if (c.tries >= MAX_ESSAIS) {
@@ -161,7 +166,7 @@
     open(c, "Connexion…");
   }
   function build(cam) {
-    var c = { id: cam.id, name: cam.name, ptz: cam.ptz !== false, dir: null, inflight: false, wantStop: false, hd: !!cam.hd, q: cam.hd ? loadQ(cam.id) : "sd", live: false, wait: false, tries: 0, ok: false, lastT: 0, moved: 0, since: 0, timer: null }, head, view, pad, i;
+    var c = { id: cam.id, name: cam.name, ptz: cam.ptz !== false, dir: null, inflight: false, wantStop: false, hd: !!cam.hd, q: cam.hd ? loadQ(cam.id) : "sd", live: false, wait: false, tries: 0, ok: false, lastT: 0, moved: 0, since: 0, timer: null, servie: null, vid: lecteur() }, head, view, pad, i;
     c.padOn = true;
  c.root = el("div", "ccard");
     head = el("div", "chead"); head.appendChild(el("span", "cname", cam.name));
@@ -198,8 +203,8 @@
  c.fs = el("button", "cbtn", ""); c.fs.onclick = function () { toggleFs(c); };
     c.qb = el("button", "cbtn cq", "SD");
     c.qb.onclick = function () {
-      c.q = c.q === "hd" ? "sd" : "hd"; saveQ(c.id, c.q); qLabel(c);
-      if (c.live) { c.tries = 0; if (c.timer) { clearTimeout(c.timer); c.timer = null; } open(c, "Connexion…"); }
+      c.q = servie(c) === "hd" ? "sd" : "hd"; c.servie = null; saveQ(c.id, c.q); qLabel(c);
+      if (c.live) { c.tries = 0; if (c.timer) { clearTimeout(c.timer); c.timer = null; } open(c, "Connexion…", true); }
     };
     c.ctl.appendChild(c.snd); c.ctl.appendChild(c.vol); if (c.ptz) c.ctl.appendChild(c.pz); c.ctl.appendChild(c.fs);
     c.btns.appendChild(c.pp); c.btns.appendChild(c.ctl);
@@ -236,8 +241,8 @@
   }
   // V1.7 : relecture de l'etat des cameras (30 s, accueil affiche, page visible) ; meme liste : etat mis a jour ; liste changee : reconstruite si aucune ne joue
   function cle(cam) { return [cam.id, cam.name, cam.ptz !== false, !!cam.hd].join("|"); }
-  function relire() {
-    if (!loaded || loading || !visible || document.hidden) return;
+  function relire(maintenant) {
+    if (!loaded || (loading && !maintenant) || !visible || document.hidden) return;
     loading = true;
     APP.api("GET", "/api/cameras", null, function (err, d) {
       var i, meme;
@@ -260,7 +265,8 @@
       t = c.v.currentTime;
       if (c.ok && t < c.lastT - 0.3) { reconnect(c); continue; }
       if (t > c.lastT + 0.2) {
-        c.lastT = t; c.moved = n; c.ok = true;
+        if (!c.ok) { c.ok = true; relire(true); } // image arrivee : qualite reellement servie relue (flux deja regarde par un autre appareil)
+        c.lastT = t; c.moved = n;
         if (c.state.textContent !== "EN DIRECT" && APP.bannerMsg && APP.bannerMsg.indexOf(c.name + " : ") === 0) APP.banner("", "");
         setState(c, "EN DIRECT");
         if (n - c.since > 20000) c.tries = 0;

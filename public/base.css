@@ -27,6 +27,8 @@ html{margin:0;height:100%;overflow:hidden}
    --sel-lueur (lueur courte qui accompagne l'anneau de sélection #cfe6ff), --halo-blanc, --halo-vert, --halo-ambre (état actif : halo court, l'état reste porté par la bordure ou le fond), --actif-contour (contour blanc d'un cercle actif). */
 input{font-family:"Outfit",Roboto,Arial,sans-serif}
 body{margin:0;font-size:18px;overflow:hidden;display:flex;flex-direction:column;height:100dvh;font-family:"Outfit",Roboto,Arial,sans-serif;background:#0a0d13 radial-gradient(ellipse at 50% -15%,#171e2c 0,#0a0d13 62%);color:#e9eef7}
+/* Encoches (étape encoche) : la page couvre tout l'écran dans l'APK ; version tablette sur un appareil à encoche (réglage « Affichage ») : contenu hors de l'encoche, fond jusqu'au bord. Sans encoche : 0. Téléphone : tel.css. */
+.tab body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 ::-webkit-scrollbar{width:0;height:0}
 .b-light{margin-right:10px;background:linear-gradient(180deg,#1f2633,#141922);color:#e9eef7;border:1px solid rgba(255,255,255,.09);font-weight:500;border-radius:16px;box-shadow:var(--relief-ombre),inset 0 1px 0 rgba(255,255,255,.07);min-height:46px;font-size:15px}
 .b-small{margin-right:8px;background:linear-gradient(180deg,#1f2633,#141922);color:#e9eef7;border:1px solid rgba(255,255,255,.09);font-weight:500;box-shadow:var(--relief-ombre),inset 0 1px 0 rgba(255,255,255,.07);min-height:44px;font-size:14px;border-radius:14px}

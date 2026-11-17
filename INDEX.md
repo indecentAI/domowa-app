@@ -2,7 +2,7 @@
 Tailles en tokens estimes (octets / 3,3). R = routes (sans le prefixe /api), E = expose, I = importe.
 Un paquet = CLAUDE.md + INDEX.md + fichiers de la ou des zones demandees.
 
-## socle (~27.6k tok)
+## socle (~27.9k tok)
 - config.mjs 82 : Constantes LOCAL_HOST, LOCAL_PORT. L'adresse du hub DIRIGERA (ancienne constante HUB_IP) est dans donnees/d... E: LOCAL_HOST LOCAL_PORT
 - core/file.mjs 1.0k : File d'ecritures commune (qualite 2026-11-12, socle de la proposition P2) : plafond d'ecritures par seconde... E: creerFile
 - core/http.mjs 984 : Outils HTTP : HOSTS/ORIGINS autorises, HttpError, send (JSON no-store), readBody (JSON, 4 Ko max par defaut... E: ORIGINS HOSTS reglerReseau hoteValide HttpError send CORPS_MAX readBody checkWrite ajouterTraducteur describe I: ../config.mjs
@@ -13,15 +13,15 @@ Un paquet = CLAUDE.md + INDEX.md + fichiers de la ou des zones demandees.
 - core/routeur.mjs 1.3k : Registre de routes : charge modules/*.mjs puis les routes apportees par les adaptateurs. Un module exporte ... E: tailleCorps defaut enregistrer preparer inventaire repondre api I: outils.mjs http.mjs appareils.mjs
 - maj.sh 3.9k : Mise a jour depuis le depot : etapes ou version affichees puis confirmees, avance seule (jamais de fusion),...
 - public/app.js 3.1k : Objet global APP : $, el, api (XHR), bandeau, statut, setBusy, distant et lieu (V1.8 : page servie par l'ec... E: APP.el APP.lieu APP.api APP.banner APP.setStatus APP.setBusy APP.colorOf APP.find APP.lights APP.selIds APP.roomKey APP.refresh APP.render APP.showTab
-- public/base.css 2.2k : variables, polices, page figée, boutons génériques, bandeau, vues. Charger en premier.
+- public/base.css 2.3k : variables, polices, page figée, boutons génériques, bandeau, vues. Charger en premier.
 - public/commandes.js 824 : Verification apres commande et compte rendu : APP.verify(devices, items) -> noms en ecart, APP.report(repon... E: APP.verify APP.report APP.applyLights
 - public/entete.css 1.2k : en-tête, boutons ronds, statut, menu latéral (tiroir) et voile.
-- public/index.html 2.0k : Structure de la page (header, menu « ⋯ » #plusMenu (dont #majBtn, #clientsBtn et #apkBtn : V1.9, dans l'APK...
+- public/index.html 2.0k : Structure de la page (header, menu « ⋯ » #plusMenu (dont #accOrgBtn : V1.9 révision 3, #majBtn, #clientsBtn...
 - public/menu.js 2.3k : Menu lateral et navigation : navModel (pieces, dont celles sans appareil ON/OFF, categories, categories ext... E: APP.nav
-- public/navigation.js 1.9k : Navigation commune aux deux versions (V1.6) : menu « ⋯ » de l'en-tête (#plusBtn, #plusMenu : Actualiser, Pl... E: APP.affichage APP.fermerDessus
+- public/navigation.js 2.1k : Navigation commune aux deux versions (V1.6) : menu « ⋯ » de l'en-tête (#plusBtn, #plusMenu : Actualiser, Pl... E: APP.affichage APP.fermerDessus
 - public/prevision.js 1.3k : Mise a jour immediate : un POST connu est applique a l'affichage avant la reponse, annule si echec total, r... E: APP.optimistic APP.rollback APP.prevoir APP.api
 - public/version.js 363 : Choix de la version (V1.6) : classe « tel » (smartphone) ou « tab » (tablette) posée sur <html> avant le pr...
-- sauvegarde.sh 298 : Sauvegarde des fichiers .json de donnees/ sans secret (liste fermee : jamais dirigera-token.txt, camera-sec...
+- sauvegarde.sh 302 : Sauvegarde des fichiers .json de donnees/ sans secret (liste fermee : jamais dirigera-token.txt, camera-sec...
 - server.mjs 1.1k : Point d'entree : ecoute locale HTTP 127.0.0.1:8080 (controle Host, sans appairage) et, en mode distant (V1.... I: config.mjs core/http.mjs core/outils.mjs core/routeur.mjs core/serveur.mjs core/acces.mjs core/portier.mjs core/annonce.mjs
 - start.sh 368 : Demarre le serveur (sauvegarde des donnees, nohup, attente) et ouvre Chrome. V1.8 : se place dans son propr...
 - stop.sh 141 : Arrete le serveur (server.pid) et libere le verrou de veille. V1.8 : se place dans son propre dossier (lien...
@@ -73,7 +73,7 @@ Un paquet = CLAUDE.md + INDEX.md + fichiers de la ou des zones demandees.
 - public/scenarios.css 1.3k : onglet Scénarios (cartes, pastilles, boutons).
 - public/scenes.js 4.6k : Onglet Scenarios : liste, appliquer, renommer, supprimer, icone (ICONS = SCENE_ICONS de modules/scenarios.m... E: APP.renderScenes APP.loadScenes APP.sceneIcon APP.applyScene
 
-## animations (~28.2k tok)
+## animations (~28.3k tok)
 - modules/animations-donnees.mjs 743 : Fichier donnees/animations-v2.json {v: 2, animations: [...], migre_de?, migre_le?} (V1.5, sans secret) : ab... E: lireAnimations ecrireAnimations I: ../core/outils.mjs ../core/http.mjs animations-plan.mjs
 - modules/animations-moteur.mjs 3.6k : Moteur des animations (V1.5, serveur, en memoire seulement : rien ne reprend apres un redemarrage) : lancer... E: animable lancer arreter enMarche liberer toutArreter etat I: ../core/outils.mjs ../core/http.mjs ../core/appareils.mjs ../core/modele.mjs ../core/file.mjs animations-plan.mjs
 - modules/animations-plan.mjs 5.0k : Animations (V1.5, fonctions pures, sans hub ni fichier) : valider (format d'une animation ; migrer : ancien... E: LIMITES COURBES CORPS_ANIMATION migrer valider segments courbe horaire verifier compiler decouper retour I: ../core/http.mjs ../core/modele.mjs
@@ -81,17 +81,22 @@ Un paquet = CLAUDE.md + INDEX.md + fichiers de la ou des zones demandees.
 - public/animations.css 3.1k : onglet Animations (#viewAnim, préfixe an-, construit par animations.js) : liste (cartes .scard de scenarios...
 - public/animations.js 14.4k : Onglet Animations (V1.5, #viewAnim, prefixe an-) : liste (lancer, arreter, modifier, dupliquer, supprimer ;... E: APP.animations
 
-## accueil (~7.1k tok)
-- public/accueil.css 2.5k : page d'accueil (V1.5) : rubriques Pièces / Actions / Catégories (4 au plus), une ligne de cartes chacune, d...
-- public/home.js 4.6k : Accueil : rubriques Pieces / Actions / Categories (4 au plus), une ligne de cartes chacune a defilement hor... E: APP.homeFavoris APP.homePieces APP.homeRafraichir APP.homeActions APP.renderHome
+## accueil (~17.5k tok)
+- modules/accueil.mjs 2.0k : Accueil personnalisable (V1.9 révision 3) : ordre des cartes de chaque rubrique, ordre des rubriques, carte... R: GET /accueil ; POST /accueil /accueil/defaut E: FICHIER RUBRIQUES MAX_CLES CORPS_ACCUEIL vide analyser valider routes I: ../core/http.mjs ../core/outils.mjs ../core/modele.mjs
+- public/accueil-org.js 6.6k : Accueil personnalisable (V1.9 révision 3) : ordre des cartes de chaque rubrique, ordre des rubriques, carte... E: APP.accueilOrg
+- public/accueil.css 3.6k : page d'accueil (V1.5) : rubriques Pièces / Actions / Catégories (4 au plus), une ligne de cartes chacune, d...
+- public/home.js 5.4k : Accueil : rubriques Pieces / Actions / Categories (4 au plus), une ligne de cartes chacune a defilement hor... E: APP.homeFavoris APP.homePieces APP.homeRafraichir APP.homeActions APP.renderHome
 
-## cameras (~12.0k tok)
-- adapters/cameras/cameras.mjs 4.5k : flux des caméras RTSP (Tapo) converti par ffmpeg en MP4 fragmenté H.264 + AAC, lu par une balise <video>. R: GET /cameras /cameras/:id/stream ; POST /cameras/:id/move E: cameras cheminHd routes nomDe I: ../../core/http.mjs ../../core/modele.mjs ../../core/outils.mjs cameras-gestion.mjs sonde.mjs
+## cameras (~18.6k tok)
+- adapters/cameras/cameras.mjs 2.9k : flux des caméras RTSP (Tapo) converti par ffmpeg en MP4 fragmenté H.264 + AAC, lu par une balise <video>. R: GET /cameras /cameras/:id/stream ; POST /cameras/:id/move E: cameras cheminHd routes nomDe I: ../../core/http.mjs ../../core/modele.mjs ../../core/outils.mjs cameras-gestion.mjs sonde.mjs diffusion.mjs mp4.mjs onvif.mjs
+- adapters/cameras/diffusion.mjs 3.1k : Flux partagé d'une caméra (V1.9) : un seul ffmpeg (une seule session RTSP) par caméra, sa sortie MP4 fragme... E: MAX_FLUX MAX_APPAREILS DEMARRAGE_MS SILENCE_MS RETARD_MAX RETARD_FIN_MS creerDiffusions I: ../../core/http.mjs mp4.mjs
 - adapters/cameras/index.mjs 346 : Adaptateur cameras IP : chaque camera de donnees/cameras.json devient un appareil de type camera (caps stre... E: lister rangement appliquer routes I: cameras.mjs sonde.mjs
 - adapters/cameras/manifest.json 70 : Manifeste : Cameras IP : flux RTSP via ffmpeg, PTZ ONVIF, recherche ONVIF/mDNS/SSDP/scan ; donnees/cameras.json et donnees/camera-secrets/
+- adapters/cameras/mp4.mjs 1.7k : Lecture du MP4 fragmenté produit par ffmpeg (V1.9, flux partagé) : découpage de la sortie en boîtes de prem... E: SORTIE BOITE_MAX creerDecoupeur pisteVideo imageCle
+- adapters/cameras/onvif.mjs 2.9k : Appels ONVIF vers une caméra (SOAP 1.2, en-tête WS-Security UsernameToken à condensé ; adressage WS-Address... E: ONVIF_PORT NS ACTIONS enveloppe soap xaddr capacites CORPS lireSujets lireAbonnement lireMessages lireErreur
 - adapters/cameras/sonde.mjs 1.2k : Joignabilite des cameras (V1.7) : connexion TCP seule au port RTSP (2 s au plus ; aucune requete RTSP, aucu... E: DELAI MOTIFS connecter creerSonde sonde I: ../../core/reseau.mjs ../../core/outils.mjs
-- public/cameras.css 1.2k : panneau des caméras de l'accueil (colonne de droite, une carte par caméra). Masqué (.hidden) s'il n'y a auc...
-- public/cameras.js 4.7k : Cartes camera de l'accueil (#homeCams) : lecteur, EN DIRECT, reconnexion 3 essais, son, volume, plein ecran... E: APP.camerasReload
+- public/cameras.css 1.3k : panneau des caméras de l'accueil (colonne de droite, une carte par caméra). Masqué (.hidden) s'il n'y a auc...
+- public/cameras.js 5.1k : Cartes camera de l'accueil (#homeCams) : lecteur, EN DIRECT, reconnexion 3 essais, son, volume, plein ecran... E: APP.camerasReload
 
 ## cameras-ajout (~13.7k tok)
 - adapters/cameras/cameras-gestion.mjs 4.5k : gestion des cameras (recherche, ajout, renommage, suppression) et secrets par camera. R: POST /cameras/discover /cameras/discover/cancel /cameras/add /cameras/:id/rename|delete ; GET /cameras/discover /cameras/list E: PATH_RE secretDe nomDe routesGestion I: ../../core/http.mjs ../../core/modele.mjs ../../core/outils.mjs decouverte.mjs sonde.mjs
@@ -113,8 +118,8 @@ Un paquet = CLAUDE.md + INDEX.md + fichiers de la ou des zones demandees.
 - public/st-familles.js 3.5k : Familles SmartThings generiques, LECTURE SEULE : capteurs, interrupteurs, audio, autres appareils (vue #vie...
 - scripts/smartthings.mjs 4.2k : configuration (config, autoriser) et diagnostic (liste, machine, lecture seule) du cloud SmartThings, sans ...
 
-## telephone (~3.9k tok)
-- public/tel.css 1.4k : version smartphone (V1.6, classe « tel » sur <html>, posée par version.js ; sans effet sur la tablette) : e...
+## telephone (~4.0k tok)
+- public/tel.css 1.5k : version smartphone (V1.6, classe « tel » sur <html>, posée par version.js ; sans effet sur la tablette) : e...
 - public/tel.js 2.5k : Version smartphone (V1.6, classe « tel » posée par version.js ; inactif sur tablette) : barre d'onglets #on... E: APP.telFeuille
 
 ## distant (~24.5k tok)
@@ -142,8 +147,8 @@ Un paquet = CLAUDE.md + INDEX.md + fichiers de la ou des zones demandees.
 ## apk (~902 tok)
 - public/apk.js 902 : Lien avec l'application Android (V1.9) : sans effet hors de l'APK (APP.apk.present faux, aucun écouteur). D... E: APP.apk
 
-## diagnostic (~1.5k tok)
-scripts/camera-test.mjs 1.1k, scripts/decouverte-test.mjs 389
+## diagnostic (~3.6k tok)
+scripts/camera-evenements.mjs 2.1k, scripts/camera-test.mjs 1.1k, scripts/decouverte-test.mjs 389
 
 ## outils (~9.1k tok)
 - outils/ia.mjs 7.7k : Outil IA : INDEX.md genere, paquet minimal par zone pour un nouveau chat, controle avant/apres patch.

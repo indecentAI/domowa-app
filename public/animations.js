@@ -614,7 +614,7 @@
     favBtns = f.map((a, i) => ({ a, b: r.boutons[i] }));
     majCarte();
     return r.w;
-  });
+  }, "animations"); // V1.9 révision 3 : clé de la carte dans l'ordre de l'accueil
   APP.animations = { majEtat };
   charger();
 })();

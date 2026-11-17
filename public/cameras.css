@@ -3,6 +3,9 @@
 /* V1.6 : colonne repliée (240 px) tant qu'aucune caméra ne joue ; dépliée (384 px) dès qu'une vue est ouverte */
 .hcams{flex:none;width:240px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px 24px 0;transition:width .25s ease}
 .hcams:has(.cview.open){width:384px}
+/* V1.9 révision 3 : colonne masquée (accueil-org.js : #viewHome.hcam-masq) : absente de l'accueil, grisée en mode Organiser */
+#viewHome.hcam-masq:not(.horg) .hcams{display:none}
+#viewHome.horg.hcam-masq .hcams{opacity:.45}
 .ccard{margin:0 0 14px;background:var(--carte-fond);border:1px solid var(--carte-bord);border-radius:22px;box-shadow:var(--carte-ombre);overflow:hidden}
 .ccard:fullscreen{display:flex;flex-direction:column;margin:0;border:0;border-radius:0;background:#000}
 .chead{display:flex;align-items:center;justify-content:space-between;padding:12px 16px}

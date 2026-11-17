@@ -69,6 +69,7 @@
     if (APP.clients) l.appendChild(ligne("Appareils autorisés", null, () => APP.clients.ouvrir()));
     if (APP.apk && APP.apk.present) l.appendChild(ligne("Réglages de l'application", null, () => APP.apk.reglages(), "tf-apk")); // V1.9 : APK seulement
     l.appendChild(el("div", "tf-sec", "Écran"));
+    if (APP.accueilOrg) l.appendChild(ligne("Organiser l'accueil", null, () => APP.accueilOrg.ouvrir(), "tf-org")); // V1.9 révision 3
     const a = ligne("Actualiser", null, () => APP.refresh());
     const st = el("span", "tf-nb", $("stamp").textContent || ""); st.id = "tfStamp"; a.appendChild(st);
     l.appendChild(a);

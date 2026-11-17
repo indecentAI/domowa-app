@@ -1,6 +1,6 @@
 /* @zone telephone */
 /* tel.css : version smartphone (V1.6, classe « tel » sur <html>, posée par version.js ; sans effet sur la tablette) : en-tête réduit, barre d'onglets (portrait : en bas ;
-   paysage : rail à gauche, en-tête masqué, Tout OFF en bas du rail), écrans « Appareils » et « Plus » (tel.js), marges de l'encoche et de la barre de gestes (safe-area). */
+   paysage : rail à gauche, en-tête masqué, Tout OFF en bas du rail), écrans « Appareils » et « Plus » (tel.js), marges de l'encoche et de la barre de gestes (safe-area : seule prise en compte de l'encoche, l'APK ne pose plus de marge native depuis l'étape encoche ; paysage : rail à gauche, contenu à droite). */
 .onglets{display:none}
 #alloffRail{display:none}
 .tel #menuBtn,.tel #homeBtn,.tel #plusBtn,.tel #stamp,.tel #plusMenu,.tel #menu,.tel #scrim{display:none}
@@ -33,6 +33,7 @@
  .tel .onglet{flex:1 1 0;min-height:44px;max-height:64px;padding:2px 0}
  .tel #alloffRail{display:flex;flex:none;min-height:48px;margin-top:6px;font-size:13px;color:#ffd27a;background:linear-gradient(180deg,#4a3913,#33270d);border:1px solid rgba(255,190,70,.4)}
  .tel .banner{bottom:12px;left:calc(50% + 42px)}
+ .tel .view{padding-right:calc(12px + env(safe-area-inset-right))}
 }
 /* Feuille de réglages (tel.js) : voile et poignée (glisser vers le bas ou toucher : fermer) */
 .tf-voile{position:fixed;left:0;top:0;right:0;bottom:0;z-index:45;background:rgba(3,5,9,.6)}
