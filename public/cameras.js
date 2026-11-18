@@ -8,6 +8,12 @@
 // Etape cam-mse : lecture par MediaSource (cameras-direct.js, APP.camDirect) pour rester pres du direct (rattrapage doux, saut rare sur une image cle) ;
 // repli sur la lecture directe de l'adresse (lecteur nu) si MediaSource manque ou si le format est refuse, garde pour cette carte et cette qualite jusqu'au rechargement.
 // Attribut data-lecture de la balise video : direct | nu (essais, diagnostic).
+// Etape cam-vignette-libre : vignette au-dessus de tous les ecrans de l'application (fenetres comprises), deplacable au doigt ou a la souris (glisser hors des boutons),
+// position gardee sur cet appareil (localStorage cam-flot-pos : fractions de la place libre, suivies a la rotation) ; bouton « Mettre en vignette » (.cvigb) sur la carte qui joue :
+// la carte quitte la colonne et y reste hors (c.force) meme a l'accueil, jusqu'a la croix « Fermer » ; « EN DIRECT » masque en vignette (le nom prime ; les autres etats restent).
+// Etape apk-pip : dans l'APK, camera en direct annoncee a l'application (image dans l'image d'Android 8 et plus) ; en image dans l'image, la video seule (APP.camPip).
+// Etape cam-vignette-retour : a l'accueil, vignette tenue et doigt (ou souris) immobile au-dessus de la colonne des cameras SURVOL_MS : colonne en surbrillance (.hcams.ccible) ;
+// lachee alors, chaque carte en vignette retourne a sa place dans la colonne sans arret du flux (position gardee inchangee) ; doigt sorti de la colonne : surbrillance retiree.
 (function () {
   var $ = APP.$, el = APP.el, box = $("homeCams"), cards = [], loaded = false, loading = false, visible = true, flot = null; // visible : accueil affiche (premier ecran ; home.js l affiche avant ce script)
   var MAX_ESSAIS = 3;
@@ -31,7 +37,31 @@
   function setState(c, t) {
     if (c.stxt.textContent !== t) c.stxt.textContent = t;
     c.dot.className = t === "EN DIRECT" ? "cdot" : "cdot hidden";
+    c.state.classList.toggle("cdirect", t === "EN DIRECT"); // masque en vignette (cameras.css)
+    annoncer();
   }
+  // Etape apk-pip (APK seulement : APP.apk.video, sans effet dans un navigateur) : camera en direct annoncee a l'application, avec les dimensions de son image
+  // (rapport de la fenetre d'image dans l'image) ; vignette d'abord, sinon la premiere qui joue. Envoye seulement quand cela change (apk.js).
+  function enDirect() {
+    var i, c, j = null;
+    for (i = 0; i < cards.length; i++) { c = cards[i]; if (c.live && c.ok && (!j || (c.flot && !j.flot))) j = c; }
+    return j;
+  }
+  function annoncer() {
+    var j;
+    if (!APP.apk || !APP.apk.present) return;
+    j = enDirect();
+    APP.apk.video(j ? { joue: true, l: j.v.videoWidth || null, h: j.v.videoHeight || null } : { joue: false });
+  }
+  // Image dans l'image de l'APK ({evt: pip, actif} de l'application, apk.js) : la video seule de la camera en direct couvre la fenetre (html.cam-pip, carte .cpip, cameras.css) ;
+  // rien d'autre ne change (la carte garde sa place, sa vignette, sa lecture) ; sortie : classes retirees.
+  APP.camPip = function (actif) {
+    var i, j;
+    for (i = 0; i < cards.length; i++) cards[i].root.classList.remove("cpip");
+    j = actif ? enDirect() : null;
+    if (j) j.root.classList.add("cpip");
+    document.documentElement.classList.toggle("cam-pip", !!j);
+  };
   function fsEl() { return document.fullscreenElement || document.webkitFullscreenElement; }
   function fsExit() { var f = document.exitFullscreen || document.webkitExitFullscreen, p; if (f) { p = f.call(document); if (p && p.catch) p.catch(function () {}); } }
   function fsIcons() {
@@ -141,9 +171,80 @@
   // Vignette flottante (etape cam-vignette) : conteneur #camFlot cree au premier besoin, ajoute au body (hors des vues masquees) ;
   // la carte est deplacee d'un bloc (appendChild : meme tache, la lecture ne s'interrompt pas), une place vide garde son rang dans la colonne.
   function conteneur() {
-    if (!flot) { flot = el("div", "cflot", ""); flot.id = "camFlot"; flot.setAttribute("role", "region"); flot.setAttribute("aria-label", "Cam\u00e9ra en cours"); document.body.appendChild(flot); }
+    if (!flot) { flot = el("div", "cflot", ""); flot.id = "camFlot"; flot.setAttribute("role", "region"); flot.setAttribute("aria-label", "Cam\u00e9ra en cours"); document.body.appendChild(flot); glisser(flot); }
     return flot;
   }
+  // Position de la vignette (etape cam-vignette-libre) : sans position gardee, coin bas droit de cameras.css ; sinon left / top dans l'ecran, BORD px du bord au moins.
+  var POS_CLE = "cam-flot-pos", SEUIL_GLISSE = 8, BORD = 8;
+  function borne(v) { return Math.min(1, Math.max(0, v)); }
+  function lirePos() {
+    try { var p = JSON.parse(localStorage.getItem(POS_CLE) || "null"); return p && isFinite(p.x) && isFinite(p.y) ? { x: borne(p.x), y: borne(p.y) } : null; } catch (e) { return null; }
+  }
+  function libre(r) { return { x: Math.max(0, innerWidth - r.width - 2 * BORD), y: Math.max(0, innerHeight - r.height - 2 * BORD) }; }
+  function poser(l, t) { flot.style.left = l + "px"; flot.style.top = t + "px"; flot.style.right = "auto"; flot.style.bottom = "auto"; }
+  function placer() {
+    var p, r, lb;
+    if (!flot || !flot.firstChild) return;
+    p = lirePos();
+    if (!p) { flot.style.left = flot.style.top = flot.style.right = flot.style.bottom = ""; return; }
+    r = flot.getBoundingClientRect(); lb = libre(r);
+    poser(BORD + p.x * lb.x, BORD + p.y * lb.y);
+  }
+  // Retour dans la colonne (etape cam-vignette-retour) : cible = colonne visible a l'accueil (ni masquee, ni mode Organiser), testee sur la position du doigt
+  // (la vignette la recouvre : pas d'elementFromPoint) ; surbrillance apres SURVOL_MS au-dessus d'elle.
+  var SURVOL_MS = 600;
+  function dansColonne(x, y) {
+    var r, vh = $("viewHome");
+    if (!visible || box.classList.contains("hidden") || (vh && (vh.classList.contains("horg") || vh.classList.contains("hcam-masq")))) return false;
+    r = box.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && x >= Math.max(0, r.left) && x <= Math.min(innerWidth, r.right) && y >= Math.max(0, r.top) && y <= Math.min(innerHeight, r.bottom);
+  }
+  function cible(d, oui) {
+    if (!oui) { if (d.survol) { clearTimeout(d.survol); d.survol = null; } if (d.cible) { d.cible = false; box.classList.remove("ccible"); flot.classList.remove("cflot-cible"); } return; }
+    if (d.cible || d.survol) return;
+    d.survol = setTimeout(function () { d.survol = null; d.cible = true; box.classList.add("ccible"); flot.classList.add("cflot-cible"); }, SURVOL_MS);
+  }
+  // Glisser (pointer events, sans bibliothèque) : hors des boutons et du curseur, jamais en plein ecran ; au-dela de SEUIL_GLISSE px, la vignette suit le doigt (capture gardee)
+  function glisser(f) {
+    var d = null;
+    f.addEventListener("pointerdown", function (e) {
+      var r;
+      if (fsEl() || e.button > 0 || (e.target.closest && e.target.closest("button,input"))) return;
+      r = f.getBoundingClientRect();
+      d = { id: e.pointerId, x0: e.clientX, y0: e.clientY, l: r.left, t: r.top, w: r.width, h: r.height, bouge: false };
+    });
+    f.addEventListener("pointermove", function (e) {
+      var dx, dy;
+      if (!d || e.pointerId !== d.id) return;
+      dx = e.clientX - d.x0; dy = e.clientY - d.y0;
+      if (!d.bouge) {
+        if (Math.abs(dx) < SEUIL_GLISSE && Math.abs(dy) < SEUIL_GLISSE) return;
+        d.bouge = true; f.classList.add("cflot-glisse");
+        try { f.setPointerCapture(d.id); } catch (x) {}
+      }
+      poser(Math.min(Math.max(BORD, d.l + dx), Math.max(BORD, innerWidth - d.w - BORD)), Math.min(Math.max(BORD, d.t + dy), Math.max(BORD, innerHeight - d.h - BORD)));
+      cible(d, dansColonne(e.clientX, e.clientY));
+      e.preventDefault();
+    });
+    function fin(e) {
+      var r, lb, i, retour;
+      if (!d || e.pointerId !== d.id) return;
+      retour = d.cible && e.type === "pointerup";
+      cible(d, false);
+      if (retour) { // lachee sur la colonne : retour a sa place, lecture continue ; position gardee inchangee (prochaine vignette au meme endroit)
+        f.classList.remove("cflot-glisse");
+        for (i = 0; i < cards.length; i++) if (cards[i].flot) rentrer(cards[i]);
+      } else if (d.bouge) {
+        r = f.getBoundingClientRect(); lb = libre(r);
+        try { localStorage.setItem(POS_CLE, JSON.stringify({ x: lb.x ? borne((r.left - BORD) / lb.x) : 0, y: lb.y ? borne((r.top - BORD) / lb.y) : 0 })); } catch (x) {}
+        f.classList.remove("cflot-glisse");
+      }
+      d = null;
+    }
+    f.addEventListener("pointerup", fin);
+    f.addEventListener("pointercancel", fin);
+  }
+  window.addEventListener("resize", placer);
   function flotter(c) {
     if (c.flot || !c.root.parentNode) return;
     if (c.dir) releaseArrow(c, c.dir, true);
@@ -151,10 +252,11 @@
     c.root.parentNode.insertBefore(c.place, c.root);
     conteneur().appendChild(c.root);
     c.flot = true; c.root.classList.add("cvign");
+    placer();
   }
   function rentrer(c) {
     if (!c.flot) return;
-    c.flot = false; c.root.classList.remove("cvign");
+    c.flot = false; c.force = false; c.root.classList.remove("cvign");
     if (c.place && c.place.parentNode) c.place.parentNode.replaceChild(c.root, c.place);
     else if (c.root.parentNode) c.root.parentNode.removeChild(c.root); // colonne reconstruite entre-temps : carte retiree
     c.place = null;
@@ -244,12 +346,17 @@
     open(c, "Connexion…");
   }
   function build(cam) {
-    var c = { flot: false, place: null, id: cam.id, name: cam.name, ptz: cam.ptz !== false, dir: null, inflight: false, wantStop: false, vite: false, pasFin: 0, pasTimer: null, centreEnCours: false, hd: !!cam.hd, q: cam.hd ? loadQ(cam.id) : "sd", live: false, wait: false, tries: 0, ok: false, lastT: 0, moved: 0, since: 0, timer: null, servie: null, vid: lecteur(), direct: null, nu: { sd: false, hd: false } }, head, view, pad, i;
+    var c = { flot: false, force: false, place: null, id: cam.id, name: cam.name, ptz: cam.ptz !== false, dir: null, inflight: false, wantStop: false, vite: false, pasFin: 0, pasTimer: null, centreEnCours: false, hd: !!cam.hd, q: cam.hd ? loadQ(cam.id) : "sd", live: false, wait: false, tries: 0, ok: false, lastT: 0, moved: 0, since: 0, timer: null, servie: null, vid: lecteur(), direct: null, nu: { sd: false, hd: false } }, head, view, pad, i;
     c.padOn = false; // étape cam-fleches : flèches masquées au démarrage du flux (bouton d'orientation pour les afficher)
     c.root = el("div", "ccard");
     head = el("div", "chead"); head.appendChild(el("span", "cname", cam.name));
     c.state = el("span", "cstate", ""); c.dot = el("span", "cdot hidden", ""); c.stxt = el("span", "", "");
     c.state.appendChild(c.dot); c.state.appendChild(c.stxt); head.appendChild(c.state);
+    c.vigb = el("button", "cvigb", ""); // etape cam-vignette-libre : mettre en vignette depuis l'accueil (carte qui joue, dans la colonne : cameras.css)
+    c.vigb.innerHTML = SV + '<rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="12" width="6" height="4" rx="1" fill="currentColor"/></svg>';
+    c.vigb.setAttribute("aria-label", "Mettre en vignette : " + cam.name);
+    c.vigb.onclick = function () { if (!c.live) return; c.force = true; flotter(c); };
+    head.appendChild(c.vigb);
     c.plein = el("button", "cplein", ""); // plein ecran depuis la vignette (visible en vignette seulement, cameras.css)
     c.plein.innerHTML = ICON_FS_ON; c.plein.setAttribute("aria-label", "Plein \u00e9cran : " + cam.name);
     c.plein.onclick = function () { toggleFs(c); };
@@ -372,7 +479,7 @@
   APP.surVue(function (name) {
     var i;
     visible = name === "home";
-    for (i = 0; i < cards.length; i++) { if (!visible && cards[i].live) flotter(cards[i]); else if (visible) rentrer(cards[i]); }
+    for (i = 0; i < cards.length; i++) { if (!visible && cards[i].live) flotter(cards[i]); else if (visible && !cards[i].force) rentrer(cards[i]); } // mise en vignette demandee : gardee a l'accueil
     if (!visible) return;
     if (loaded) relire(); else load();
   }, 40);
