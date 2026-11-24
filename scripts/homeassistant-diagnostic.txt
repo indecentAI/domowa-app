@@ -1,0 +1,31 @@
+{#- Domowa : diagnostic Home Assistant (V2.0). A coller tel quel dans Home Assistant : Outils de développement > Modèle (Developer tools > Template).
+    Lecture seule, rien n'est envoyé ailleurs : le résultat s'affiche à droite, à copier et à transmettre.
+    Masqué : noms, identifiants (remplacés par un numéro), valeurs des capteurs et états de présence, lieux. Écartés : personnes, traceurs, zones.
+    Gardé : domaine, classe d'appareil, unité, modes de couleur, fonctions déclarées, noms des attributs. -#}
+{%- set detail = ['light', 'switch', 'binary_sensor', 'cover', 'climate', 'fan', 'lock', 'valve', 'media_player', 'vacuum', 'humidifier', 'water_heater', 'siren'] -%}
+{%- set exclus = ['person', 'device_tracker', 'zone'] -%}
+{%- set gardes = ['device_class', 'unit_of_measurement', 'state_class', 'supported_color_modes', 'color_mode', 'supported_features', 'min_color_temp_kelvin', 'max_color_temp_kelvin', 'hvac_modes', 'preset_modes', 'fan_modes', 'effect_list'] -%}
+{%- set caches = ['friendly_name', 'entity_id', 'entity_picture', 'icon', 'latitude', 'longitude', 'gps_accuracy', 'source', 'user_id', 'device_trackers', 'id'] -%}
+DOMOWA DIAGNOSTIC HOME ASSISTANT v1
+{%- set tous = states | rejectattr('domain', 'in', exclus) | list %}
+entites lues : {{ tous | length }} (ecartees : personnes, traceurs, zones)
+== nombre par domaine
+{%- for g in tous | groupby('domain') %}
+{{ g.grouper }} : {{ g.list | length }}
+{%- endfor %}
+== detail (domaines utiles a l'application)
+{%- for d in detail %}
+{%- for s in tous | selectattr('domain', 'eq', d) | sort(attribute='entity_id') %}
+{%- set a = s.attributes %}
+{{ d }} #{{ loop.index }}{% if a.entity_id is defined and a.entity_id is not string %} | groupe de {{ a.entity_id | length }}{% endif %} | etat={% if s.state in ['on', 'off'] %}on/off{% elif s.state in ['unavailable', 'unknown'] %}{{ s.state }}{% elif (s.state | float(-1.5e300)) != -1.5e300 %}nombre{% else %}texte{% endif %}{% for k in gardes %}{% if a[k] is defined and a[k] is not none %} | {{ k }}={{ a[k] | join(',') if (a[k] is iterable and a[k] is not string) else a[k] }}{% endif %}{% endfor %} | attributs={{ a.keys() | reject('in', caches) | reject('in', gardes) | sort | join(',') }}
+{%- endfor %}
+{%- endfor %}
+== capteurs (sensor : nombre par classe et unite, sans valeur)
+{%- set ns = namespace(cles=[]) %}
+{%- for s in tous | selectattr('domain', 'eq', 'sensor') %}
+{%- set ns.cles = ns.cles + [(s.attributes.device_class | default('-', true)) ~ ' (' ~ (s.attributes.unit_of_measurement | default('-', true)) ~ ')'] %}
+{%- endfor %}
+{%- for c in ns.cles | unique | sort %}
+sensor {{ c }} : {{ ns.cles | select('eq', c) | list | length }}
+{%- endfor %}
+FIN

@@ -2,13 +2,21 @@
 (function () {
   const el = APP.el;
   let root = null, body = null, vue = "main", etat = null, session = null, form = null, trouves = null, cherche = false, erreur = "", info = "", occupe = false;
-  let arme = null, armeT = null, relecture = null, suivi = null, tic = null, valeurs = {};
-  // form : {type, hub?} ; valeurs : champs non secrets saisis (le temps de la fenêtre) ; un champ secret n'est jamais gardé.
+  let arme = null, armeT = null, relecture = null, suivi = null, tic = null, valeurs = {}, equip = [], distantEq = false;
+  // form : {type, hub?, auto?, pour?} (auto, V2.0 : connexion transparente, type trouvé par la recherche ou par /api/hubs/identifier ; pour : adresse dont le type est connu) ; valeurs : champs non secrets saisis (le temps de la fenêtre) ; un champ secret n'est jamais gardé.
 
+  // Commande du widget du hub (rechercher, installer, identifier) : équipement relu, fenêtre relue
+  if (APP.cartes) APP.cartes.surEquipement(() => { if (root && vue === "main") charger(); });
   function charger() {
     APP.api("GET", "/api/hubs", null, (err, d) => {
       if (!err && d) etat = d; else if (err) erreur = err;
       if (root && vue === "main") rendre();
+    });
+    // V2.1 : équipement du hub connecté (famille « hub », vue Équipements) : même widget que la configuration du hub (APP.cartes.hub)
+    APP.api("GET", "/api/equipements", null, (err, d) => {
+      if (err || !d || !Array.isArray(d.equipements)) return;
+      equip = d.equipements.filter((e) => e.famille === "hub" && !e.absent); distantEq = !!d.distant || APP.distant;
+      if (root && vue === "main" && !occupe) rendre();
     });
   }
   function poster(url, corps, ok) {
@@ -72,6 +80,14 @@
     t.champs.forEach((c) => { if (c.type === "adresse") valeurs[c.cle] = h.adresse || ""; });
     rendre();
   }
+  function ouvrirAuto() { form = { type: null, hub: null, auto: true, pour: null }; trouves = null; erreur = ""; info = ""; valeurs = {}; vue = "form"; rendre(); }
+  // Résultat de recherche touché : adresse reprise ; en connexion transparente, son type devient celui du formulaire (champs propres affichés).
+  function choisir(r) {
+    valeurs.adresse = r.adresse;
+    if (form.auto && r.type && typeDe(r.type)) { form.type = r.type; form.pour = r.adresse; }
+    form.liste = false; // liste repliée sur le hub choisi (tient sans défilement avec les champs du type) ; le toucher la rouvre
+    rendre();
+  }
   function ouvrirForm(t, h) { form = { type: t.type, hub: h ? h.id : null }; trouves = null; erreur = ""; info = ""; valeurs = {}; vue = "form"; rendre(); }
 
   // ---------- vues ----------
@@ -79,19 +95,20 @@
     const box = el("div", "");
     if (!etat) { box.appendChild(el("div", "hb-note", "Chargement…")); return box; }
     if (!etat.types.length) box.appendChild(el("div", "hb-note", "Aucun type de hub n'est déclaré par le serveur."));
-    etat.types.forEach((t) => {
-      box.appendChild(el("div", "hb-sec", t.nom));
+    // V2.0 : aucun type de hub affiché ; un type bloqué (un autre hub est utilisé, un hub à la fois) est masqué en entier.
+    // Repli : si tous les types sont bloqués (deux jetons laissés par une version de travail), tous restent montrés, Déconnecter seul proposé.
+    const libres = etat.types.filter((t) => !t.bloque);
+    (libres.length ? libres : etat.types).forEach((t) => {
       if (t.panne) box.appendChild(el("div", "hb-err", "Lecture impossible : " + t.panne));
       etat.hubs.filter((h) => h.type === t.type).forEach((h) => {
         const b = el("div", "hb-bloc"), x = TEXTE_ETAT[h.etat] || TEXTE_ETAT.erreur;
-        ligne(b, "Hub", h.nom);
         ligne(b, "État", x[0], x[1]);
         if (h.adresse) ligne(b, "Adresse", h.adresse);
         if (h.motif) b.appendChild(el("div", "hb-motif", h.motif));
         const r = el("div", "hb-rang");
-        if (h.etat !== "connecte" && t.champs) r.appendChild(bouton("b-main", "Reconnecter", () => reconnecter(t, h)));
-        if (t.champs) r.appendChild(bouton("b-small", "Changer de hub", () => ouvrirForm(t, h)));
-        b.appendChild(r);
+        if (h.etat !== "connecte" && t.champs && !t.bloque) r.appendChild(bouton("b-main", "Reconnecter", () => reconnecter(t, h)));
+        if (t.champs && !t.bloque) r.appendChild(bouton("b-small", "Changer de hub", () => ouvrirForm(t, h)));
+        if (r.childNodes.length) b.appendChild(r);
         if (h.etat !== "deconnecte") {
           const conf = arme === h.id;
           b.appendChild(bouton("hb-deco" + (conf ? " arme" : ""), conf ? "Confirmer la déconnexion" : "Déconnecter", () => {
@@ -101,54 +118,80 @@
           }));
         }
         box.appendChild(b);
+        // Hub connecté : logiciel, soleil et heure, localisation, code d'appairage, options (widget commun de equipements-cartes.js ; équipement de cet adaptateur)
+        const eq = h.etat === "connecte" && APP.cartes ? equip.filter((e) => String(e.id).split(":")[0] === t.type)[0] : null;
+        if (eq) { const w = el("div", "eq-cartes hb-equip"); APP.cartes.hub(eq, w, () => { if (root && vue === "main") rendre(); }, distantEq); if (w.childNodes.length) box.appendChild(w); }
       });
-      if (t.champs && t.nb < t.max) box.appendChild(bouton("b-main hb-large", "Connecter un hub", () => ouvrirForm(t, null)));
     });
+    // V2.0 : un seul bouton, quel que soit le nombre de types ; le type est trouvé à la connexion (priorité déclarée par le serveur).
+    if (libres.some((t) => t.champs && t.nb < t.max)) box.appendChild(bouton("b-main hb-large", "Connecter un hub", ouvrirAuto));
     return box;
   }
   function rendreForm() {
-    const t = typeDe(form.type), box = el("div", "");
+    const t = form.type ? typeDe(form.type) : null, box = el("div", "");
     box.appendChild(bouton("b-small hb-retour", "← Retour", () => { form = null; trouves = null; erreur = ""; vue = "main"; rendre(); }));
-    if (!t || !t.champs) { box.appendChild(el("div", "hb-note", "Ce type de hub n'est plus disponible.")); return box; }
-    box.appendChild(el("div", "hb-sec", (form.hub ? "Changer de hub" : "Connecter un hub") + " : " + t.nom));
+    if (form.type && (!t || !t.champs)) { box.appendChild(el("div", "hb-note", "Ce type de hub n'est plus disponible.")); return box; }
+    box.appendChild(el("div", "hb-sec", form.hub ? "Changer de hub" : "Connecter un hub"));
     const f = el("div", "hb-bloc");
-    if (t.recherche) {
+    const peutChercher = form.auto ? etat.types.some((x) => !x.bloque && x.recherche && x.champs) : t.recherche;
+    if (peutChercher) {
       f.appendChild(bouton("b-light hb-large", cherche ? "Recherche… (5 secondes)" : "Rechercher sur le réseau", () => {
         if (cherche) return;
         cherche = true; trouves = null; erreur = ""; rendre();
-        APP.api("POST", "/api/hubs/recherche", { type: t.type }, (err, d) => {
+        APP.api("POST", "/api/hubs/recherche", form.auto ? {} : { type: t.type }, (err, d) => {
           cherche = false;
           if (err) erreur = err; else trouves = d.resultats;
-          if (root && vue === "form") rendre();
+          if (root && vue === "form") { if (form.auto && trouves && trouves.length) choisir(trouves[0]); else rendre(); } // le premier = le plus prioritaire
         });
       }));
       if (trouves && !trouves.length) f.appendChild(el("div", "hb-note", "Aucun hub trouvé. Tapez son adresse ci-dessous."));
-      (trouves || []).forEach((r) => {
-        const cle = (t.champs.find((c) => c.type === "adresse") || {}).cle;
-        const b = bouton("hb-trouve" + (cle && valeurs[cle] === r.adresse ? " sel" : ""), "", () => { if (cle) valeurs[cle] = r.adresse; rendre(); });
+      const replie = form.auto && form.pour && !form.liste && (trouves || []).length > 1 && trouves.some((r) => r.adresse === form.pour);
+      (trouves || []).filter((r) => !replie || r.adresse === form.pour).forEach((r) => {
+        const b = bouton("hb-trouve" + (valeurs.adresse === r.adresse ? " sel" : ""), "", () => { if (replie) { form.liste = true; rendre(); } else choisir(r); });
         b.appendChild(el("span", "hb-tadr", r.adresse));
-        b.appendChild(el("span", "hb-tnom", (r.nom || "") + (r.connu ? " (actuel)" : "")));
+        b.appendChild(el("span", "hb-tnom", (r.nom || "") + (r.connu ? " (actuel)" : "") + (replie ? " · " + (trouves.length - 1) + " autre(s)" : "")));
         f.appendChild(b);
       });
     }
     const entrees = [];
-    t.champs.forEach((c) => {
-      f.appendChild(el("label", "hb-lab", c.libelle));
+    // Connexion transparente sans type connu : l'adresse seule ; les champs propres au type (port, jeton…) paraissent quand il est trouvé.
+    const champs = t ? t.champs : [{ cle: "adresse", libelle: "Adresse du hub", type: "adresse" }];
+    // Champ court (V2.0, ex. port) : posé à droite du champ précédent (.hb-duo), pour que le formulaire tienne sans défilement.
+    let duo = null;
+    champs.forEach((c, k) => {
+      let dest = f;
+      if (!c.court && champs[k + 1] && champs[k + 1].court) { duo = el("div", "hb-duo"); f.appendChild(duo); }
+      if (duo) { dest = el("div", ""); duo.appendChild(dest); if (c.court) duo = null; }
+      dest.appendChild(el("label", "hb-lab", c.libelle));
       const i = el("input", "hb-in");
       i.type = c.type === "secret" ? "password" : "text";
       if (c.type === "adresse") { i.setAttribute("inputmode", "decimal"); i.placeholder = "ex. 192.168.1.20"; }
       i.setAttribute("autocomplete", "off"); i.setAttribute("autocapitalize", "off"); i.setAttribute("autocorrect", "off"); i.spellcheck = false;
       i.id = "hbChamp-" + c.cle;
       if (c.type !== "secret") { i.value = valeurs[c.cle] || ""; i.oninput = () => { valeurs[c.cle] = i.value; }; }
-      f.appendChild(i);
+      dest.appendChild(i);
       entrees.push([c, i]);
     });
     if (form.hub) f.appendChild(el("div", "hb-note", "Le hub actuel reste utilisé si l'appairage échoue ou est annulé."));
+    if (info) f.appendChild(el("div", "hb-note", info)); // V2.0 : « Complétez les champs… » (connexion transparente)
     const r = el("div", "hb-rang");
     r.appendChild(bouton("b-main", "Connecter", () => {
       const ch = {};
       entrees.forEach((e) => { ch[e[0].cle] = e[1].value.trim(); if (e[0].type === "secret") e[1].value = ""; });
-      appairer(t, ch);
+      const adr = (entrees.find((e) => e[0].type === "adresse") || [{}, { value: "" }])[1].value.trim();
+      if (!form.auto || (t && form.pour === adr)) { appairer(t, ch); return; }
+      // Connexion transparente, adresse tapée : le serveur dit quel type répond ; s'il demande d'autres champs (port, jeton…), ils paraissent, sinon l'appairage part.
+      const vu = (trouves || []).find((x) => x.adresse === adr && x.type);
+      const suite = (type) => {
+        const u = typeDe(type);
+        if (!u || !u.champs) { erreur = "Ce type de hub n'est plus disponible."; return; }
+        form.type = u.type; form.pour = adr; valeurs.adresse = adr;
+        const ch2 = {}; u.champs.forEach((c) => { if (ch[c.cle] !== undefined) ch2[c.cle] = ch[c.cle]; });
+        if (u.champs.every((c) => c.type === "adresse" || ch2[c.cle] || c.court)) { appairer(u, ch2); return; }
+        info = "Complétez les champs, puis Connecter.";
+      };
+      if (vu) { suite(vu.type); rendre(); return; }
+      poster("/api/hubs/identifier", { adresse: adr }, (d) => suite(d.type));
     }));
     r.appendChild(bouton("b-small", "Annuler", () => { form = null; trouves = null; erreur = ""; vue = "main"; rendre(); }));
     f.appendChild(r);
@@ -157,8 +200,7 @@
   }
   function rendreSession() {
     const box = el("div", ""), s = session || {}, e = s.etape;
-    const t = typeDe(s.type);
-    box.appendChild(el("div", "hb-sec", "Appairage" + (t ? " : " + t.nom : "")));
+    box.appendChild(el("div", "hb-sec", "Appairage"));
     const f = el("div", "hb-bloc hb-session");
     f.appendChild(el("div", "hb-etape", e ? e.texte : "Préparation…"));
     if (e && e.fin) {
@@ -184,9 +226,12 @@
   }
   const AIDE = [
     { titre: "Hubs", lignes: [
-      "Cette fenêtre s'ouvre en touchant l'état, en haut de l'écran (« Hub connecté » ou « Hors ligne »).",
+      "Cette fenêtre s'ouvre en touchant l'état, en haut de l'écran (« Connecté » ou « Hors ligne »).",
       APP.lieu("Elle montre chaque hub connu de cet appareil et son état, et permet de le connecter, de le reconnecter, d'en changer ou de le déconnecter."),
       "La connexion d'un hub suit les étapes affichées (par exemple, appuyer sur un bouton du hub pendant un compte à rebours). Annuler est possible à tout moment.",
+      "Un seul hub à la fois : tant qu'un hub est connecté (ou en erreur), aucun autre ne peut être connecté (seul le hub utilisé est montré). Déconnectez-le d'abord.",
+      "« Connecter un hub » trouve seul le type du hub : la recherche choisit d'office le hub trouvé (le prioritaire s'il y en a plusieurs) ; une adresse tapée est reconnue à la connexion.",
+      "Hub connecté : son logiciel (à jour ou mise à jour disponible), le prochain coucher et lever du soleil, le fuseau, la localisation en texte (à l'écran seulement) et le code d'appairage (« Afficher », puis un second appui ; effacé après 30 secondes ou à la fermeture), comme dans la vue Équipements. Rechercher une mise à jour ; Installer en deux appuis (le hub redémarre : ne pas le débrancher) ; Identifier.",
     ] },
   ];
   function rendreAide() {
@@ -214,6 +259,7 @@
     clearTimeout(armeT); clearTimeout(suivi); clearInterval(relecture); clearInterval(tic);
     arme = null; erreur = ""; info = ""; form = null; trouves = null; valeurs = {}; session = null; vue = "main";
     document.body.removeChild(root); root = null; body = null;
+    if (APP.cartes) APP.cartes.effacerCode(); // code d'appairage jamais gardé à la fermeture
   }
   function icone(texte, titre, fn) { const b = el("button", "hb-ic", texte); b.title = titre; b.setAttribute("aria-label", titre); b.onclick = fn; return b; }
   // Ouverture : relit les hubs et reprend une session en cours (fenêtre refermée pendant un appairage) ; relue toutes les 15 s (vue principale).

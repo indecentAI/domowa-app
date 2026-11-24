@@ -12,6 +12,7 @@
 .hb-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 18px 18px}
 .hb-sec{text-transform:uppercase;margin:12px 4px 8px;font-size:var(--sec-taille);letter-spacing:var(--sec-espace);color:var(--sec-couleur);font-weight:var(--sec-graisse)}
 .hb-bloc{margin-bottom:10px;padding:10px 14px;border-radius:16px;background:var(--carte-fond-2);border:1px solid var(--carte-bord)}
+.hb-equip{margin-bottom:10px}
 .hb-ligne{display:flex;justify-content:space-between;padding:6px 0;font-size:16px}
 .hb-lib{color:var(--muted)}
 .hb-val{margin-left:12px;text-align:right}
@@ -30,6 +31,7 @@
 .hb-tnom{margin-left:12px;font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hb-lab{display:block;margin:14px 2px 6px;font-size:14px;color:#9fb0c8}
 .hb-in{width:100%;height:48px;padding:0 14px;border-radius:12px;border:1px solid #262c37;background:#0d1117;color:#e9eef7;font-size:17px}
+.hb-duo{display:grid;grid-template-columns:minmax(0,1fr) 130px;gap:0 12px} /* V2.0 : champ court (port) à droite du précédent */
 .hb-session{text-align:center;padding:18px 14px}
 .hb-etape{font-size:19px;line-height:1.4}
 .hb-compte{margin:14px 0 8px;font-size:46px;font-weight:300;letter-spacing:.02em;color:#cfe6ff}

@@ -1,6 +1,6 @@
-// @zone appareils | Registre des adaptateurs (adapters/<id>/manifest.json + module) : liste commune des appareils (cache 1 s, invalide a chaque commande, 10 s max par adaptateur, liste partielle + pannes(), caps et state toujours des objets, identifiants uniques entre adaptateurs), pieces (meme isolation), appliquer, relire, commande de piece. Ne connait aucune marque.
+// @zone appareils equipements | Registre des adaptateurs (adapters/<id>/manifest.json + module) : liste commune des appareils (cache 1 s, invalide a chaque commande, 10 s max par adaptateur, liste partielle + pannes(), caps et state toujours des objets, identifiants uniques entre adaptateurs), pieces (meme isolation), appliquer, relire, commande de piece ; equipements (V2.1 : cache 5 s, pannes a part, capacites composees, sans secret) et code d'appairage sur demande. Ne connait aucune marque.
 // Un adaptateur exporte : lister() -> [appareil] ; appliquer(appareil, set) ; facultatifs : relire(appareil), pieces() -> [{id, name}],
-// piece(roomId, type, set) (commande groupee native), erreur(e) -> [statut, message] | null, routes (routes propres, chargees par le routeur ; l'ancien handle n'est plus lu, journal),
+// piece(roomId, type, set) (commande groupee native), equipements() -> [equipement] (V2.1, contrat « Capacités » de .claude/rules/equipements.md), erreur(e) -> [statut, message] | null, routes (routes propres, chargees par le routeur ; l'ancien handle n'est plus lu, journal),
 // animer(appareil, cible, ms) (V1.5, animations : une ecriture d'une seule valeur, {on} | {level} | {hue, sat 0-1} | {kelvin}, avec fondu de ms fait par l'appareil ; erreur avec appareil: true
 // et motif si le refus ne concerne que cet appareil), hub (contrat des hubs, CLAUDE.md « Hubs » : routes generiques de modules/hubs.mjs), gestionPieces (creation de pieces, CLAUDE.md « Pièces » :
 // {nom, icones: [cles generiques], creer({nom, icone}) -> {id}, deplacer(pieceId, ids)} ; exige pieces() ; routes de modules/pieces-creation.mjs).
@@ -10,8 +10,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { DIR, log, borne } from './outils.mjs';
-import { ajouterTraducteur } from './http.mjs';
+import { ajouterTraducteur, HttpError } from './http.mjs';
 import { estOnOff, ID_RE } from './modele.mjs';
+import { composer, sansSecret, secrete, definition, groupe, ENVELOPPES, valider, sensible } from './capacites.mjs';
 
 const adaptateurs = []; // { id, m: manifeste, a: module }
 let pret = null;
@@ -49,6 +50,25 @@ export function adressesHubs() {
   const r = [];
   for (const x of hubs()) { try { r.push(...(x.hub.adresses ? x.hub.adresses() : [])); } catch (e) { /* adaptateur fautif : ignore */ } }
   return r;
+}
+// Un hub a la fois (V2.0, CLAUDE.md « Hubs ») : un adaptateur de hub dit par hub.utilise() (synchrone, sans reseau) s'il porte un jeton (connecte ou en erreur).
+// Un hub non utilise est « en retrait » (ni interroge par lister() et pieces(), ni panne, ni gestion des pieces) quand un autre hub est utilise ; si aucun ne l'est,
+// seul le premier qui a une adresse (sinon le premier charge) reste interroge : il porte « Aucun hub configuré. » ou « Hub non connecté. », comme avant.
+// hubBloque(id) : nom du hub utilise par un autre adaptateur (son appairage est alors refuse par modules/hubs.mjs), sinon null. Adaptateur sans utilise : jamais en retrait.
+const avecUtilise = (x) => !!(x.a.hub && typeof x.a.hub === 'object' && typeof x.a.hub.utilise === 'function');
+const sur = (f, defaut) => { try { return f(); } catch (e) { return defaut; } };
+const utilise = (x) => avecUtilise(x) && sur(() => x.a.hub.utilise() === true, false);
+function retrait(x) {
+  if (!avecUtilise(x) || utilise(x)) return false;
+  const hs = adaptateurs.filter(avecUtilise);
+  if (hs.some(utilise)) return true;
+  const garde = hs.find((y) => sur(() => (y.a.hub.adresses ? y.a.hub.adresses() : []).length > 0, false)) || hs[0];
+  return garde !== x;
+}
+export const enRetrait = (id) => { const x = adaptateurs.find((y) => y.id === id); return !!x && retrait(x); };
+export function hubBloque(id) {
+  const autre = adaptateurs.find((y) => y.id !== id && utilise(y));
+  return autre ? String(autre.a.hub.nom || autre.id) : null;
 }
 
 // Cache par adaptateur : une seule lecture en vol par generation ; toute commande change de generation (la lecture suivante est fraiche).
@@ -107,7 +127,8 @@ export function uniques(l) {
 }
 export async function lister(adapter) {
   await charger();
-  const choisis = adaptateurs.filter((x) => !adapter || x.id === adapter);
+  for (const x of adaptateurs) if (retrait(x)) noter(x, null); // hub en retrait : plus une panne
+  const choisis = adaptateurs.filter((x) => (!adapter || x.id === adapter) && !retrait(x));
   const res = await Promise.allSettled(choisis.map(listerUn));
   const liste = [];
   let err = null;
@@ -152,7 +173,7 @@ export async function piece(d0, type, set) {
   await a.piece(d0.room.id, type, set);
 }
 // Adaptateurs qui savent creer une piece (gestionPieces avec creer et deplacer, et pieces() pour relire).
-export const gestionsPieces = () => adaptateurs.filter((x) => x.a.gestionPieces && typeof x.a.gestionPieces.creer === 'function' && typeof x.a.gestionPieces.deplacer === 'function' && typeof x.a.pieces === 'function')
+export const gestionsPieces = () => adaptateurs.filter((x) => x.a.gestionPieces && typeof x.a.gestionPieces.creer === 'function' && typeof x.a.gestionPieces.deplacer === 'function' && typeof x.a.pieces === 'function' && !retrait(x))
   .map((x) => ({ id: x.id, m: x.m, g: x.a.gestionPieces, a: x.a }));
 // Adaptateurs dont les appareils (hors modele ON/OFF : lave-linge, cameras, familles...) se rangent localement dans les pieces (V1.4) :
 // rangement = {nom (origine affichee), appareils() -> [{id, nom, genre}] (depuis son cache, jamais bloquant)}.
@@ -161,7 +182,7 @@ export const rangeables = () => adaptateurs.filter((x) => x.a.rangement && typeo
 // que si tous echouent.
 export async function pieces() {
   await charger();
-  const avec = adaptateurs.filter((x) => typeof x.a.pieces === 'function');
+  const avec = adaptateurs.filter((x) => typeof x.a.pieces === 'function' && !retrait(x));
   const res = await Promise.allSettled(avec.map((x) => borne(() => x.a.pieces(), DELAI)));
   const liste = [];
   res.forEach((r, i) => {
@@ -170,5 +191,124 @@ export async function pieces() {
   });
   if (avec.length && res.every((r) => r.status === 'rejected')) throw res[0].reason || new Error('lecture impossible');
   return liste;
+}
+// Equipements (V2.1, contrat « Capacités », vue Equipements) : chaque adaptateur qui exporte equipements() et n'est pas en retrait, DELAI ms au plus, isolation des pannes
+// comme lister() mais pannes rendues a part (jamais d'erreur levee : une liste vide et les pannes). Cache court par adaptateur (CACHE_EQUIP : un appel Home Assistant = /api/states
+// + WebSocket), une seule lecture en vol ; la liste brute (codes d'appairage et donnees privees compris) reste en memoire seulement, jamais journalisee.
+// Rendu : equipement {id, adapter, origine (nom du hub affiche), hub, idNatif, nom, type, piece, joignable, vu_le, elements, capacites (composees : absorbees puis triees, presentees), codes: [{element, cap, libelle}]
+// (capacites secretes : jamais leur valeur), inconnues (nombre)}. Les donnees privees (localisation, coordonnees) restent pour l'ecran seulement.
+export const CACHE_EQUIP = 5000;
+const cachesEq = new Map();
+const EQ_ID = /^[a-z0-9_-]{1,40}:[A-Za-z0-9_.:-]{1,160}$/;
+function equipUn(x, frais) {
+  const c = cachesEq.get(x.id) || {};
+  cachesEq.set(x.id, c);
+  if (!frais && c.liste && Date.now() - c.t < CACHE_EQUIP) return Promise.resolve(c.liste);
+  if (c.vol) return c.vol;
+  const origine = String((x.a.hub && typeof x.a.hub.nom === 'string' && x.a.hub.nom) || x.m.libelle || x.id).slice(0, 40); // nom affiche (puce de la tuile)
+  const p = borne(() => x.a.equipements(), DELAI).then((l) => {
+    const r = (Array.isArray(l) ? l : []).filter((e) => e && typeof e === 'object' && typeof e.id === 'string' && EQ_ID.test(e.id) && e.id.startsWith(x.id + ':')).map((e) => ({ ...e, adapter: x.id, origine: origine }));
+    c.liste = r; c.t = Date.now(); return r;
+  });
+  c.vol = p;
+  p.then(() => { if (c.vol === p) c.vol = null; }, () => { if (c.vol === p) c.vol = null; });
+  return p;
+}
+// Capacite presentee au client : rang, widget, type et groupe du referentiel (enveloppe : type et widget de sa nature), libelle et unite par defaut ; absorbees de meme.
+export function presenter(c) {
+  const d = definition(c.cap) || {}, n = ENVELOPPES.includes(c.cap) ? definition(c.nature) || {} : null;
+  const o = { ...c, rang: d.rang, widget: d.widget, type: (n || d).type, groupe: groupe(c.cap), libelle: c.libelle || (n && n.libelle) || d.libelle || c.cap };
+  if (o.unite === undefined && ((n || d).unite !== undefined)) o.unite = (n || d).unite;
+  if (Array.isArray(c.absorbees)) o.absorbees = c.absorbees.map(presenter);
+  delete o.secret;
+  return o;
+}
+// Equipement rendu (sans secret) : les capacites secretes ne laissent que {element, cap, libelle} dans codes.
+export function composerEquipement(e) {
+  const caps = Array.isArray(e.capacites) ? e.capacites.filter((c) => c && typeof c === 'object' && typeof c.cap === 'string') : [];
+  const codes = caps.filter((c) => c.secret || secrete(c.cap)).filter((c) => typeof c.valeur === 'string' && c.valeur)
+    .map((c) => ({ element: String(c.element), cap: c.cap, libelle: c.libelle || (definition(c.cap) || {}).libelle || c.cap }));
+  const { capacites, inconnues, ...reste } = e;
+  return { ...reste, capacites: composer(sansSecret(caps)).map(presenter), codes, inconnues: Array.isArray(inconnues) ? inconnues.length : 0 };
+}
+// -> {equipements, pannes: [{adapter, libelle, motif}], repondu: [ids des adaptateurs qui ont repondu]} ; frais : sans le cache court (actualisation demandee).
+export async function equipements(frais) {
+  await charger();
+  const choisis = adaptateurs.filter((x) => typeof x.a.equipements === 'function' && !retrait(x));
+  const res = await Promise.allSettled(choisis.map((x) => equipUn(x, frais)));
+  const liste = [], pannesEq = [], repondu = [];
+  res.forEach((r, i) => {
+    const x = choisis[i];
+    if (r.status === 'fulfilled') { liste.push(...r.value); repondu.push(x.id); return; }
+    pannesEq.push({ adapter: x.id, libelle: String(x.m.libelle || x.id), motif: motif(x, r.reason) });
+  });
+  const vus = new Set();
+  const equip = liste.filter((e) => !vus.has(e.id) && vus.add(e.id)).map(composerEquipement);
+  return { equipements: equip, pannes: pannesEq, repondu };
+}
+// Code d'appairage d'un element d'un equipement (route sur demande, ecoute locale seulement) : valeur de la capacite secrete, depuis le cache (ou une lecture) ; null s'il n'y en a pas.
+// Jamais journalise ni garde ailleurs que dans le cache de l'adaptateur.
+export async function codeAppairage(id, element, cap) {
+  await charger();
+  const x = adaptateurs.find((y) => typeof y.a.equipements === 'function' && !retrait(y) && String(id).startsWith(y.id + ':'));
+  if (!x) return null;
+  const e = (await equipUn(x, false)).find((y) => y.id === id);
+  const c = e && Array.isArray(e.capacites) ? e.capacites.find((k) => k && (k.secret || secrete(k.cap)) && k.element === element && k.cap === cap) : null;
+  return c && typeof c.valeur === 'string' && c.valeur ? { cap: c.cap, element: c.element, libelle: c.libelle || (definition(c.cap) || {}).libelle, valeur: c.valeur } : null;
+}
+// Scenes du hub (V2.1 etape scenes-hub ; contrat « Scènes du hub ») : adaptateurs qui exportent scenesHub {lister, lancer(id), annuler(id)}, hors retrait.
+// scenesHub() -> {scenes: [{id: '<adaptateur>:<id>', adapter, nom, annulable (s), lance_le}], pannes} (jamais d'erreur levee) ; actionScene(id, 'lancer' | 'annuler') : 404 inconnue, borne 10 s.
+const SCENE_ID = /^[a-z0-9_-]{1,40}:[A-Za-z0-9_.:-]{1,160}$/;
+export async function scenesHub() {
+  await charger();
+  const choisis = adaptateurs.filter((x) => x.a.scenesHub && typeof x.a.scenesHub.lister === 'function' && !retrait(x));
+  const res = await Promise.allSettled(choisis.map((x) => borne(() => x.a.scenesHub.lister(), DELAI)));
+  const scenes = [], pannesS = [];
+  res.forEach((r, i) => {
+    const x = choisis[i];
+    if (r.status === 'rejected') { pannesS.push({ adapter: x.id, libelle: String(x.m.libelle || x.id), motif: motif(x, r.reason) }); return; }
+    for (const s of Array.isArray(r.value) ? r.value : []) {
+      const id = s && typeof s.id === 'string' ? x.id + ':' + s.id : '';
+      if (!SCENE_ID.test(id) || typeof s.nom !== 'string') continue;
+      scenes.push({ id, adapter: x.id, nom: s.nom.slice(0, 60), annulable: Number.isFinite(s.annulable) ? Math.max(0, Math.min(600, s.annulable)) : 0, lance_le: typeof s.lance_le === 'string' ? s.lance_le : null });
+    }
+  });
+  scenes.sort((a, b) => a.nom.localeCompare(b.nom, 'fr') || a.id.localeCompare(b.id));
+  return { scenes, pannes: pannesS };
+}
+export async function actionScene(id, action) {
+  await charger();
+  if (typeof id !== 'string' || !SCENE_ID.test(id) || (action !== 'lancer' && action !== 'annuler')) throw new HttpError(400, 'Scène invalide.');
+  const x = adaptateurs.find((y) => y.a.scenesHub && !retrait(y) && id.startsWith(y.id + ':'));
+  if (!x || typeof x.a.scenesHub[action] !== 'function') throw new HttpError(404, 'Scène inconnue.');
+  const natif = id.slice(x.id.length + 1);
+  const l = await borne(() => x.a.scenesHub.lister(), DELAI);
+  if (!(Array.isArray(l) ? l : []).some((s) => s && s.id === natif)) throw new HttpError(404, 'Scène inconnue.');
+  await borne(() => x.a.scenesHub[action](natif), DELAI);
+}
+// Ecriture generique (V2.1 etape ecriture-generique ; contrat « Capacités ») : une capacite d'un equipement, validee par son descripteur (valider : ecriture declaree,
+// bornes, pas, options), commande sensible : confirm exige ; une commande a la fois par equipement (409 sinon) ; l'adaptateur traduit (ecrire(element, cap, valeur, descripteur) :
+// sa liste fermee) ; relu 1 s apres (sans cache), jamais renvoye. -> equipement compose relu, ou null s'il a disparu. Adaptateur sans ecrire : 501.
+const enCours = new Set();
+export const RELECTURE_MS = 1000;
+export async function ecrireCapacite(id, element, cap, valeur, confirm) {
+  await charger();
+  const x = adaptateurs.find((y) => typeof y.a.equipements === 'function' && !retrait(y) && String(id).startsWith(y.id + ':'));
+  if (!x) throw new HttpError(404, 'Équipement inconnu.');
+  if (typeof x.a.ecrire !== 'function') throw new HttpError(501, 'Commandes pas encore disponibles pour ce hub.');
+  const e = (await equipUn(x, false)).find((y) => y.id === id);
+  if (!e) throw new HttpError(404, 'Équipement inconnu.');
+  const c = (Array.isArray(e.capacites) ? e.capacites : []).find((k) => k && k.element === element && k.cap === cap && !(k.secret || secrete(k.cap)));
+  if (!c) throw new HttpError(404, 'Commande inconnue pour cet équipement.');
+  const v = valider(c, valeur);
+  if (sensible(c) && confirm !== true) throw new HttpError(409, 'Confirmation requise.');
+  if (enCours.has(id)) throw new HttpError(409, 'Une commande est déjà en cours pour cet équipement.');
+  enCours.add(id);
+  try {
+    await borne(() => x.a.ecrire(element, cap, v, c), DELAI);
+    await new Promise((r) => setTimeout(r, RELECTURE_MS));
+    const apres = (await equipUn(x, true)).find((y) => y.id === id);
+    return apres ? composerEquipement(apres) : null;
+  } finally { enCours.delete(id); }
 }
 // FIN

@@ -42,3 +42,6 @@ body.busy .scenes{pointer-events:none}
 @media (orientation:landscape){.tel .scenebar .hint{display:none}}
 /* V1.6 : tablette en portrait : cartes des scénarios (et des animations, .scard) en grille sur toute la largeur */
 @media (orientation:portrait){.tab .scenes{align-self:stretch;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}.tab .scard{width:auto;margin:0}}
+/* V2.1 étape scenes-hub : scènes du hub (scenes.js, carteHub) : puce « hub », bouton Annuler pendant le délai du hub */
+.shub-puce{flex:none;margin-left:8px;padding:2px 8px;border-radius:10px;background:#1f2a3d;color:#a9c3ea;font-size:12px;font-weight:500}
+.srow .sannuler{flex:none;min-height:46px;padding:0 14px;border-radius:23px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:#e6ecf5;font-size:14px}

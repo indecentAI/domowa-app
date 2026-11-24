@@ -1,5 +1,19 @@
 # HISTORIQUE.md - évolutions (inutile pour coder)
 
+## V2.1 - Home Assistant et vue Équipements
+- Home Assistant peut remplacer le hub IKEA (un seul hub à la fois) : « Connecter un hub » trouve l'un ou l'autre sur le Wi-Fi ; lumières et prises se commandent comme avec le hub IKEA.
+- Nouvelle vue « Équipements » (menu et accueil) : une tuile par équipement du hub (lumières, prises, stores, capteurs, enceintes, purificateurs, télécommandes, le hub) ; un appui ouvre sa configuration, avec seulement ce que l'équipement sait faire.
+- Commandes du hub IKEA depuis cette vue : stores, purificateur, enceinte, capteur de mouvement (durée, horaire), options des prises (retour du courant, verrou, voyant), compteur, Identifier.
+- Hub : logiciel et mise à jour (deux appuis), soleil et heure, code d'appairage sur demande ; aussi dans la fenêtre Hubs.
+- Alarme (fuite, fumée, CO) : bandeau rouge en haut de toutes les vues tant qu'elle dure ; ouvertures et mouvements datés (« depuis 08:15 », « vu à 08:15 »).
+- Pastille rouge sur une tuile : mise à jour, batterie faible, filtre à changer, air mauvais.
+- Icône au choix pour chaque équipement (32 icônes) ; une lampe la garde dans la vue Lumières.
+- Scènes du hub IKEA dans Scénarios : Lancer, puis Annuler pendant le délai du hub.
+- Télécommandes : une carte par mode, lampes de chaque mode, ON / OFF, luminosité et blanc du groupe ; « Ajouter des lampes… » à un mode (retrait : application IKEA).
+- Home Assistant : tous ses autres équipements s'affichent en lecture ; leurs commandes viendront ensuite (chauffage d'abord).
+
+Détails : capacités communes aux deux hubs (référentiel core/capacites.mjs), écriture générique POST /api/equipements/:id/capacite, événements du hub par WebSocket, scripts de diagnostic (equipements-diagnostic.mjs, groupes-essai.mjs, homeassistant-diagnostic.txt). Aucune version 2.0 publiée : ses ajouts Home Assistant sont dans cette version.
+
 ## V1.9 - Application Android « Domowa »
 - Application Android « Domowa » (Android 7 et plus), à installer depuis la page Releases du dépôt public : l'application s'ouvre en plein écran, sans avertissement de certificat ni barre du navigateur.
 - Se connecter à un serveur de la maison : il est trouvé seul sur le Wi-Fi (il n'annonce que son adresse et son port) ; comparer une fois son empreinte, puis taper le code d'« Autoriser un appareil ».
@@ -92,3 +106,7 @@ Détails : chaque publication porte aussi l'application (domowa-X.Y-N.apk signé
 - Lave-linge Samsung (SmartThings, cloud) : catégorie Électroménager (menu et accueil) et vue dédiée ; état, temps restant, heure de fin, progression, phases, programme, température, essorage, sécurité enfant, commande à distance, connexion ; commandes Pause, Reprise et Arrêt.
 - Isolation des pannes : un service qui ne répond pas n'empêche plus le reste de fonctionner (bandeau d'indisponibilité).
 - Architecture : cœur sans marque (routeur, registre d'adaptateurs, modèle commun), un dossier par adaptateur, catégories à vue propre, outil outils/ia.mjs (index, paquets, contrôle).
+
+## Reprise de CLAUDE.md : contenu de la V1.9 et publications de l'APK (texte sorti des consignes, allègement)
+
+Contenu de la V1.9 (étapes 1 à 6, terminées) : construction et diagnostic ; côté serveur (annonce mDNS, version dans /api/status et /api/clients, DOMOWA_SANS_NAVIGATEUR, installer.sh etat, etape et controle ; client web : apk.js) ; chemin A (se connecter, épinglage, x1, x2, r1, r2, bandeau) ; chemin B (Termux en liste fermée, installation de Termux guidée par F-Droid, serveur de cet appareil, l1, x3, Réparer) ; publication avec l'APK final, mise à jour de l'APK, plein écran d'un élément. Publications : v1.8-1 (APK 1.8), v1.8-2 (révision, depuis une branche : section Distribution), v1.9-1 (depuis la branche publication-v1.9-1, main ayant reçu entre-temps l'interface étape 3), v1.9-2 (main, typographie comprise), v1.9-3 (main 406313d : accueil personnalisable, flux de caméra partagé, diagnostic ONVIF, encoche), v1.9-4 (main c0633f5 : caméras plus proches du direct par MediaSource, vignette et son plein écran, flèches par pas et retour au centre), v1.9-5 (main 0533162 : vignette libre au-dessus des fenêtres, « Mettre en vignette », retour dans la colonne par glisser, image dans l'image de l'APK).

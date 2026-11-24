@@ -42,7 +42,7 @@
     b.appendChild(el("div", "bfill"));
     b.appendChild(el("div", "bgloss"));
     // V1.4 : type dessiné dans la bulle (lumière, prise) ; vues à plat (Tous, catégories) : pièce sous la bulle (« Autres » par défaut)
-    if (APP.piecesChoix) { var k = el("div", "bkind"); k.innerHTML = APP.piecesChoix.type(isLight ? "lumiere" : "prise"); b.appendChild(k); }
+    if (APP.piecesChoix) { var k = el("div", "bkind"); k.innerHTML = (APP.icones && APP.icones.element(d.id, 20)) || APP.piecesChoix.type(isLight ? "lumiere" : "prise"); b.appendChild(k); } // V2.1 : icône choisie dans la vue Équipements
     w.appendChild(b);
     if (APP.room === "all") w.appendChild(el("div", "bpiece", d.room ? d.room.name : "Autres"));
     if (d.reachable) b.onclick = function () { APP.sel[d.id] = !APP.sel[d.id]; APP.render(); };
@@ -152,7 +152,7 @@
     var b = el("button", "tl-corps", ""), t = null, long = false, x0 = 0, y0 = 0, k, txt, sw;
     b.type = "button";
     if (APP.telSel) { k = el("span", "tl-case" + (sel ? " sel" : ""), ""); if (sel) k.innerHTML = ICON_OK; b.appendChild(k); }
-    k = el("span", "tl-type", ""); if (APP.piecesChoix) k.innerHTML = APP.piecesChoix.type(isLight ? "lumiere" : "prise"); b.appendChild(k);
+    k = el("span", "tl-type", ""); if (APP.piecesChoix) k.innerHTML = (APP.icones && APP.icones.element(d.id, 20)) || APP.piecesChoix.type(isLight ? "lumiere" : "prise"); b.appendChild(k);
     if (on && isLight) k.style.color = APP.colorOf(true, d.colorMode, d.hue, d.sat, d.temp);
     txt = el("span", "tl-txt", "");
     txt.appendChild(el("span", "tl-nom", d.name));

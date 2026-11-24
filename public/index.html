@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- @zone socle | Structure de la page (header, menu « ⋯ » #plusMenu (dont #accOrgBtn : V1.9 révision 3, #majBtn, #clientsBtn et #apkBtn : V1.9, dans l'APK seulement), #banner, #viewHome, #viewLights, #viewScenes, #viewAnim, #viewElectro, #viewSt, #viewAppareils et #viewPlus (téléphone), #menu, #onglets) et ordre de chargement CSS/scripts ; version.js en tête (classe tel ou tab). -->
+<!-- @zone socle | Structure de la page (header, menu « ⋯ » #plusMenu (dont #accOrgBtn : V1.9 révision 3, #majBtn, #clientsBtn et #apkBtn : V1.9, dans l'APK seulement), #banner, #viewHome, #viewLights, #viewScenes, #viewAnim, #viewElectro, #viewSt, #viewEquip (V2.1), #viewAppareils et #viewPlus (téléphone), #menu, #onglets) et ordre de chargement CSS/scripts ; version.js en tête (classe tel ou tab). -->
 <html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script src="version.js"></script>
@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="st-compte.css">
 <link rel="stylesheet" href="hubs.css">
 <link rel="stylesheet" href="pieces.css">
+<link rel="stylesheet" href="equipements.css">
 <link rel="stylesheet" href="maj.css">
 <link rel="stylesheet" href="clients.css">
 <link rel="stylesheet" href="tel.css">
@@ -46,6 +47,7 @@
 <div id="viewAnim" class="view hidden"></div>
 <div id="viewElectro" class="view hidden"><div id="electroList" class="e-liste"></div></div>
 <div id="viewSt" class="view hidden"><div id="stListe" class="e-liste"></div></div>
+<div id="viewEquip" class="view hidden"></div>
 <div id="viewAppareils" class="view hidden"></div>
 <div id="viewPlus" class="view hidden"></div>
 <div id="scrim" class="scrim"></div><nav id="menu" class="menu"></nav>
@@ -72,6 +74,10 @@
 <script src="pieces-liste.js"></script>
 <script src="pieces-choix.js"></script>
 <script src="animations.js"></script>
+<script src="icones.js"></script>
+<script src="equipements-cartes.js"></script>
+<script src="equipements.js"></script>
+<script src="alarmes.js"></script>
 <script src="maj.js"></script>
 <script src="clients.js"></script>
 <script src="apk.js"></script>

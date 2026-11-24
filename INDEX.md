@@ -1,8 +1,8 @@
 # INDEX.md - genere par "node outils/ia.mjs" (ne pas modifier a la main)
-Tailles en tokens estimes (octets / 3,3). R = routes (sans le prefixe /api), E = expose, I = importe.
-Un paquet = CLAUDE.md + INDEX.md + fichiers de la ou des zones demandees.
+Tailles en tokens estimes (octets / 3,3). R = routes (sans le prefixe /api), E = expose, I = importe, L = reperes nom@ligne (fichiers de plus de 20 Ko : Read avec offset et limit).
+Un paquet = CLAUDE.md + regles de zone + INDEX.md + fichiers de la ou des zones demandees.
 
-## socle (~27.9k tok)
+## socle (~28.0k tok)
 - config.mjs 82 : Constantes LOCAL_HOST, LOCAL_PORT. L'adresse du hub DIRIGERA (ancienne constante HUB_IP) est dans donnees/d... E: LOCAL_HOST LOCAL_PORT
 - core/file.mjs 1.0k : File d'ecritures commune (qualite 2026-11-12, socle de la proposition P2) : plafond d'ecritures par seconde... E: creerFile
 - core/http.mjs 984 : Outils HTTP : HOSTS/ORIGINS autorises, HttpError, send (JSON no-store), readBody (JSON, 4 Ko max par defaut... E: ORIGINS HOSTS reglerReseau hoteValide HttpError send CORPS_MAX readBody checkWrite ajouterTraducteur describe I: ../config.mjs
@@ -16,34 +16,62 @@ Un paquet = CLAUDE.md + INDEX.md + fichiers de la ou des zones demandees.
 - public/base.css 2.3k : variables, polices, page figée, boutons génériques, bandeau, vues. Charger en premier.
 - public/commandes.js 824 : Verification apres commande et compte rendu : APP.verify(devices, items) -> noms en ecart, APP.report(repon... E: APP.verify APP.report APP.applyLights
 - public/entete.css 1.2k : en-tête, boutons ronds, statut, menu latéral (tiroir) et voile.
-- public/index.html 2.0k : Structure de la page (header, menu « ⋯ » #plusMenu (dont #accOrgBtn : V1.9 révision 3, #majBtn, #clientsBtn...
+- public/index.html 2.1k : Structure de la page (header, menu « ⋯ » #plusMenu (dont #accOrgBtn : V1.9 révision 3, #majBtn, #clientsBtn...
 - public/menu.js 2.3k : Menu lateral et navigation : navModel (pieces, dont celles sans appareil ON/OFF, categories, categories ext... E: APP.nav
 - public/navigation.js 2.1k : Navigation commune aux deux versions (V1.6) : menu « ⋯ » de l'en-tête (#plusBtn, #plusMenu : Actualiser, Pl... E: APP.affichage APP.fermerDessus
 - public/prevision.js 1.3k : Mise a jour immediate : un POST connu est applique a l'affichage avant la reponse, annule si echec total, r... E: APP.optimistic APP.rollback APP.prevoir APP.api
 - public/version.js 363 : Choix de la version (V1.6) : classe « tel » (smartphone) ou « tab » (tablette) posée sur <html> avant le pr...
-- sauvegarde.sh 302 : Sauvegarde des fichiers .json de donnees/ sans secret (liste fermee : jamais dirigera-token.txt, camera-sec...
+- sauvegarde.sh 317 : Sauvegarde des fichiers .json de donnees/ sans secret (liste fermee : jamais dirigera-token.txt, camera-sec...
 - server.mjs 1.1k : Point d'entree : ecoute locale HTTP 127.0.0.1:8080 (controle Host, sans appairage) et, en mode distant (V1.... I: config.mjs core/http.mjs core/outils.mjs core/routeur.mjs core/serveur.mjs core/acces.mjs core/portier.mjs core/annonce.mjs
 - start.sh 368 : Demarre le serveur (sauvegarde des donnees, nohup, attente) et ouvre Chrome. V1.8 : se place dans son propr...
 - stop.sh 141 : Arrete le serveur (server.pid) et libere le verrou de veille. V1.8 : se place dans son propre dossier (lien...
 
-## appareils (~11.6k tok)
-- adapters/dirigera/connexion.mjs 2.6k : Connexion au hub DIRIGERA : adresse (donnees/dirigera.json, migree de config.mjs), jeton (donnees/dirigera-... E: JETON migrer lire jetonPresent etatLocal client sansRenvoi enregistrer deconnecter erreur I: ../../core/outils.mjs ../../core/reseau.mjs
-- adapters/dirigera/index.mjs 1.6k : Adaptateur DIRIGERA : versModele, lister, appliquer (ON puis niveau puis couleur ou temperature), animer (V... E: lister relire pieces piece animer appliquer erreur hub gestionPieces I: ../../core/outils.mjs connexion.mjs pieces.mjs hub.mjs
+## appareils (~26.9k tok)
+- adapters/dirigera/connexion.mjs 2.7k : Connexion au hub DIRIGERA : adresse (donnees/dirigera.json, migree de config.mjs), jeton (donnees/dirigera-... E: JETON migrer lire jetonPresent etatLocal client sansRenvoi enregistrer deconnecter erreur I: ../../core/outils.mjs ../../core/reseau.mjs evenements.mjs
+- adapters/dirigera/ecriture.mjs 2.1k : Ecriture generique DIRIGERA (V2.1 etape ecriture-generique ; cartes du 21/11, section 18) : ecrire(element,... E: ecrire I: ../../core/http.mjs ../../core/outils.mjs connexion.mjs modele.mjs
+- adapters/dirigera/evenements.mjs 1.5k : Evenements du hub DIRIGERA (V2.1 etape evenements ; cartes du 21/11, section 1) : abonnement par la bibliot... E: recevoir constater heures suivre arreter _essai I: ../../core/outils.mjs
+- adapters/dirigera/index.mjs 1.9k : Adaptateur DIRIGERA : lister, relire (versModele de modele.mjs : capacites, V2.1), equipements (V2.1 : tout... E: scenesHub lister equipements relire pieces piece animer appliquer erreur hub gestionPieces ecrire I: ../../core/outils.mjs connexion.mjs pieces.mjs modele.mjs evenements.mjs hub.mjs ecriture.mjs
 - adapters/dirigera/manifest.json 78 : Manifeste : Hub IKEA DIRIGERA : lumieres et prises (HTTPS local, TLS strict, adresse donnees/dirigera.json, jeton donnees/dirigera-token.txt, npm dirigera 2.0.2 ; contrat hub)
-- core/appareils.mjs 3.4k : Registre des adaptateurs (adapters/<id>/manifest.json + module) : liste commune des appareils (cache 1 s, i... E: charger actifs extensions hubs adressesHubs invalider pannes uniques lister trouver appliquer relire peutAnimer animer piece gestionsPieces rangeables pieces I: outils.mjs http.mjs modele.mjs
+- adapters/dirigera/modele.mjs 7.1k : Adaptateur DIRIGERA : description en capacites de tout appareil et du hub de la bibliotheque dirigera 2.0.2... E: decrire versModele versEquipements planLier horaire I: ../../core/modele.mjs ../../core/capacites.mjs ../../core/http.mjs L: nb@9 tx@11 opts@13 cond@17 copie@94 decrire@101 a_@104 versModele@130 versEquipements@147 cr@190 nomDe@191 lies@192 planLier@228 horaire@239
+- adapters/homeassistant/manifest.json 106 : Manifeste : Home Assistant : lumieres et prises (HTTP local, adresse IPv4 privee, adresse donnees/homeassistant.json, jeton donnees/homeassistant-token.txt ; contrat hub ; V2.0 etape 3 : commandes ON/OFF, luminosite, couleur, blanc)
+- core/appareils.mjs 6.8k : Registre des adaptateurs (adapters/<id>/manifest.json + module) : liste commune des appareils (cache 1 s, i... E: charger actifs extensions hubs adressesHubs enRetrait hubBloque invalider pannes uniques lister trouver appliquer relire peutAnimer animer piece gestionsPieces rangeables pieces CACHE_EQUIP presenter composerEquipement equipements codeAppairage scenesHub actionScene RELECTURE_MS ecrireCapacite I: outils.mjs http.mjs modele.mjs capacites.mjs L: charger@20 actifs@44 extensions@46 hubs@48 adressesHubs@49 avecUtilise@58 sur@59 utilise@60 retrait@61 enRetrait@68 hubBloque@69 objet@81 normaliser@82 invalider@85 listerUn@86 motif@98 noter@104 pannes@111 signaler@116 uniques@117 lister@128 trouver@144 de@146 appliquer@151 relire@152 peutAnimer@159 animer@160 piece@169 gestionsPieces@176 rangeables@180 pieces@183 equipUn@203 presenter@218 composerEquipement@227 equipements@235 codeAppairage@251 scenesHub@262 actionScene@279 ecrireCapacite@294
 - core/confirmation.mjs 499 : Confirmation d'une commande groupee (Tout OFF, piece, lot de lumieres) : attendre 1 s, relire, reprendre un... E: DELAI_CONFIRMATION confirmer I: outils.mjs appareils.mjs modele.mjs
-- core/modele.mjs 1.2k : Modele commun d'un appareil (ID_RE, estOnOff), validation d'un reglage (reglage) et conversion vers le form... E: KELVIN_MIN ID_RE estOnOff reglage manque pourClient ancien I: http.mjs
+- core/modele.mjs 1.9k : Modele commun d'un appareil (ID_RE, estOnOff), validation d'un reglage (reglage) et conversion vers le form... E: KELVIN_MIN ID_RE ROLES_ONOFF estOnOff reglage manque pourClient projeter ancien I: http.mjs
 - modules/appareils.mjs 810 : Routes appareils : etat (V1.8 : mode local | distant du serveur, distant = demande arrivee par l'ecoute res... R: GET /status /devices /rooms ; POST /devices/:id/power|brightness|cmd E: routes I: ../core/http.mjs ../core/outils.mjs ../core/appareils.mjs ../core/modele.mjs animations-moteur.mjs ../core/serveur.mjs
 - modules/pieces.mjs 646 : Route ON/OFF d'une piece {on, kind: light|outlet} : commande de piece native, relue apres 1 s, reprise appa... R: POST /rooms/:id/power E: routes I: ../core/http.mjs ../core/outils.mjs ../core/appareils.mjs ../core/confirmation.mjs animations-moteur.mjs
 - modules/tout-off.mjs 769 : Route Tout OFF {confirm: true} : une commande de piece par piece pour les lumieres, puis appareil par appar... R: POST /actions/all-off E: routes I: ../core/http.mjs ../core/outils.mjs ../core/appareils.mjs ../core/confirmation.mjs animations-moteur.mjs
 
-## hubs (~12.4k tok)
-- adapters/dirigera/appairage.mjs 1.0k : DIRIGERA : recherche du hub sur le reseau local (mDNS _ihsp._tcp via bonjour-service, adresses IPv4 privees... E: rechercher champs verifier appairer I: ../../core/http.mjs ../../core/outils.mjs ../../core/reseau.mjs connexion.mjs
+## equipements (~73.6k tok)
+- adapters/dirigera/ecriture.mjs (voir appareils)
+- adapters/dirigera/evenements.mjs (voir appareils)
+- adapters/dirigera/modele.mjs (voir appareils)
+- adapters/homeassistant/modele.mjs 11.2k : Home Assistant, fonctions pures (sans reseau ni fichier) : identifiant d'appareil <-> entite (domaines inte... E: DOMAINES MAX_APPAREILS MAX_ENTITES idDe EXCLUS idLecture entiteDe retenue decrire versModele actionDe depuisEtats versEquipements I: ../../core/modele.mjs ../../core/capacites.mjs L: idDe@23 idLecture@29 entiteDe@35 objet@37 nb@38 tx@39 bo@40 liste@41 a_@42 domaineDe@43 nomDe@44 retenue@48 options@61 parDrapeaux@63 bit@64 copie@67 nombre@88 connu@89 coordonnees@90 traceur@300 inconnu@310 decrire@319 versModele@342 actionDe@355 depuisEtats@375 versEquipements@391 rangDom@416
+- core/appareils.mjs (voir appareils)
+- core/capacites.mjs 4.5k : Referentiel des capacites (V2.1) : rang, famille, widget attendu, type de valeur, bornes par defaut ; valid... E: FAMILLES REFERENTIEL ROLES ENVELOPPES definition connue secrete privee sensible sansSecret famille groupe bornes valider trier absorber composer I: http.mjs
+- modules/equipements.mjs 5.8k : Vue Equipements (V2.1 etape equipements-vue) : GET /api/equipements (equipements composes de tous les hubs,... R: GET /equipements /equipements/alarmes /equipements/icones /equipements/positions ; POST /equipements/icone /equipements/vus /equipements/oublier /equipements/positions /equipements/positions/supprimer /equipements/:id/capacite /equipements/code E: FICHIER MAX_CONNUS OUBLI_MS CLE_RE analyser suivre FICHIER_POSITIONS MAX_POSITIONS DEFAUT_POSITIONS analyserPositions ajouterPosition retirerPosition FICHIER_ICONES ICONES_EQUIPEMENTS analyserIcones poserIcone pieceDe ALERTES alarmes routes I: ../core/http.mjs ../core/outils.mjs ../core/appareils.mjs pieces-registre.mjs
+- public/alarmes.js 1.0k : Bandeau d'alarme (V2.1 étape alarmes ; cartes du 21/11, section 3) : tant qu'une alarme dure (fuite, fumée,... E: APP.alarmes
+- public/equipements-cartes.js 12.3k : Cartes de la vue Équipements (V2.1 étape cartes-lecture ; décisions : claude/cartes-v2.1.md du projet) : te... E: APP.cartes L: nb@13 mille@15 unite@16 option@18 qualite@24 pire@30 texte@43 deux@60 date@61 heure@62 pluriel@63 depuis@65 vu@74 caps@81 de@82 num@83 raisonAir@85 logiciel@87 peut@99 expose@102 ecrire@103 surEquipement@119 inactif@123 lier@125 deuxAppuis@128 carte@140 ligne@141 grand@142 piste@144 pisteCap@154 onoff@156 onoffCap@165 rangee@166 action@168 rond@169 pas@171 curseur@178 pastille@184 barre@185 identifier@189 options@210 infos@223 consommation@233 purificateur@253 joue@298 lecturePause@300 enceinte@305 air@330 etat@351 versTexte@359 decaler@360 condition@361 mouvement@374 lies@400 ajouter@421 telecommande@462 effacerCode@488 boutonCode@489 hub@517 tuileHub@557
+- public/equipements.css 5.0k : vue Équipements (#viewEquip, préfixe eq-, V2.1) : filtres, grille de tuiles de taille fixe (200 x 124 ; tél...
+- public/equipements.js 13.0k : Vue Équipements (#viewEquip, préfixe eq-, V2.1 étape equipements-vue) : tuiles de taille fixe par famille (... E: APP.composer APP.equipements L: appareil@21 famille@23 raisons@44 alarme@54 joue@55 mouvement@57 S@66 apres@87 commander@88 bascule@89 rond@96 inactif@98 rapide@101 precision@102 tuile@103 pastille@217 dessin@221 entete@222 ligne@243 mesures@244 configLumiere@290 configStore@318 modeSupprimer@370 lirePositions@371 ajouterPosition@374 retirerPosition@377 configSimple@381 oublier@390 ouvrir@397 ouvrirElement@402 vu@404 toutVu@409 rendreAide@430 filtres@442 visibles@456 squelette@461 lever@469 rendreGrille@472 rendreDetail@487 rendre@505 montrer@515 charger@520 demarrer@536 arreter@537
+- public/icones.js 2.7k : Icônes des équipements (V2.1 étape icones ; cartes du 21/11, section 4) : pack Équipements (32 icônes en tr... E: APP.icones
+- scripts/equipements-diagnostic.mjs 622 : Diagnostic des équipements (V2.1, 21/11) : node scripts/equipements-diagnostic.mjs, serveur démarré. Lit GE...
+
+## hubs (~21.5k tok)
+- adapters/dirigera/appairage.mjs 1.2k : DIRIGERA : recherche du hub sur le reseau local (mDNS _ihsp._tcp via bonjour-service, adresses IPv4 privees... E: rechercher identifier champs verifier appairer I: ../../core/http.mjs ../../core/outils.mjs ../../core/reseau.mjs connexion.mjs
 - adapters/dirigera/connexion.mjs (voir appareils)
-- adapters/dirigera/hub.mjs 1.1k : Contrat hub de l'adaptateur DIRIGERA (CLAUDE.md, « Hubs ») : un seul hub (id dirigera-1), etat (sonde GET /... E: hub I: ../../core/http.mjs ../../core/outils.mjs connexion.mjs appairage.mjs
-- modules/hubs.mjs 2.4k : Routes generiques des hubs (contrat : CLAUDE.md, « Hubs » ; aucun nom de marque) : GET /api/hubs (types dec... R: POST /hubs/recherche /hubs/appairage /hubs/appairage/annuler /hubs/[a-z0-9][a-z0-9-]{0,39}/deconnexion ; GET /hubs/appairage /hubs E: etatHubs appairageEnCours routes I: ../core/http.mjs ../core/outils.mjs ../core/appareils.mjs ../core/reseau.mjs
+- adapters/dirigera/hub.mjs 1.2k : Contrat hub de l'adaptateur DIRIGERA (CLAUDE.md, « Hubs ») : un seul hub (id dirigera-1), etat (sonde GET /... E: hub I: ../../core/http.mjs ../../core/outils.mjs connexion.mjs appairage.mjs
+- adapters/homeassistant/hub.mjs 2.2k : Contrat hub de l'adaptateur Home Assistant (CLAUDE.md, « Hubs ») : un hub (id homeassistant-1), utilise (je... E: hub I: ../../core/http.mjs ../../core/reseau.mjs connexion.mjs
+- modules/hubs.mjs 3.4k : Routes generiques des hubs (contrat : CLAUDE.md, « Hubs » ; aucun nom de marque) : GET /api/hubs (types dec... R: POST /hubs/recherche /hubs/identifier /hubs/appairage /hubs/appairage/annuler /hubs/[a-z0-9][a-z0-9-]{0,39}/deconnexion ; GET /hubs/appairage /hubs E: etatHubs appairageEnCours routes I: ../core/http.mjs ../core/outils.mjs ../core/appareils.mjs ../core/reseau.mjs
 - public/hubs.css 1.3k : fenêtre « Hubs » (préfixe hb-, construite par hubs.js), même allure que la fenêtre Compte SmartThings ; éta...
-- public/hubs.js 4.0k : Fenêtre « Hubs » (préfixe hb-), ouverte en touchant l'état de l'en-tête (#status) : hubs déclarés par les a... E: APP.hubs
+- public/hubs.js 5.6k : Fenêtre « Hubs » (préfixe hb-), ouverte en touchant l'état de l'en-tête (#status) : hubs déclarés par les a... E: APP.hubs
+- scripts/groupes-essai.mjs 3.9k : Essai guidé des groupes du hub DIRIGERA (V2.1, 21/11 ; cartes, section 15 : vérifications demandées avant d... I: ../adapters/dirigera/connexion.mjs
+
+## homeassistant (~18.3k tok)
+- adapters/homeassistant/connexion.mjs 2.6k : Connexion a Home Assistant : adresse et port (donnees/homeassistant.json, sans secret), jeton d'acces longu... E: JETON PORT_DEFAUT portValide jetonValide lire jetonPresent etatLocal cible obtenir envoyer enregistrer deconnecter erreur I: ../../core/outils.mjs ../../core/reseau.mjs
+- adapters/homeassistant/hub.mjs (voir hubs)
+- adapters/homeassistant/index.mjs 931 : Adaptateur Home Assistant (V2.0) : lister (GET /api/states : lumieres et prises, modele.mjs, capacites proj... E: lister equipements relire appliquer erreur hub I: ../../core/http.mjs ../../core/outils.mjs connexion.mjs modele.mjs registre.mjs hub.mjs
+- adapters/homeassistant/modele.mjs (voir equipements)
+- adapters/homeassistant/registre.mjs 1.3k : Registre de Home Assistant par l'API WebSocket (V2.1), lecture seule : entites (config/entity_registry/list... E: COMMANDES dialoguer lireRegistre I: connexion.mjs ../../core/reseau.mjs
 
 ## pieces (~35.3k tok)
 - adapters/dirigera/pieces.mjs 1.5k : DIRIGERA, pieces (contrat gestionPieces, CLAUDE.md « Pièces ») : icones generiques <-> liste fermee du hub,... E: iconeGenerique gestionPieces I: ../../core/http.mjs ../../core/outils.mjs connexion.mjs
@@ -51,27 +79,28 @@ Un paquet = CLAUDE.md + INDEX.md + fichiers de la ou des zones demandees.
 - modules/pieces-gestion.mjs 5.3k : Modification et suppression des pieces (contrat gestionPieces : modifier, supprimer, contenu ; registre loc... R: POST /pieces/:id/modifier /pieces/:id/supprimer E: rangementComplet routes I: ../core/http.mjs ../core/outils.mjs ../core/appareils.mjs pieces-creation.mjs pieces-registre.mjs ../core/modele.mjs
 - modules/pieces-registre.mjs 1.3k : Registre local des pieces (V1.4, CLAUDE.md « Pièces » ; aucun nom de marque) : donnees/pieces.json {v: 1, l... E: MAX_LOCALES LOCAL_RE estLocale nouvelleLocale lireRegistre majRegistre independants I: ../core/http.mjs ../core/outils.mjs ../core/appareils.mjs ../core/modele.mjs
 - public/pieces-choix.js 4.5k : Pièce d'un appareil (V1.4) : pastille (icône et nom de sa pièce, « Autres » par défaut) et fenêtre « Ranger... E: APP.piecesChoix
-- public/pieces-gestion.js 7.5k : Fenêtre « Pièces » (V1.4, préfixe pg-, cadre et classes hb- et np- des fenêtres Hubs et Nouvelle pièce) : l... E: APP.piecesGestion
+- public/pieces-gestion.js 7.5k : Fenêtre « Pièces » (V1.4, préfixe pg-, cadre et classes hb- et np- des fenêtres Hubs et Nouvelle pièce) : l... E: APP.piecesGestion L: s@7 cible@11 independants@12 pieces@14 piece@20 bouton@21 desarmer@22 initForm@24 charger@29 choisir@41 hubDans@44 indDans@45 locauxVoulus@46 changements@47 verdict@56 rendreListe@67 ligne@86 rendreAppareils@97 rendreForm@133 majNom@192 majPied@199 armer@200 destinations@203 rendreSuppression@207 remplirSuppression@225 remplirPied@233 compteRendu@263 enregistrer@269 supprimer@286 rendreAide@331 rendre@342 fermer@350 ouvrir@356
 - public/pieces-liste.js 875 : Pièces dans l'accueil, le menu et la vue d'une pièce (V1.4) : GET /api/pieces/liste relu avec chaque actual...
 - public/pieces.css 2.7k : fenêtre « Nouvelle pièce » (préfixe np-, construite par pieces.js ; cadre et éléments communs : classes hb-...
-- public/pieces.js 6.7k : Fenêtre « Nouvelle pièce » (préfixe np-, allure et classes hb- de la fenêtre Hubs) : carte « + » au bout de... E: APP.pieces
+- public/pieces.js 6.7k : Fenêtre « Nouvelle pièce » (préfixe np-, allure et classes hb- de la fenêtre Hubs) : carte « + » au bout de... E: APP.pieces L: svg@25 cle@27 propre@28 charger@33 iconesDe@53 independants@54 locales@55 bouton@56 desarmer@57 verdict@60 choisis@71 choisisL@72 quittent@73 locale@74 rendreForm@76 majNom@157 majPied@164 remplirPied@165 envoyer@194 rendreResultat@212 rendreAide@246 rendre@257 fermer@265 ouvrir@271
 
-## lumieres (~12.8k tok)
+## lumieres (~13.7k tok)
 - modules/couleurs.mjs 468 : Couleurs personnalisees (colors.json [{id, hue 0-359, sat 0-100}], 7 max) : GET et POST /api/colors, POST /... R: GET /colors ; POST /colors /colors/:id/delete E: routes I: ../core/http.mjs ../core/outils.mjs
 - modules/lots.mjs 1.3k : Commande groupee POST /api/lights/apply {ids, settings} et executer(items) : 10 envois en parallele, ecart ... R: POST /lights/apply E: verifierIds executer repondre routes I: ../core/http.mjs ../core/outils.mjs ../core/appareils.mjs ../core/modele.mjs ../core/confirmation.mjs plan.mjs animations-moteur.mjs
-- public/panel.js 1.0k : Panneau de reglage (colonne droite, prefixe q-) : ON/OFF, luminosite, Blanc/Couleur, cadran SVG, couleurs r...
+- public/panel.js 1.5k : Panneau de reglage (colonne droite, prefixe q-) : ON/OFF, luminosite, Blanc/Couleur, cadran SVG, couleurs r... E: APP.panneauCaps
 - public/panneau.css 3.1k : colonne droite (panneau de réglage, préfixe q-). Construit par panel.js.
-- public/reglages.js 6.9k : Reglages d'une lumiere (prefixe q-, panneau.css), composant partage (V1.5) : APP.reglages(opts) -> {root, c... E: APP.reglages APP.reglagesRetirer
+- public/reglages.js 7.4k : Reglages d'une lumiere (prefixe q-, panneau.css), composant partage (V1.5) : APP.reglages(opts) -> {root, c... E: APP.reglages APP.reglagesRetirer L: clamp@25 svgEl@26 stepBtn@31 renderAll@40 exitDel@41 addCustom@42 delCustom@48 loadCustom@56
 
-## plan (~6.3k tok)
+## plan (~6.4k tok)
 - modules/plan.mjs 523 : Plan des pieces (layout.json {piece: {appareil: {x, y}}}, positions 0-100 %) : GET et POST /api/layout ; ex... R: GET /layout ; POST /layout E: lireLayout routes I: ../core/http.mjs ../core/outils.mjs ../core/modele.mjs
 - public/plan.css 1.8k : colonne gauche, barre de sélection, plan des pièces, bulles, mode Organiser.
 - public/plan.js 4.0k : Vue Lumieres, colonne gauche : puces de pieces, bulles (tile), plan par piece (layout, glisser en mode Orga...
 
-## scenarios (~7.2k tok)
+## scenarios (~8.7k tok)
 - modules/scenarios.mjs 1.2k : Scenarios (scenarios.json, 30 max) : GET et POST /api/scenarios (capture l'etat des lumieres choisies), POS... R: GET /scenarios ; POST /scenarios /scenarios/:id/apply|rename|delete|icon|fav E: SCENE_ICONS routes I: ../core/http.mjs ../core/outils.mjs ../core/appareils.mjs ../core/modele.mjs lots.mjs
-- public/scenarios.css 1.3k : onglet Scénarios (cartes, pastilles, boutons).
-- public/scenes.js 4.6k : Onglet Scenarios : liste, appliquer, renommer, supprimer, icone (ICONS = SCENE_ICONS de modules/scenarios.m... E: APP.renderScenes APP.loadScenes APP.sceneIcon APP.applyScene
+- modules/scenes-hub.mjs 336 : Scenes du hub (V2.1 etape scenes-hub ; cartes §17, contrat « Scènes du hub » de .claude/rules/hubs.md) : GE... R: GET /scenes-hub ; POST /scenes-hub/lancer /scenes-hub/annuler E: routes I: ../core/http.mjs ../core/appareils.mjs
+- public/scenarios.css 1.5k : onglet Scénarios (cartes, pastilles, boutons).
+- public/scenes.js 5.7k : Onglet Scenarios : liste, appliquer, renommer, supprimer, icone (ICONS = SCENE_ICONS de modules/scenarios.m... E: APP.renderScenes APP.loadScenes APP.sceneIcon APP.applyScene
 
 ## animations (~28.3k tok)
 - modules/animations-donnees.mjs 743 : Fichier donnees/animations-v2.json {v: 2, animations: [...], migre_de?, migre_le?} (V1.5, sans secret) : ab... E: lireAnimations ecrireAnimations I: ../core/outils.mjs ../core/http.mjs animations-plan.mjs
@@ -79,11 +108,11 @@ Un paquet = CLAUDE.md + INDEX.md + fichiers de la ou des zones demandees.
 - modules/animations-plan.mjs 5.0k : Animations (V1.5, fonctions pures, sans hub ni fichier) : valider (format d'une animation ; migrer : ancien... E: LIMITES COURBES CORPS_ANIMATION migrer valider segments courbe horaire verifier compiler decouper retour I: ../core/http.mjs ../core/modele.mjs
 - modules/animations.mjs 1.4k : Routes des animations (V1.5) : GET /api/animations (liste, en cours, limites, lampes animables), POST /api/... R: GET /animations ; POST /animations/verifier /animations /animations/essai /animations/:id/modifier|supprimer|dupliquer|lancer|arreter|favori E: routes I: ../core/http.mjs ../core/outils.mjs ../core/appareils.mjs animations-plan.mjs animations-moteur.mjs animations-donnees.mjs scenarios.mjs
 - public/animations.css 3.1k : onglet Animations (#viewAnim, préfixe an-, construit par animations.js) : liste (cartes .scard de scenarios...
-- public/animations.js 14.4k : Onglet Animations (V1.5, #viewAnim, prefixe an-) : liste (lancer, arreter, modifier, dupliquer, supprimer ;... E: APP.animations
+- public/animations.js 14.4k : Onglet Animations (V1.5, #viewAnim, prefixe an-) : liste (lancer, arreter, modifier, dupliquer, supprimer ;... E: APP.animations L: virgule@13 duree@14 plur@19 horaire@21 nomLampe@30 couleurCible@31 resumeEtape@38 enCoursDe@54 majEtat@57 charger@66 planifier@69 poster@75 fenetre@88 bouton@99 aide@136 choisirLampes@148 choisirIcone@183 et@200 coul@201 assistants@247 genererModele@258 rendre@271 icBouton@312 carteAnim@313 nouvelleEtape@343 ouvrirEditeur@344 quitterEditeur@351 change@355 majPartielle@357 construireEditeur@360 montrerVolet@407 bascule@414 majBoutonsEditeur@420 verifier@427 enregistrer@443 dessinerFrise@454 listeEtapes@479 pas@504 regle@505 segments@519 formEtape@529 favorites@593 sigFav@594 basculer@595 majCarte@599
 
 ## accueil (~17.5k tok)
 - modules/accueil.mjs 2.0k : Accueil personnalisable (V1.9 révision 3) : ordre des cartes de chaque rubrique, ordre des rubriques, carte... R: GET /accueil ; POST /accueil /accueil/defaut E: FICHIER RUBRIQUES MAX_CLES CORPS_ACCUEIL vide analyser valider routes I: ../core/http.mjs ../core/outils.mjs ../core/modele.mjs
-- public/accueil-org.js 6.6k : Accueil personnalisable (V1.9 révision 3) : ordre des cartes de chaque rubrique, ordre des rubriques, carte... E: APP.accueilOrg
+- public/accueil-org.js 6.6k : Accueil personnalisable (V1.9 révision 3) : ordre des cartes de chaque rubrique, ordre des rubriques, carte... E: APP.accueilOrg L: videM@5 SV@10 trier@18 rubriques@30 sansPanne@33 fusion@34 planifier@48 changer@54 masquer@58 deplacerRubrique@74 envoyer@80 adopter@99 lire@111 poser@119 vide@125 pas@128 bouton@137 decorer@143 mobiles@165 defileur@166 placer@173 boucle@184 tenir@193 bouge@205 lache@206 barre@220 focus@249 bascule@253 ligneF@262 remplir@270 affichage@292 aide@306 ouvrir@315 quitter@323
 - public/accueil.css 3.6k : page d'accueil (V1.5) : rubriques Pièces / Actions / Catégories (4 au plus), une ligne de cartes chacune, d...
 - public/home.js 5.4k : Accueil : rubriques Pieces / Actions / Categories (4 au plus), une ligne de cartes chacune a defilement hor... E: APP.homeFavoris APP.homePieces APP.homeRafraichir APP.homeActions APP.renderHome
 
@@ -97,7 +126,7 @@ Un paquet = CLAUDE.md + INDEX.md + fichiers de la ou des zones demandees.
 - adapters/cameras/sonde.mjs 1.2k : Joignabilite des cameras (V1.7) : connexion TCP seule au port RTSP (2 s au plus ; aucune requete RTSP, aucu... E: DELAI MOTIFS connecter creerSonde sonde I: ../../core/reseau.mjs ../../core/outils.mjs
 - public/cameras-direct.js 4.2k : Lecture d'un flux de caméra par MediaSource (étape cam-mse) : le client reçoit lui-même le MP4 fragmenté du... E: APP.camDirect
 - public/cameras.css 2.2k : panneau des caméras de l'accueil (colonne de droite, une carte par caméra). Masqué (.hidden) s'il n'y a auc...
-- public/cameras.js 9.3k : Cartes camera de l'accueil (#homeCams) : lecteur, EN DIRECT, reconnexion 3 essais, son, volume, plein ecran... E: APP.camPip APP.camerasReload
+- public/cameras.js 9.3k : Cartes camera de l'accueil (#homeCams) : lecteur, EN DIRECT, reconnexion 3 essais, son, volume, plein ecran... E: APP.camPip APP.camerasReload L: now@34 lecteur@35 setState@37 enDirect@45 annoncer@50 fsEl@65 fsExit@66 fsIcons@67 toggleFs@77 show@84 loadQ@95 saveQ@96 servie@97 qLabel@98 sendMove@108 finMouvement@109 arreterApres@114 pressArrow@119 releaseArrow@128 centrer@133 arrow@139 boutonCentre@150 ptzLabel@158 soundLabel@163 conteneur@173 borne@179 lirePos@180 libre@183 poser@184 placer@185 dansColonne@196 cible@202 glisser@208 flotter@248 rentrer@257 couper@265 stop@269 repos@280 majEtat@288 stopAll@295 adresse@297 jouer@298 open@306 reconnect@325 start@342 build@348 entete@411 load@421 cle@438 relire@439
 
 ## cameras-ajout (~13.7k tok)
 - adapters/cameras/cameras-gestion.mjs 4.5k : gestion des cameras (recherche, ajout, renommage, suppression) et secrets par camera. R: POST /cameras/discover /cameras/discover/cancel /cameras/add /cameras/:id/rename|delete ; GET /cameras/discover /cameras/list E: PATH_RE secretDe nomDe routesGestion I: ../../core/http.mjs ../../core/modele.mjs ../../core/outils.mjs decouverte.mjs sonde.mjs
@@ -107,15 +136,15 @@ Un paquet = CLAUDE.md + INDEX.md + fichiers de la ou des zones demandees.
 - public/cameras-ajout.js 3.8k : fenetre "Cameras" (bouton + du panneau des cameras de l'accueil) : recherche, ajout avec test, ajout manuel... E: APP.camerasOpen
 
 ## electromenager (~50.3k tok)
-- adapters/smartthings/api.mjs 6.5k : Client du cloud SmartThings : HTTPS vers api.smartthings.com seul (TLS strict, aucune redirection suivie, 1... E: ErreurST RETOUR SCOPES creerClient client I: ../../core/outils.mjs
+- adapters/smartthings/api.mjs 6.5k : Client du cloud SmartThings : HTTPS vers api.smartthings.com seul (TLS strict, aucune redirection suivie, 1... E: ErreurST RETOUR SCOPES creerClient client I: ../../core/outils.mjs L: rempli@40 objet@41 creerClient@43 cloudInjoignable@53 etatCloud@54 surRetourCloud@55 noterCloud@56 poignee@66 armerSonde@76 envoyer@87 envoyerBrut@93 lireSecrets@119 ecrireSecrets@126 versionSecrets@135 lireBrut@136 exclusif@145 frais@152 echeance@153 posterJeton@156 jeton@167 renouveler@172 appel@193 get@205 envoyerCommande@210 commande@219 choisirProgramme@225 reglerOption@231 droitCommande@237 appareils@242 statut@256 sante@258 etatCompte@262 adresseAutorisation@274 echangerCode@280 effacerJetons@302 enregistrerApplication@314
 - adapters/smartthings/compte.mjs 1.5k : Compte SmartThings depuis l'application : etat sans secret, application OAuth (saisie de secours), connexio... R: GET /smartthings/compte ; POST /smartthings/application /smartthings/connexion /smartthings/code /smartthings/deconnexion E: routes I: ../../core/http.mjs api.mjs
 - adapters/smartthings/familles.mjs 3.8k : Familles SmartThings generiques, LECTURE SEULE : capteurs, interrupteurs, audio, appareils a cycle (seche-l... R: GET /smartthings/appareils ; POST /smartthings/appareils/actualiser E: FAMILLES famille valeurs connus routes I: ../../core/outils.mjs api.mjs
 - adapters/smartthings/index.mjs 6.0k : Adaptateur SmartThings (cloud) : lave-linge -> type generique washer (voir core/modele.mjs) ; routes GET /a... R: GET /washers ; POST /washers/actualiser /washers/st-[A-Za-z0-9-]{1,72}/reglages /washers/st-[A-Za-z0-9-]{1,72}/commande E: lister appliquer erreur rangement routes I: ../../core/outils.mjs ../../core/http.mjs compte.mjs familles.mjs api.mjs
 - adapters/smartthings/manifest.json 103 : Manifeste : Samsung SmartThings (cloud, exception : api.smartthings.com seul, TLS strict, OAuth donnees/smartthings.json) : lave-linge (type washer) et familles generiques en lecture seule (familles.mjs)
 - public/electromenager.css 3.0k : vue Électroménager (#viewElectro, préfixe e-) : état complet d'un lave-linge et commandes, affichés dans la...
-- public/electromenager.js 11.6k : Vue Electromenager (#viewElectro, prefixe e-) : tuile compacte par lave-linge dans la carte SmartThings ; f...
+- public/electromenager.js 11.6k : Vue Electromenager (#viewElectro, prefixe e-) : tuile compacte par lave-linge dans la carte SmartThings ; f... L: finGeste@10 pad@14 heure@15 duree@16 programme@17 temperature@19 essorage@20 phase@21 onoff@22 ligne@23 carte@30 bouton@67 boutons@82 iconeProg@118 codeActuel@123 svgDe@124 grad@128 geometrie@133 curseur@135 selection@163 selecteurListe@197 cadran@254 envoyerReglages@390 envoyer@404 rendre@415 tuileDe@428 ouvrirDetail@430 majDetail@437 afficher@448 charger@457 ouvrir@474 demarrerLecture@481 arreterLecture@482 fermer@483 hhmm@496 resume@497 actualiser@509
 - public/st-compte.css 2.4k : fenêtre Compte SmartThings et fenêtre de détail (préfixe sc-), carte de groupe SmartThings et tuiles compac...
-- public/st-compte.js 7.7k : Compte SmartThings (fenetre, prefixe sc-) et carte de groupe SmartThings (en-tete : etat du compte + icone ... E: APP.stCompte
+- public/st-compte.js 7.7k : Compte SmartThings (fenetre, prefixe sc-) et carte de groupe SmartThings (en-tete : etat du compte + icone ... E: APP.stCompte L: prevenir@10 charger@11 poster@20 texteEtat@31 horsLigne@40 heureCourte@41 majCloud@57 date@64 ligne@70 bouton@76 champ@77 sectionApplication@87 sectionConnexion@104 sectionDeconnexion@137 rendreMain@152 rendreAide@222 rendre@234 fermer@240 icone@245 ouvrir@246 remplirEntete@268 majEntetes@279 actualiser@283 groupe@300 tuile@327 fenetre@347 visibleTous@356 majTous@357 rendreTous@380 hote@392 majDans@393 dans@394 nbDans@395
 - public/st-familles.js 3.5k : Familles SmartThings generiques, LECTURE SEULE : capteurs, interrupteurs, audio, autres appareils (vue #vie...
 - scripts/smartthings.mjs 4.2k : configuration (config, autoriser) et diagnostic (liste, machine, lecture seule) du cloud SmartThings, sans ...
 
@@ -133,7 +162,7 @@ Un paquet = CLAUDE.md + INDEX.md + fichiers de la ou des zones demandees.
 - public/appairage.html 548 : Page d'appairage (V1.8, autonome : seule page servie par l'écoute réseau à un appareil sans jeton, avec app...
 - public/appairage.js 1.3k : Page d'appairage (V1.8, autonome, sans APP) : saisie du code à 8 chiffres (espace toléré) et du nom de l'ap...
 - public/clients.css 911 : fenêtre « Appareils autorisés » (V1.8, préfixe ca-, construite par clients.js ; cadre et éléments communs :...
-- public/clients.js 7.0k : Fenêtre « Appareils autorisés » (V1.8, préfixe ca-, cadre hb- de hubs.css) : mode du serveur (local ou dist... E: APP.clients
+- public/clients.js 7.0k : Fenêtre « Appareils autorisés » (V1.8, préfixe ca-, cadre hb- de hubs.css) : mode du serveur (local ou dist... E: APP.clients L: date@25 empreinte@26 stop@27 desarmer@28 fermer@29 lire@30 ouvrir@33 rubrique@57 echec@58 ligne@64 bouton@65 demander@68 finCode@85 majCompte@86 revoquer@91 versMode@100 changerMode@101 vueMode@113 serveur@167 vueCode@191 liste@201 rendre@221
 - scripts/appairage.mjs 695 : Code d'appairage en terminal (V1.8, machine sans ecran), serveur demarre en mode distant : node scripts/app... I: ../config.mjs
 - scripts/serveur.mjs 1.3k : Mode du serveur (V1.8), serveur arrete : node scripts/serveur.mjs (etat) | distant [adresse] [port] (ouvre ... I: ../config.mjs ../core/serveur.mjs
 
@@ -151,6 +180,6 @@ Un paquet = CLAUDE.md + INDEX.md + fichiers de la ou des zones demandees.
 ## diagnostic (~3.6k tok)
 scripts/camera-evenements.mjs 2.1k, scripts/camera-test.mjs 1.1k, scripts/decouverte-test.mjs 389
 
-## outils (~9.1k tok)
-- outils/ia.mjs 7.7k : Outil IA : INDEX.md genere, paquet minimal par zone pour un nouveau chat, controle avant/apres patch.
+## outils (~11.5k tok)
+- outils/ia.mjs 10.1k : Outil IA : INDEX.md genere, paquet minimal par zone pour un nouveau chat, controle avant/apres patch. L: extra@25 decoupe@32 tok@33 k@34 fin@35 arbre@37 lire@47 reperes@91 zonesDe@102 blocZone@110 texteIndex@127 fichiersIndex@136 secrets@149 essai@151 pwd@154 fuite@158 ecrireIndex@160 motifsRegle@171 globVersRegex@176 taille@177 fichiersRegles@178 reglesPour@183 choisisPour@192 couts@194 pack@205 syntaxeModules@232 check@240 ko@242 droits@265 avertissements@296 arbreRelatif@310 arbreTout@319 nomsVersion@333 fuitesPubliques@347 vu@349 arbreEntier@357 prealablePublier@368 publier@376 copier@397 release@410
 - outils/publier.sh (voir distribution)

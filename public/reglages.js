@@ -4,7 +4,10 @@
 // (animations.js : sans ON/OFF, « Inchangée » pour la couleur et la luminosite, changement transmis aussitot).
 // opts : {onoff (boutons ON/OFF), curseur (luminosite en curseur horizontal, sans cadran), off (avec curseur : bouton « OFF » sur la ligne de luminosite,
 //   P.off, rappel eteindre(P) ; couleur masquee tant qu'il est choisi), inchange (mode « Inchangée » et luminosite gardee), actif() (le cadran repond), differe (envoi 600 ms / 50 ms apres le geste, attente si APP.busy),
-//   niveau(P), blanc(P), couleur(P), on(vrai|faux), inchangee(P) (rappels ; P = {level, mode: temperature|color|aucune, hue, sat 0-100, kelvin, garde (luminosite gardee)})}.
+//   niveau(P), blanc(P), couleur(P), on(vrai|faux), inchangee(P) (rappels ; P = {level, mode: temperature|color|aucune, hue, sat 0-100, kelvin, garde (luminosite gardee)}),
+//   caps (V2.1 : capacites exposees, liste de "onoff", "luminosite", "blanc", "couleur" ; absent = toutes, editeur d'animation) : seules ces sections sont CONSTRUITES (jamais cachees ensuite) :
+//   ON/OFF (avec opts.onoff), cadran de luminosite, blanc (temperature + Chaud / Neutre / Froid), couleur (teinte + intensite + couleurs rapides et personnalisees) ; Blanc / Couleur seulement si les deux,
+//   carte des couleurs seulement si blanc ou couleur ; titre false : sans titre ni indication (vue Equipements : en-tete propre) ; kelvin [min, max] (bornes declarees de la temperature, sinon 1801-6535). Les elements N absents restent indefinis.
 (function () {
   var el = APP.el;
   var WHITES = [["Chaud", 2700], ["Neutre", 4000], ["Froid", 6500]];
@@ -68,6 +71,10 @@
     var P = { level: 80, mode: "temperature", hue: 240, sat: 100, kelvin: 4000, garde: false };
     var N = {}, timer = null, interacting = false, lpTimer = null, lpFired = false;
     var actif = opts.actif || function () { return true; };
+    var A = function (k) { return !opts.caps || opts.caps.indexOf(k) >= 0; };
+    var aBlanc = A("blanc"), aCouleur = A("couleur"), aLum = opts.curseur || A("luminosite"), deux = aBlanc && aCouleur;
+    var KMIN = opts.kelvin && opts.kelvin[0] > 0 ? opts.kelvin[0] : 1801, KMAX = opts.kelvin && opts.kelvin[1] > KMIN ? opts.kelvin[1] : 6535;
+    if (!deux) P.mode = aBlanc ? "temperature" : "color";
     // Rappel apres un geste : differe (panneau : envoi aux lampes, attente si une commande est en cours) ou immediat (editeur)
     function schedule(fn, delay) {
       if (!opts.differe) { fn(); return; }
@@ -100,31 +107,33 @@
         if (N.offB) N.offB.className = "q-mode q-garde q-offb" + (P.off ? " sel" : "");
         N.c2.className = "q-card" + (P.off ? " q-eteinte" : "");
         N.lvl.style.setProperty("--tc", "hsl(40,100%," + Math.round(30 + 0.65 * P.level) + "%)");
-      } else {
+      } else if (N.fill) {
         N.fill.setAttribute("stroke-dasharray", a);
         N.glow.setAttribute("stroke-dasharray", a);
         N.thumb.setAttribute("cx", x); N.thumb.setAttribute("cy", y);
         N.thumbG.setAttribute("cx", x); N.thumbG.setAttribute("cy", y + 2);
         N.num.textContent = P.garde ? "=" : P.level;
         N.dial.className = "q-dial" + (lit && !P.garde ? "" : " dim");
-        N.c1.className = "q-card q-c1" + (lit ? "" : " q-dim");
         N.bulb.setAttribute("class", "q-bulb" + (lit && !P.garde ? " on" : ""));
         N.c1.style.setProperty("--ga", lit && !P.garde ? (0.1 + 0.4 * frac).toFixed(2) : "0");
       }
+      if (!opts.curseur) N.c1.className = "q-card q-c1" + (lit ? "" : " q-dim");
       if (N.garde) N.garde.className = "q-mode q-garde" + (P.garde && !P.off ? " sel" : "");
-      N.kVal.textContent = P.kelvin + " K"; setRange(N.kel, P.kelvin);
-      N.hueVal.textContent = P.hue + "°"; setRange(N.hue, P.hue);
-      N.satVal.textContent = P.sat + " %"; setRange(N.sat, P.sat);
-      N.sat.style.setProperty("--satg", "linear-gradient(to right,#fff,hsl(" + P.hue + ",100%,50%))");
-      N.sat.style.setProperty("--tc", "hsl(" + P.hue + ",100%," + Math.round(100 - P.sat / 2) + "%)");
-      N.hue.style.setProperty("--tc", "hsl(" + P.hue + ",100%,50%)");
-      N.mW.className = "q-mode" + (P.mode === "temperature" ? " sel" : "");
-      N.mC.className = "q-mode" + (P.mode === "color" ? " sel" : "");
+      if (N.kel) { N.kVal.textContent = P.kelvin + " K"; setRange(N.kel, P.kelvin); }
+      if (N.hue) {
+        N.hueVal.textContent = P.hue + "°"; setRange(N.hue, P.hue);
+        N.satVal.textContent = P.sat + " %"; setRange(N.sat, P.sat);
+        N.sat.style.setProperty("--satg", "linear-gradient(to right,#fff,hsl(" + P.hue + ",100%,50%))");
+        N.sat.style.setProperty("--tc", "hsl(" + P.hue + ",100%," + Math.round(100 - P.sat / 2) + "%)");
+        N.hue.style.setProperty("--tc", "hsl(" + P.hue + ",100%,50%)");
+      }
+      if (N.mW) N.mW.className = "q-mode" + (P.mode === "temperature" ? " sel" : "");
+      if (N.mC) N.mC.className = "q-mode" + (P.mode === "color" ? " sel" : "");
       if (N.mA) N.mA.className = "q-mode" + (P.mode === "aucune" ? " sel" : "");
-      N.white.style.display = P.mode === "temperature" ? "" : "none";
-      N.color.style.display = P.mode === "color" ? "" : "none";
-      for (i = 0; i < N.pw.length; i++) N.pw[i].className = "q-pcard" + (Math.abs(P.kelvin - WHITES[i][1]) <= 100 ? " sel" : "");
-      for (i = 0; i < N.pc.length; i++) N.pc[i].className = "q-sw" + (P.hue === COLORS[i][1] && P.sat === COLORS[i][2] ? " sel" : "");
+      // Blanc / Couleur (les deux construits) : la section du mode choisi ; une seule construite : toujours affichee
+      if (deux) { N.white.style.display = P.mode === "temperature" ? "" : "none"; N.color.style.display = P.mode === "color" ? "" : "none"; }
+      for (i = 0; N.pw && i < N.pw.length; i++) N.pw[i].className = "q-pcard" + (Math.abs(P.kelvin - WHITES[i][1]) <= 100 ? " sel" : "");
+      for (i = 0; N.pc && i < N.pc.length; i++) N.pc[i].className = "q-sw" + (P.hue === COLORS[i][1] && P.sat === COLORS[i][2] ? " sel" : "");
       paintCustom();
     }
 
@@ -263,9 +272,8 @@
     } else construireCadran();
     function construireCadran() {
     c1 = el("div", "q-card q-c1"); N.c1 = c1;
-    N.title = el("div", "q-title", ""); N.hint = el("div", "q-hint", "");
-    c1.appendChild(N.title); c1.appendChild(N.hint);
-    if (opts.onoff) {
+    if (opts.titre !== false) { N.title = el("div", "q-title", ""); N.hint = el("div", "q-hint", ""); c1.appendChild(N.title); c1.appendChild(N.hint); }
+    if (opts.onoff && A("onoff")) {
       seg = el("div", "q-segs");
       N.bOn = el("button", "q-seg", ""); N.bOn.innerHTML = ICON_POWER + "<span>ON</span>";
       N.bOff = el("button", "q-seg", ""); N.bOff.innerHTML = ICON_POWER + "<span>OFF</span>";
@@ -273,6 +281,7 @@
       N.bOff.onclick = function () { opts.on(false); };
       seg.appendChild(N.bOn); seg.appendChild(N.bOff); c1.appendChild(seg);
     }
+    if (!aLum) return;
     N.dialBox = el("div", "q-dialbox");
     row = el("div", "q-dialrow");
     var minus = stepBtn(false), plus = stepBtn(true);
@@ -323,6 +332,7 @@
     };
     }
 
+    if (deux) {
     row = el("div", "q-modes");
     N.mW = el("button", "q-mode", ""); N.mW.innerHTML = ICON_SUN + "<span>Blanc</span>";
     N.mC = el("button", "q-mode", ""); N.mC.innerHTML = '<i class="q-wheel"></i><span>Couleur</span>';
@@ -335,14 +345,18 @@
       row.appendChild(N.mA);
     }
     c2.appendChild(row);
+    }
 
+    if (aBlanc) {
     N.white = el("div", "q-sect");
-    t = ctl({ name: "Température de couleur", icon: ICON_THERMO, big: true, key: "kelvin", cls: "kel", min: 1801, max: 6535, step: 100, apply: applyWhite });
+    t = ctl({ name: "Température de couleur", icon: ICON_THERMO, big: true, key: "kelvin", cls: "kel", min: KMIN, max: KMAX, step: 100, apply: applyWhite });
     N.kel = t.input; N.kVal = t.val; N.white.appendChild(t.box);
     row = el("div", "q-pre"); N.pw = [];
     for (i = 0; i < WHITES.length; i++) { N.pw.push(mkWhite(i)); row.appendChild(N.pw[i]); }
     N.white.appendChild(row); c2.appendChild(N.white);
+    }
 
+    if (aCouleur) {
     N.color = el("div", "q-sect");
     t = ctl({ name: "Teinte", unit: "(°)", inline: true, key: "hue", cls: "hue", min: 0, max: 359, step: 5, wrap: true, apply: applyColor });
     N.hue = t.input; N.hueVal = t.val; N.color.appendChild(t.box);
@@ -356,10 +370,11 @@
     N.custom = el("div", "q-qc q-custom");
     quick.appendChild(N.custom);
     N.color.appendChild(quick); c2.appendChild(N.color);
+    }
     if (!opts.curseur) N.root.appendChild(c1);
-    N.root.appendChild(c2);
+    if (opts.curseur || aBlanc || aCouleur) N.root.appendChild(c2); else { c2 = null; N.c2 = null; }
 
-    var inst = { root: N.root, c1: c1, c2: c2, N: N, P: P, peindre: paint, renderCustom: renderCustom, occupe: function () { return interacting || !!timer; } };
+    var inst = { root: N.root, c1: c1, c2: c2, N: N, P: P, caps: opts.caps ? opts.caps.slice() : null, peindre: paint, renderCustom: renderCustom, occupe: function () { return interacting || !!timer; } };
     instances.push(inst);
     renderCustom();
     paint();

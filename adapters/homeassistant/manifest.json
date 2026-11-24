@@ -1,0 +1,7 @@
+{
+  "id": "homeassistant",
+  "nom": "Home Assistant : lumieres et prises (HTTP local, adresse IPv4 privee, adresse donnees/homeassistant.json, jeton donnees/homeassistant-token.txt ; contrat hub ; V2.0 etape 3 : commandes ON/OFF, luminosite, couleur, blanc)",
+  "module": "index.mjs",
+  "types": ["light", "outlet"],
+  "libelle": "Home Assistant"
+}

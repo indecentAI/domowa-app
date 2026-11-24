@@ -157,7 +157,7 @@ var APP = window.APP = {
         return;
       }
       APP.devices = d.devices;
-      APP.setStatus(true, "Hub connecté");
+      APP.setStatus(true, "Connecté"); // V2.0 : sans le type de hub (DIRIGERA ou Home Assistant)
       if (APP.connErr) { APP.banner("", ""); APP.connErr = false; APP.pannesMsg = ""; }
       montrerPannes(d.pannes);
       $("stamp").textContent = "Actualisé à " + now();

@@ -1,37 +1,40 @@
-// @zone appareils | Adaptateur DIRIGERA : versModele, lister, appliquer (ON puis niveau puis couleur ou temperature), animer (V1.5 : une ecriture d'une valeur avec fondu), commande de piece ; connexion (adresse, jeton, client TLS strict, erreurs) dans connexion.mjs, contrat hub dans hub.mjs. Interface : core/appareils.mjs.
+// @zone appareils | Adaptateur DIRIGERA : lister, relire (versModele de modele.mjs : capacites, V2.1), equipements (V2.1 : tout le hub en capacites), ecrire (V2.1 : ecriture generique, ecriture.mjs), appliquer (ON puis niveau puis couleur ou temperature), animer (V1.5 : une ecriture d'une valeur avec fondu), commande de piece ; connexion (adresse, jeton, client TLS strict, erreurs) dans connexion.mjs, contrat hub dans hub.mjs. Interface : core/appareils.mjs.
 // Nouvelle commande d'ecriture : lire d'abord node_modules/dirigera/dist/api/*.js (le hub expose aussi blinds, capteurs, speakers...).
 import { withTimeout } from '../../core/outils.mjs';
 import { client, erreur } from './connexion.mjs';
 import { iconeGenerique } from './pieces.mjs';
+import { versModele, versEquipements } from './modele.mjs';
+import { suivre, constater, heures } from './evenements.mjs';
 export { erreur };
 export { hub } from './hub.mjs';
 export { gestionPieces } from './pieces.mjs';
+export { ecrire } from './ecriture.mjs'; // V2.1 etape ecriture-generique : POST /api/equipements/:id/capacite
+// Scenes du hub (V2.1 etape scenes-hub ; contrat « Scènes du hub » de .claude/rules/hubs.md) : liste (scenes.list), lancer (scenes.trigger), annuler (scenes.undo) ;
+// POST jamais renvoye par got ; aucune modification de scene (application IKEA).
+export const scenesHub = {
+  lister: async () => (await auHub((c) => c.scenes.list())).filter((s) => s && typeof s.id === 'string' && s.info && typeof s.info.name === 'string')
+    .map((s) => ({ id: s.id, nom: s.info.name, annulable: Number.isFinite(s.undoAllowedDuration) && s.undoAllowedDuration > 0 ? Math.min(600, Math.round(s.undoAllowedDuration)) : 0,
+      lance_le: typeof s.lastTriggered === 'string' ? s.lastTriggered : null })),
+  lancer: (id) => auHub((c) => c.scenes.trigger({ id })),
+  annuler: (id) => auHub((c) => c.scenes.undo({ id })),
+};
 
 const TYPES = ['light', 'outlet'];
 const auHub = async (fn) => withTimeout(fn(await client()));
 // Hub non configure ou deconnecte : panne comme un hub injoignable (« Aucun hub configuré. », « Hub non connecté. ») ; s'il ne reste aucun appareil ON/OFF : « Hors ligne ».
 
-const nb = (v) => (typeof v === 'number' ? v : null);
-function versModele(d) {
-  const a = d.attributes || {};
-  const cr = (d.capabilities && d.capabilities.canReceive) || [];
-  const peut = (k) => Array.isArray(cr) && cr.includes(k);
-  const lo = Math.min(a.colorTemperatureMin, a.colorTemperatureMax), hi = Math.max(a.colorTemperatureMin, a.colorTemperatureMax);
-  return {
-    id: d.id, type: d.type, name: a.customName || '(sans nom)',
-    room: d.room ? { id: d.room.id, name: d.room.name } : null, reachable: d.isReachable !== false,
-    caps: {
-      onoff: true, level: d.type === 'light' && peut('lightLevel'), color: peut('colorHue') && peut('colorSaturation'), ctemp: peut('colorTemperature'),
-      ctempMin: Number.isFinite(lo) ? lo : null, ctempMax: Number.isFinite(hi) ? hi : null,
-    },
-    state: {
-      on: typeof a.isOn === 'boolean' ? a.isOn : null, level: nb(a.lightLevel), colorMode: a.colorMode || null,
-      hue: nb(a.colorHue), sat: nb(a.colorSaturation), ctemp: nb(a.colorTemperature),
-    },
-  };
+// Evenements (V2.1) : ecoute du hub ouverte ou tenue a jour apres chaque lecture (evenements.mjs ; fermee si plus de hub configure)
+const ecouter = () => { suivre(client().catch(() => null)); };
+export async function lister() { try { return (await auHub((c) => c.devices.list())).filter((d) => TYPES.includes(d.type)).map(versModele); } finally { ecouter(); } }
+// V2.1 : tous les appareils du hub et le hub, decrits en capacites (vue Equipements ; scenes du hub hors de cette vue : etape scenes-hub).
+// Hub facultatif : son echec n'empeche pas la liste des appareils. Rendu en memoire seulement (capacites secretes et privees comprises : jamais journalise).
+export async function equipements() {
+  const [l, h] = await Promise.allSettled([auHub((c) => c.devices.list()), auHub((c) => c.hub.status())]);
+  ecouter();
+  if (l.status === 'rejected') throw l.reason;
+  constater(l.value); // changement vu par la lecture et non par un evenement : sans heure
+  return versEquipements(l.value, h.status === 'fulfilled' ? h.value : null, heures);
 }
-
-export async function lister() { return (await auHub((c) => c.devices.list())).filter((d) => TYPES.includes(d.type)).map(versModele); }
 export async function relire(d) { return versModele(await auHub((c) => c.devices.get({ id: d.id }))); }
 export async function pieces() { return (await auHub((c) => c.rooms.list())).map((r) => ({ id: r.id, name: r.name, icone: iconeGenerique(r.icon) })); }
 

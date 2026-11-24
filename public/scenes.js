@@ -5,9 +5,10 @@
 
   APP.renderScenes = function () {
     var box = $("sceneList"); box.innerHTML = "";
-    if (!APP.scenes.length) { box.appendChild(el("p", "", "Aucun scénario enregistré.")); return; }
     var i;
+    if (!APP.scenes.length && !scenesHub.length) { box.appendChild(el("p", "", "Aucun scénario enregistré.")); return; }
     for (i = 0; i < APP.scenes.length; i++) box.appendChild(card(APP.scenes[i]));
+    for (i = 0; i < scenesHub.length; i++) box.appendChild(carteHub(scenesHub[i]));
   };
 
   APP.loadScenes = function () {
@@ -16,7 +17,62 @@
       APP.scenes = d.scenarios || [];
       APP.renderScenes();
     });
+    chargerHub();
   };
+
+  // V2.1 étape scenes-hub (cartes §17) : scènes du hub à côté des scénarios de Domo-wa, tuiles marquées « hub » ; Lancer (POST /api/scenes-hub/lancer) ;
+  // pendant le délai d'annulation du hub (annulable, en s), « Annuler · N s » (POST /api/scenes-hub/annuler) ; aucune modification (application du hub).
+  var scenesHub = [], annulables = {}, lancement = null;
+  function chargerHub() {
+    APP.api("GET", "/api/scenes-hub", null, function (err, d) {
+      if (err || !d || !Array.isArray(d.scenes)) return; // serveur ancien ou hub en panne : scénarios seuls
+      scenesHub = d.scenes; APP.renderScenes();
+    });
+  }
+  function carteHub(s) {
+    var c = el("div", "scard shub"), head = el("div", "shead"), ic = el("span", "sslot", "");
+    c.setAttribute("data-scene", s.id);
+    ic.innerHTML = ICON_HUB; head.appendChild(ic);
+    var nm = el("div", "sname", s.nom); nm.title = s.nom; head.appendChild(nm);
+    head.appendChild(el("span", "shub-puce", "hub"));
+    c.appendChild(head);
+    c.appendChild(el("div", "tsub", s.annulable ? "Scène du hub · annulable " + s.annulable + " s" : "Scène du hub"));
+    var row = el("div", "srow"), a = el("button", "sapply b-main", ""), fin = annulables[s.id] || 0, reste = Math.ceil((fin - Date.now()) / 1000);
+    libelleLancer(a, lancement === s.id);
+    a.onclick = function () { lancerHub(s, a); };
+    row.appendChild(a);
+    if (reste > 0) {
+      var u = el("button", "sannuler", "Annuler · " + reste + " s");
+      u.onclick = function () { annulerHub(s); };
+      row.appendChild(u);
+      var t = setInterval(function () { if (!document.body.contains(u)) { clearInterval(t); return; } var r = Math.ceil(((annulables[s.id] || 0) - Date.now()) / 1000); if (r > 0) u.textContent = "Annuler · " + r + " s"; else { clearInterval(t); delete annulables[s.id]; APP.renderScenes(); } }, 1000);
+    }
+    c.appendChild(row);
+    return c;
+  }
+  function libelleLancer(b, charge) {
+    if (charge) { b.setAttribute("aria-busy", "true"); b.innerHTML = '<span class="b-anneau" aria-hidden="true"></span><span>Chargement…</span>'; }
+    else { b.removeAttribute("aria-busy"); b.innerHTML = ICON_OK + "<span>Lancer</span>"; }
+  }
+  function lancerHub(s, b) {
+    if (lancement) return;
+    lancement = s.id; libelleLancer(b, true);
+    APP.api("POST", "/api/scenes-hub/lancer", { id: s.id }, function (err) {
+      lancement = null;
+      if (err) { APP.banner(err, "err"); APP.renderScenes(); return; }
+      if (s.annulable) annulables[s.id] = Date.now() + s.annulable * 1000;
+      APP.banner("Scène « " + s.nom + " » lancée.", "ok");
+      APP.renderScenes(); APP.refresh();
+    });
+  }
+  function annulerHub(s) {
+    APP.api("POST", "/api/scenes-hub/annuler", { id: s.id }, function (err) {
+      if (err) { APP.banner(err, "err"); return; }
+      delete annulables[s.id];
+      APP.banner("Scène « " + s.nom + " » annulée.", "ok");
+      APP.renderScenes(); APP.refresh();
+    });
+  }
 
   var ICON_EDIT = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
   var ICON_TRASH = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
@@ -63,6 +119,7 @@
     return c;
   }
 
+  var ICON_HUB = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="7"/><path d="M12 9v6M9 12h6"/></svg>';
   var SVG0 = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">';
   var ICONS = [
     { k: "sun", t: "Soleil", d: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>' },

@@ -1,0 +1,192 @@
+/* @zone equipements */
+/* equipements.css : vue Équipements (#viewEquip, préfixe eq-, V2.1) : filtres, grille de tuiles de taille fixe (200 x 124 ; téléphone 180 de large ; la grille défile en elle-même),
+   configuration (panneau de droite ; téléphone : feuille), aide. Construite par equipements.js. Panneau des lumières des lampes et prises : panneau.css (q-) ; en-tête : pieces.css (pc-un).
+   Tablette : grille + configuration côte à côte, tout tient sans défilement de la page (1280x800 : 4 colonnes ; 1024x600 : 3). Cibles de 44 px, textes de 12 px au moins. */
+#viewEquip{gap:16px;align-items:stretch;padding:12px 16px}
+.eq-gauche{flex:1;display:flex;flex-direction:column;gap:10px;min-width:0;min-height:0}
+.eq-filtres{display:flex;gap:8px;flex:none;flex-wrap:wrap}
+.eq-filtre{min-height:44px;border-radius:22px;padding:0 16px;background:#1a2130;border:1px solid var(--line);display:flex;align-items:center;font-size:15px;font-weight:500;color:#c9d3e3;gap:6px;white-space:nowrap}
+.eq-filtre.on{background:#203a5c;border-color:#4da3ff;color:#e9f3ff}
+.eq-filtre i{font-style:normal;font-size:12px;background:#ffd36b;color:#1a1305;border-radius:9px;padding:1px 7px;font-weight:600}
+.eq-toutvu{margin-left:auto}
+.eq-panne{font-size:14px;color:#ffd98a;background:#3a2e12;border-radius:12px;padding:8px 12px;flex:none}
+.eq-vide{grid-column:1/-1;font-size:15px;color:var(--muted);padding:16px 4px}
+/* grille : tuiles de taille fixe ; marge pour la pastille de notification qui déborde du coin */
+.eq-grille{display:grid;grid-template-columns:repeat(auto-fill,200px);grid-auto-rows:124px;gap:12px;align-content:start;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;flex:1;padding:6px}
+.eq-tuile{position:relative;width:200px;height:124px;box-sizing:border-box;background:var(--carte-fond);box-shadow:var(--carte-ombre);border-radius:18px;padding:10px 10px 10px 14px;display:flex;flex-direction:column;gap:2px;border:2px solid transparent;color:var(--text);font-size:15px}
+.eq-tuile.sel{border-color:#cfe6ff;box-shadow:var(--carte-ombre),var(--sel-lueur)}
+.eq-tuile.joue{border-color:rgba(255,190,70,.85)}
+.eq-tuile.alarme{border-color:#e5484d}
+.eq-tuile.hs{opacity:.55}
+.eq-tuile.eq-trois{padding-top:8px;gap:4px}
+/* appui ailleurs que sur l'action : bouton couvrant la tuile, sous les actions */
+.eq-ouvrir{position:absolute;inset:0;z-index:0;width:100%;height:100%;min-height:0;padding:0;margin:0;border:0;border-radius:16px;background:transparent}
+.eq-tuile > :not(.eq-ouvrir):not(.eq-notif){position:relative;z-index:1;pointer-events:none}
+.eq-tuile .eq-rond,.eq-tuile .eq-rng{pointer-events:auto}
+.eq-notif{position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#e5484d;border:2px solid #0a0d13;z-index:2;pointer-events:none}
+.eq-l1{display:flex;align-items:center;gap:8px;height:44px;flex:none;min-width:0}
+.eq-trois .eq-l1{height:28px}
+.eq-ic{display:flex;flex:none;color:#c9d3e3}
+.eq-tnom{font-size:16px;font-weight:500;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eq-rond{width:44px;height:44px;min-height:44px;border-radius:50%;border:1px solid rgba(140,165,210,.22);background:#1a2130;color:#e9eef7;display:grid;place-items:center;padding:0;flex:none;font-size:15px}
+.eq-rond svg{width:20px;height:20px}
+.eq-power{color:#8a97ad}
+.eq-power.on{border-color:rgba(255,211,107,.55);background:rgba(255,211,107,.16);color:#ffd36b}
+.eq-lect.on{border-color:rgba(255,190,70,.6);background:#3a2e12;color:#ffd98a}
+.eq-stop{border-color:rgba(77,163,255,.7);background:#203a5c}
+.eq-inactif{opacity:.6}
+.eq-v2{font-size:22px;font-weight:500;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eq-v2.eteint{color:var(--muted)}
+.eq-v2.orange{color:#ff9f5a}
+.eq-v2.rouge{color:#ffb3b5}
+.eq-v2.bleu{color:#7cc0ff}
+.eq-l2{display:flex;align-items:center;gap:8px;height:44px;flex:none}
+.eq-l2 .eq-v2{flex:1;min-width:0}
+.eq-prec{display:flex;align-items:center;gap:6px;margin-top:auto;min-height:20px;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden}
+.eq-prec span{overflow:hidden;text-overflow:ellipsis}
+.eq-teinte{width:12px;height:12px;border-radius:50%;flex:none;display:inline-block}
+.eq-barre{gap:8px}
+.eq-pbar{flex:1;height:6px;border-radius:3px;background:#1d2536;overflow:hidden}
+.eq-pbar i{display:block;height:100%;background:linear-gradient(90deg,rgba(77,163,255,.45),rgba(77,163,255,.85))}
+.eq-vol{min-height:30px;margin-top:auto}
+.eq-rng{flex:1;min-width:0;height:44px;margin:-7px 0;accent-color:#ffd98a;background:transparent}
+.eq-puce{font-size:12px;border-radius:9px;padding:2px 8px;white-space:nowrap;font-weight:600;flex:none}
+.eq-neuf{background:#ffd36b;color:#1a1305}
+/* configuration */
+.eq-detail{width:360px;flex:none;display:flex;flex-direction:column;gap:10px;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.eq-config{display:flex;flex-direction:column;gap:10px}
+.eq-tete{margin:0 2px}
+.eq-pp{flex:none;max-width:45%;border-radius:22px;background:#151b25;border:1px solid #2a3344;padding:10px 14px;font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eq-aide{width:44px;height:44px;min-height:44px;padding:0;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--muted);font-size:17px;font-weight:500;flex:none}
+.eq-raison{font-size:14px;color:#ffd0d1;background:rgba(229,72,77,.14);border:1px solid rgba(229,72,77,.45);border-radius:12px;padding:8px 12px}
+.eq-raison.eq-alarme{color:#fff;background:rgba(229,72,77,.3)}
+.eq-carte{background:var(--carte-fond);box-shadow:var(--carte-ombre);border:1px solid var(--carte-bord);border-radius:20px;padding:13px 15px;display:flex;flex-direction:column;gap:10px}
+.eq-lbl{font-size:var(--sec-taille);letter-spacing:var(--sec-espace);color:var(--sec-couleur);font-weight:var(--sec-graisse);text-transform:uppercase}
+.eq-note{font-size:13px;color:var(--muted)}
+.eq-ligne{display:flex;align-items:baseline;gap:8px;font-size:14px}
+.eq-l{color:var(--muted);font-size:13px;flex:1;min-width:0}
+.eq-ligne b{font-weight:500;text-align:right;overflow-wrap:anywhere}
+.eq-lumiere.eq-hs{opacity:.5}
+/* store : position visée, préréglages */
+.eq-pos{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.eq-posv{font-size:30px;font-weight:500;white-space:nowrap}
+.eq-posv small{font-size:14px;color:var(--muted);font-weight:400}
+.eq-posrow{display:flex;align-items:center;gap:12px}
+.eq-cible{accent-color:#4da3ff;margin:0}
+.eq-aller{height:52px;min-height:52px;border-radius:26px;border:1px solid rgba(77,163,255,.6);background:rgba(77,163,255,.18);color:#9ccaff;font-size:17px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:10px}
+.eq-aller.stop{border-color:rgba(255,190,70,.5);background:#3a2e12;color:#ffd98a}
+.eq-pres{display:flex;flex-wrap:wrap;gap:8px}
+.eq-pre{min-width:64px;height:44px;min-height:44px;border-radius:22px;padding:0 14px;border:1px solid rgba(140,165,210,.22);background:#1d2536;color:#e9eef7;font-size:15px;font-weight:500}
+.eq-pre.sel{border-color:#4da3ff;background:#203a5c}
+.eq-pre.suppr{border-color:rgba(229,72,77,.6);background:rgba(229,72,77,.16);color:#ffd0d1}
+.eq-plus{min-width:44px;width:44px;padding:0;border-style:dashed;border-color:rgba(140,165,210,.5);background:transparent;color:#c9d3e3;font-size:20px}
+.eq-plus:disabled{opacity:.4}
+/* mesures, informations, codes */
+.eq-mes{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.eq-m{background:var(--carte-fond-2);border-radius:12px;padding:6px 10px;display:flex;flex-direction:column;min-width:0}
+.eq-m span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eq-m b{font-size:17px;font-weight:500;overflow-wrap:anywhere}
+.eq-m.alerte b{color:#ffb3b5}
+.eq-tech{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px;padding:0 4px}
+.eq-code{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.eq-codev{font-size:18px;font-weight:600;letter-spacing:.06em}
+.eq-bouton{min-height:44px;border-radius:12px;padding:0 14px;background:#1d2536;border:1px solid var(--line);font-size:14px;font-weight:500;color:var(--text)}
+.eq-bouton.arme{background:#3a2e12;border-color:rgba(255,190,70,.5);color:#ffd98a}
+.eq-aidebox{max-height:100%;min-height:0}
+.eq-aidecorps{display:flex;flex-direction:column;gap:4px;font-size:14px;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0}
+.eq-aidecorps p{margin:0 0 6px;color:#c9d3e3;line-height:1.35}
+/* cartes des familles (equipements-cartes.js) : style des menus du panneau des lumières ; choix actif : fond gris clair seul, sans contour ni lueur */
+.eq-cartes{display:flex;flex-direction:column;gap:10px}
+.eq-cartes.eq-hs{opacity:.5}
+.eq-piste{display:flex;background:#0e1218;border:1px solid rgba(255,255,255,.07);border-radius:30px;padding:3px;gap:2px}
+.eq-choix{flex:1;min-width:0;min-height:44px;border-radius:26px;border:0;background:transparent;color:#8b97ab;font-size:14px;font-weight:500;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eq-choix.sel{background:linear-gradient(#3a414d,#2b313b);color:#fff}
+.eq-segs{width:180px;margin:0}
+.eq-rangee{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.eq-rangee > .eq-l{flex:1}
+.eq-rangee > .eq-piste{flex:none;width:180px}
+.eq-rangee > b{font-size:17px;font-weight:500}
+.eq-action{min-height:44px;border-radius:26px;border:2px solid transparent;background:transparent;box-shadow:var(--relief-ombre),inset 0 1px 0 rgba(255,255,255,.06);color:#c9d3e3;font-size:14px;font-weight:500;width:100%}
+.eq-grand{font-size:26px;font-weight:500;line-height:1.15}
+.eq-grand small{font-size:14px;color:var(--muted);font-weight:400}
+.eq-grand.orange{color:#ff9f5a}
+.eq-grand.rouge{color:#ffb3b5}
+.eq-grand.bleu{color:#7cc0ff}
+.eq-qa{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
+.eq-qa-bon{background:#3fb97a}
+.eq-qa-moyen{background:#e9eef7}
+.eq-qa-mauvais{background:#ff9f5a}
+.eq-qual{display:flex;align-items:center;gap:10px}
+.eq-qual .eq-qa{width:14px;height:14px}
+.eq-mot{font-size:15px;color:#c9d3e3}
+.eq-qligne{display:flex;align-items:center;gap:8px;font-size:14px}
+.eq-qligne b{font-weight:500}
+.eq-minmax{margin:-6px 0 0 18px}
+.eq-pas{display:flex;align-items:center;gap:8px;flex:none}
+.eq-pas b{font-size:15px;font-weight:500;min-width:64px;text-align:center}
+.eq-gris{opacity:.55}
+.eq-lecteur{display:flex;align-items:center;justify-content:center;gap:18px}
+.eq-grandrond{width:56px;height:56px;min-height:56px}
+.eq-media{font-size:16px;font-weight:500;overflow-wrap:anywhere}
+.eq-volv{font-size:14px;color:var(--muted);min-width:44px;text-align:right}
+.eq-rep{position:relative;min-height:44px;border-radius:22px;border:1px solid var(--line);background:transparent;color:var(--muted);font-size:14px;font-weight:500;padding:0 16px;align-self:flex-start}
+.eq-rep.sel{background:linear-gradient(#3a414d,#2b313b);color:#fff;border-color:transparent}
+.eq-un{position:absolute;top:-4px;right:-4px;font-style:normal;font-size:12px;line-height:18px;width:18px;border-radius:50%;background:#e9eef7;color:#0a0d13;font-weight:600}
+.eq-lie{display:flex;align-items:center;gap:8px;font-size:15px}
+.eq-lie > .eq-l{font-size:15px;color:var(--text)}
+.eq-suite{font-size:20px}
+.eq-sous{font-size:13px;color:var(--muted);margin-top:4px}
+/* Ajout de lampes à un mode d'une télécommande (V2.1 étape telecommande-lampes) : cases de 44 px, case choisie en fond gris clair comme .eq-choix.sel */
+.eq-lierliste{display:flex;flex-direction:column;gap:6px}
+.eq-liercase{min-height:44px;border-radius:14px;border:1px solid var(--line);background:transparent;color:var(--text);font-size:15px;text-align:left;padding:0 14px 0 40px;position:relative}
+.eq-liercase::before{content:"";position:absolute;left:14px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:4px;border:2px solid var(--muted)}
+.eq-liercase.sel{background:linear-gradient(#3a414d,#2b313b);border-color:transparent;color:#fff}
+.eq-liercase.sel::before{background:#ffd98a;border-color:#ffd98a}
+.eq-lierbtns{display:flex;gap:8px}
+.eq-cond{display:flex;flex-direction:column;gap:6px}
+.eq-tech.faible{color:#ff9f5a}
+.eq-pbar.usure i{background:linear-gradient(90deg,rgba(63,185,122,.5),rgba(63,185,122,.9))}
+.eq-pbar.usure.alerte i{background:linear-gradient(90deg,rgba(255,159,90,.5),rgba(255,159,90,.95))}
+.eq-prec.orange{color:#ff9f5a}
+/* bandeau d'alarme (alarmes.js) : sous l'en-tête, au-dessus de toutes les vues ; appui = configuration, croix = fermer (zone de 44 px) */
+.al-bandeau{position:fixed;left:50%;transform:translateX(-50%);width:max-content;max-width:min(640px,calc(100vw - 24px));z-index:999;display:flex;align-items:stretch;background:#5a1518;border:1px solid #ff6b70;border-radius:14px;box-shadow:var(--relief-ombre);color:#ffe1e2}
+.al-bandeau.hidden{display:none}
+.al-texte{flex:1;min-width:0;min-height:44px;border:0;background:transparent;color:inherit;font-size:15px;font-weight:500;text-align:left;padding:10px 4px 10px 16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.al-fermer{position:relative;flex:none;width:44px;min-height:44px;border:0;background:transparent;color:inherit}
+.al-fermer::after{content:"\00d7";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px;opacity:.85}
+.eq-icbtn{position:relative;width:44px;height:44px;min-width:44px;border:0;border-radius:50%;background:transparent;color:inherit;display:flex;align-items:center;justify-content:center;padding:0}
+.eq-crayon{position:absolute;right:2px;bottom:2px;width:16px;height:16px;border-radius:50%;background:#2b313b;border:1px solid rgba(255,255,255,.18)}
+.eq-crayon::after{content:"";position:absolute;left:4px;top:7px;width:8px;height:2px;background:#dfe6f1;transform:rotate(-45deg);border-radius:1px}
+/* feuille « Icône » (icones.js) : fond #121722, rayon 24, croix de 44 px ; thèmes en titres de section, grille d'icônes de 44 px */
+.ic-fond{position:fixed;inset:0;z-index:1100;background:rgba(5,8,12,.6);display:flex;align-items:center;justify-content:center;padding:12px}
+.ic-feuille{width:min(520px,100%);max-height:calc(100vh - 24px);display:flex;flex-direction:column;background:#121722;border-radius:24px;border:1px solid rgba(255,255,255,.08);box-shadow:var(--relief-ombre)}
+.ic-tete{display:flex;align-items:center;gap:8px;padding:10px 10px 6px 18px}
+.ic-titre{flex:1;font-size:18px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ic-fermer{position:relative;width:44px;height:44px;border:0;border-radius:50%;background:transparent;color:inherit}
+.ic-fermer::after{content:"\00d7";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px}
+.ic-corps{overflow-y:auto;padding:0 16px 16px;display:flex;flex-direction:column;gap:8px}
+.ic-defaut{display:flex;align-items:center;gap:10px;min-height:48px;border-radius:24px;border:0;background:#0e1218;color:#c9d3e3;font-size:15px;padding:0 16px}
+.ic-defaut.sel,.ic-ic.sel{background:linear-gradient(#3a414d,#2b313b);color:#fff}
+.ic-theme{color:var(--sec-couleur);font-weight:var(--sec-graisse);font-size:var(--sec-taille);letter-spacing:var(--sec-espace);text-transform:uppercase;margin-top:6px}
+.ic-grille{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+.ic-ic{min-width:44px;height:48px;border:0;border-radius:14px;background:#0e1218;color:#c9d3e3;display:flex;align-items:center;justify-content:center;padding:0}
+.tel .ic-grille{grid-template-columns:repeat(6,1fr)}
+.eq-fermer{display:none}
+@media (max-height:640px){
+ #viewEquip{padding:10px;gap:10px}
+ .eq-grille{gap:10px;padding:6px 4px}
+ .eq-detail{gap:8px}
+ .eq-config{gap:8px}
+ .eq-carte{padding:10px 12px;gap:8px}
+ .eq-cartes{gap:8px}
+ .eq-grand{font-size:22px}
+ .eq-posv{font-size:26px}
+}
+/* téléphone : tuiles de 180 px, configuration en feuille (empiler est permis en portrait) */
+.tel #viewEquip{flex-direction:column;padding:10px}
+.tel .eq-grille{grid-template-columns:repeat(auto-fill,180px);gap:10px;justify-content:center;padding:6px 0}
+.tel .eq-tuile{width:180px}
+.tel .eq-detail{display:none}
+.tel .eq-detail.ouvert{display:flex;position:fixed;left:0;right:0;bottom:0;top:12%;width:auto;z-index:30;background:var(--fenetre-plein);border-radius:22px 22px 0 0;padding:10px 10px calc(10px + env(safe-area-inset-bottom));gap:10px;box-shadow:var(--carte-ombre)}
+.tel .eq-detail.ouvert .eq-fermer{display:block;flex:none;min-height:48px;border-radius:14px;background:#1d2536;font-size:15px;font-weight:500}
+/* FIN */

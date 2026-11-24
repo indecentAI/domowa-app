@@ -1,14 +1,17 @@
 // @zone hubs | Contrat hub de l'adaptateur DIRIGERA (CLAUDE.md, « Hubs ») : un seul hub (id dirigera-1), etat (sonde GET /v1/hub/status, 4 s), adresses, deconnexion, recherche et appairage (appairage.mjs). Sans secret.
 import { HttpError } from '../../core/http.mjs';
 import { withTimeout } from '../../core/outils.mjs';
-import { lire, client, etatLocal, deconnecter, erreur } from './connexion.mjs';
-import { rechercher, champs, verifier, appairer } from './appairage.mjs';
+import { lire, client, etatLocal, deconnecter, erreur, jetonPresent } from './connexion.mjs';
+import { rechercher, identifier, champs, verifier, appairer } from './appairage.mjs';
 
 const ID = 'dirigera-1';
 export const hub = {
   nom: 'IKEA DIRIGERA',
   max: 1,
+  priorite: 2, // V2.0 : Home Assistant d'abord (connexion transparente)
+  identifier,
   adresses() { const a = lire().adresse; return a ? [a] : []; },
+  utilise: () => jetonPresent(), // V2.0 : un hub a la fois (core/appareils.mjs, enRetrait)
   async etat() {
     const c = lire(), e = etatLocal();
     if (e === 'non_configure') return [];

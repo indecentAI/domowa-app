@@ -1,9 +1,9 @@
 // @zone hubs | Routes generiques des hubs (contrat : CLAUDE.md, « Hubs » ; aucun nom de marque) : GET /api/hubs (types declares par les adaptateurs, hubs et leur etat, champs en liste blanche, sans secret), POST /api/hubs/:id/deconnexion {confirm: true},
-// POST /api/hubs/recherche {type} (reseau local, adresses privees), appairage guide : POST /api/hubs/appairage {type, champs}, GET /api/hubs/appairage, POST /api/hubs/appairage/annuler.
+// POST /api/hubs/recherche {type?} (reseau local, adresses privees ; sans type : tous les types libres, V2.0), POST /api/hubs/identifier {adresse} (V2.0 : type du hub a cette adresse), appairage guide : POST /api/hubs/appairage {type, champs}, GET /api/hubs/appairage, POST /api/hubs/appairage/annuler.
 // Les champs saisis (dont les secrets, type secret) ne sont jamais renvoyes, gardes ni journalises ; le jeton obtenu reste dans l'adaptateur.
 import { HttpError, describe } from '../core/http.mjs';
 import { log, borne } from '../core/outils.mjs';
-import { hubs, invalider } from '../core/appareils.mjs';
+import { hubs, invalider, hubBloque } from '../core/appareils.mjs';
 import { privee } from '../core/reseau.mjs';
 
 const ETATS = ['connecte', 'deconnecte', 'erreur'];
@@ -25,7 +25,7 @@ const TYPES_CHAMP = ['adresse', 'texte', 'secret'];
 function champsDe(x) {
   const a = x.hub.appairage;
   if (!a || typeof a.appairer !== 'function' || typeof a.verifier !== 'function' || !Array.isArray(a.champs)) return null;
-  return a.champs.filter((c) => c && /^[a-z_]{1,30}$/.test(c.cle) && TYPES_CHAMP.includes(c.type)).map((c) => ({ cle: c.cle, libelle: texte(c.libelle, 60) || c.cle, type: c.type }));
+  return a.champs.filter((c) => c && /^[a-z_]{1,30}$/.test(c.cle) && TYPES_CHAMP.includes(c.type)).map((c) => ({ cle: c.cle, libelle: texte(c.libelle, 60) || c.cle, type: c.type, court: c.court === true }));
 }
 // Aide propre au type (fenetre « Hubs », aide « ? ») : [{titre, lignes}] ; 10 sections, 12 lignes de 400 caracteres au plus.
 function aideDe(x) {
@@ -33,11 +33,17 @@ function aideDe(x) {
   return a.slice(0, 10).filter((s) => s && texte(s.titre, 80) && Array.isArray(s.lignes)).map((s) => ({ titre: texte(s.titre, 80), lignes: s.lignes.slice(0, 12).map((l) => texte(l, 400)).filter(Boolean) }));
 }
 const typeDe = (t) => hubs().find((x) => x.id === t) || null;
+// V2.0 : ordre des types = priorite declaree par l'adaptateur (hub.priorite, petit d'abord, 9 par defaut), puis ordre de chargement ; types libres = non bloques.
+const prio = (x) => (Number.isInteger(x.hub.priorite) ? x.hub.priorite : 9);
+const ordonnes = () => hubs().map((x, i) => [x, i]).sort((a, b) => prio(a[0]) - prio(b[0]) || a[1] - b[1]).map((a) => a[0]);
+const libres = () => ordonnes().filter((x) => champsDe(x) && !hubBloque(x.id));
+// V2.0, un hub a la fois : appairage d'un type refuse tant qu'un hub d'un autre type porte un jeton (core/appareils.mjs, hubBloque) ; texte affiche par la fenetre.
+const bloqueDe = (x) => { const n = hubBloque(x.id); return n ? 'Un seul hub à la fois : déconnectez d\'abord le hub actuel.' : null; }; // V2.0 : sans nommer le type de hub
 export async function etatHubs() {
-  const xs = hubs();
+  const xs = ordonnes();
   const lus = await Promise.all(xs.map(lireUn));
   return {
-    types: xs.map((x, i) => ({ type: x.id, nom: texte(x.hub.nom, 60) || x.id, max: Number.isInteger(x.hub.max) && x.hub.max > 0 ? x.hub.max : 1, nb: lus[i].hubs.length, panne: lus[i].panne, recherche: typeof x.hub.rechercher === 'function', champs: champsDe(x), aide: aideDe(x) })),
+    types: xs.map((x, i) => ({ type: x.id, nom: texte(x.hub.nom, 60) || x.id, max: Number.isInteger(x.hub.max) && x.hub.max > 0 ? x.hub.max : 1, nb: lus[i].hubs.length, panne: lus[i].panne, recherche: typeof x.hub.rechercher === 'function', champs: champsDe(x), aide: aideDe(x), bloque: bloqueDe(x) })),
     hubs: lus.flatMap((l) => l.hubs),
     time: new Date().toISOString(),
   };
@@ -45,25 +51,54 @@ export async function etatHubs() {
 
 // Recherche sur le reseau local : une a la fois, 10 s au plus ; adresses IPv4 privees seulement (filtre repete ici, quel que soit l'adaptateur).
 let enRecherche = false;
+// Sans type (V2.0, connexion transparente) : tous les types libres qui cherchent, en parallele ; resultats marques de leur type, dans l'ordre de priorite
+// (le premier est propose d'office par la fenetre) ; une adresse vue par deux types : gardee pour le plus prioritaire. Erreur d'un type : ses resultats manquent.
 async function rechercher(c) {
   const body = await c.corps();
-  const x = typeDe(body.type);
-  if (!x || typeof x.hub.rechercher !== 'function') throw new HttpError(404, 'Type de hub inconnu ou sans recherche.');
+  const tous = body.type === undefined || body.type === null;
+  const xs = tous ? libres().filter((x) => typeof x.hub.rechercher === 'function') : [typeDe(body.type)].filter((x) => x && typeof x.hub.rechercher === 'function');
+  if (!xs.length) throw new HttpError(404, tous ? 'Aucune recherche possible.' : 'Type de hub inconnu ou sans recherche.');
   if (enRecherche) throw new HttpError(409, 'Une recherche est déjà en cours.');
   enRecherche = true;
   const ctrl = new AbortController();
-  let l;
-  try { l = await borne(() => x.hub.rechercher({ signal: ctrl.signal }), 10000); } catch (e) { if (e instanceof HttpError) throw e; l = []; } finally { ctrl.abort(); enRecherche = false; }
-  let connues = [];
-  try { connues = x.hub.adresses ? x.hub.adresses() : []; } catch (e) { connues = []; }
+  let ls;
+  try {
+    ls = await Promise.all(xs.map((x) => borne(() => x.hub.rechercher({ signal: ctrl.signal }), 10000).then((l) => l, (e) => { if (e instanceof HttpError && !tous) throw e; return []; })));
+  } finally { ctrl.abort(); enRecherche = false; }
   const vus = new Set(), resultats = [];
-  for (const r of Array.isArray(l) ? l : []) {
-    if (!r || !privee(r.adresse) || vus.has(r.adresse)) continue;
-    vus.add(r.adresse);
-    resultats.push({ adresse: r.adresse, nom: texte(r.nom, 60), connu: connues.includes(r.adresse) });
-    if (resultats.length >= 20) break;
-  }
-  return { type: x.id, resultats, time: new Date().toISOString() };
+  xs.forEach((x, i) => {
+    let connues = [];
+    try { connues = x.hub.adresses ? x.hub.adresses() : []; } catch (e) { connues = []; }
+    for (const r of Array.isArray(ls[i]) ? ls[i] : []) {
+      if (resultats.length >= 20) break;
+      if (!r || !privee(r.adresse) || vus.has(r.adresse)) continue;
+      vus.add(r.adresse);
+      resultats.push({ adresse: r.adresse, nom: texte(r.nom, 60), connu: connues.includes(r.adresse), type: x.id });
+    }
+  });
+  return { type: tous ? null : xs[0].id, resultats, time: new Date().toISOString() };
+}
+
+// V2.0 : type du hub a une adresse tapee a la main. Les types libres qui savent se reconnaitre (hub.identifier(adresse, {signal}) -> vrai, sans jeton
+// ni ecriture) sont sondes en parallele, 6 s au plus ; le plus prioritaire qui repond vrai l'emporte ; sinon le plus prioritaire des types sans sonde
+// (sa propre verification d'appairage tranchera) ; sinon 404.
+let enIdentification = false;
+async function identifier(c) {
+  const body = await c.corps();
+  const a = typeof body.adresse === 'string' ? body.adresse.trim() : '';
+  if (!privee(a)) throw new HttpError(400, 'Adresse refusée : seules les adresses IPv4 privées du réseau local sont acceptées (ex. 192.168.1.20).');
+  if (enIdentification) throw new HttpError(409, 'Une vérification est déjà en cours.');
+  const xs = libres();
+  if (!xs.length) throw new HttpError(409, 'Un seul hub à la fois : déconnectez d\'abord le hub actuel.');
+  enIdentification = true;
+  const ctrl = new AbortController();
+  let rep;
+  try {
+    rep = await Promise.all(xs.map((x) => (typeof x.hub.identifier === 'function' ? borne(() => x.hub.identifier(a, { signal: ctrl.signal }), 6000).then((v) => v === true, () => false) : Promise.resolve(null))));
+  } finally { ctrl.abort(); enIdentification = false; }
+  const x = xs[rep.indexOf(true)] || xs[rep.indexOf(null)];
+  if (!x) throw new HttpError(404, 'Aucun hub reconnu à cette adresse : vérifiez-la (la box l\'affiche dans la liste des appareils connectés).');
+  return { type: x.id, time: new Date().toISOString() };
 }
 
 // Appairage guide : une seule session a la fois (garde apres la fin pour l'affichage) ; etapes {texte, delai? (s, compte a rebours)} fournies par
@@ -82,6 +117,8 @@ async function appairer(c) {
   const x = typeDe(body.type), def = x && champsDe(x);
   if (!def) throw new HttpError(404, 'Type de hub inconnu ou sans appairage.');
   if (session && session.etat === 'en_cours') throw new HttpError(409, 'Un appairage est déjà en cours.');
+  const bloque = bloqueDe(x);
+  if (bloque) throw new HttpError(409, bloque);
   const brut = body.champs && typeof body.champs === 'object' ? body.champs : {}, champs = {};
   for (const d of def) if (typeof brut[d.cle] === 'string') champs[d.cle] = brut[d.cle].slice(0, 512);
   const params = x.hub.appairage.verifier(champs); // HttpError 400 si refuse
@@ -110,6 +147,7 @@ async function appairer(c) {
 
 export const routes = [
   ['POST', '/api/hubs/recherche', rechercher],
+  ['POST', '/api/hubs/identifier', identifier],
   ['POST', '/api/hubs/appairage', appairer],
   ['GET', '/api/hubs/appairage', async () => ({ session: vue(session), time: new Date().toISOString() })],
   ['POST', '/api/hubs/appairage/annuler', async () => {

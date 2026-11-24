@@ -31,6 +31,16 @@ export async function rechercher({ signal }) {
   });
 }
 
+// V2.0 (connexion transparente, modules/hubs.mjs identifier) : vrai si un hub IKEA repond a cette adresse. Meme sonde que l'appairage : GET /v1/hub/status
+// sans jeton par la bibliotheque, TLS strict (racine IKEA embarquee) ; toute reponse HTTP prouve le certificat IKEA ; rien n'est ecrit, aucun jeton envoye.
+export async function identifier(adresse) {
+  if (!privee(adresse)) return false;
+  try {
+    const c = await createDirigeraClient({ gatewayIP: adresse, rejectUnauthorized: true });
+    await withTimeout(c.hub.status(), 4000);
+    return true;
+  } catch (e) { return !!(e && e.response); }
+}
 export const champs = [{ cle: 'adresse', libelle: 'Adresse du hub', type: 'adresse' }];
 export function verifier(ch) {
   const a = typeof ch.adresse === 'string' ? ch.adresse.trim() : '';

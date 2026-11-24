@@ -8,6 +8,7 @@ import https from 'node:https';
 import { createDirigeraClient } from 'dirigera';
 import { DONNEES, lireJson, ecrireJson, log } from '../../core/outils.mjs';
 import { privee } from '../../core/reseau.mjs';
+import { arreter } from './evenements.mjs';
 
 export const JETON = path.join(DONNEES, 'dirigera-token.txt');
 const FICHIER = 'dirigera.json'; // { adresse, appaire_le?, deconnecte_le?, migre_de?, migre_le? } : sans secret (sauvegarde.sh l'archive)
@@ -73,14 +74,14 @@ export function sansRenvoi() {
   try { jeton = fs.readFileSync(JETON, 'utf8').trim(); } catch (e) { return Promise.reject(e.code === 'ENOENT' && c.deconnecte_le ? erreurCode('HUB_DECONNECTE', 'hub non connecte') : e); }
   const cle = c.adresse + ' ' + crypto.createHash('sha256').update(jeton).digest('hex');
   if (!sr || sr.cle !== cle) {
-    const x = { cle, p: Promise.all([import('got'), import(new URL('certificate.js', LIB).href), import(new URL('api/rooms.js', LIB).href)]).then(([g, ca, rooms]) => {
+    const x = { cle, p: Promise.all([import('got'), import(new URL('certificate.js', LIB).href), import(new URL('api/rooms.js', LIB).href), import(new URL('api/devices.js', LIB).href), import(new URL('api/hub.js', LIB).href), import(new URL('api/deviceSets.js', LIB).href)]).then(([g, ca, rooms, devices, hub, deviceSets]) => {
       const inst = g.default.extend({
         prefixUrl: 'https://' + c.adresse + ':8443/v1',
         headers: { authorization: 'Bearer ' + jeton },
         agent: { https: new https.Agent({ ca: [ca.default], checkServerIdentity: () => undefined, rejectUnauthorized: true }) },
         retry: { limit: 0 },
       });
-      return { rooms: rooms.default(inst) };
+      return { rooms: rooms.default(inst), devices: devices.default(inst), hub: hub.default(inst), deviceSets: deviceSets.default(inst) }; // V2.1 : identifier et mise a jour du hub (PUT), groupes (DELETE : scripts/groupes-essai.mjs) sans renvoi
     }) };
     x.p.catch(() => { if (sr === x) sr = null; });
     sr = x;
@@ -109,6 +110,7 @@ export function deconnecter() {
   try { fs.unlinkSync(JETON); } catch (e) { if (e.code !== 'ENOENT') throw e; }
   ecrireJson(FICHIER, Object.assign({}, c && typeof c === 'object' ? c : {}, { deconnecte_le: new Date().toISOString() }));
   cache = null; sr = null;
+  arreter(); // ecoute des evenements fermee aussitot (l'adaptateur peut passer en retrait : plus aucune lecture pour la fermer)
   log('dirigera : hub deconnecte (jeton efface)');
 }
 
