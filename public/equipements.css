@@ -78,6 +78,7 @@
 .eq-pres{display:flex;flex-wrap:wrap;gap:8px}
 .eq-pre{min-width:64px;height:44px;min-height:44px;border-radius:22px;padding:0 14px;border:1px solid rgba(140,165,210,.22);background:#1d2536;color:#e9eef7;font-size:15px;font-weight:500}
 .eq-pre.sel{border-color:#4da3ff;background:#203a5c}
+.eq-pre.arme{border-color:rgba(229,72,77,.8);background:rgba(229,72,77,.2);color:#ffd0d1}
 .eq-pre.suppr{border-color:rgba(229,72,77,.6);background:rgba(229,72,77,.16);color:#ffd0d1}
 .eq-plus{min-width:44px;width:44px;padding:0;border-style:dashed;border-color:rgba(140,165,210,.5);background:transparent;color:#c9d3e3;font-size:20px}
 .eq-plus:disabled{opacity:.4}
@@ -90,6 +91,9 @@
 .eq-tech{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px;padding:0 4px}
 .eq-code{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .eq-codev{font-size:18px;font-weight:600;letter-spacing:.06em}
+/* V2.2 ha-localisation : présence (zone « À la maison » en vert), lien « Ouvrir dans Cartes » (geo:) à l'aspect d'un bouton */
+.eq-v2.vert,.eq-grand.vert{color:#52d98a}
+.eq-carte-lien{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:#c9d3e3}
 .eq-bouton{min-height:44px;border-radius:12px;padding:0 14px;background:#1d2536;border:1px solid var(--line);font-size:14px;font-weight:500;color:var(--text)}
 .eq-bouton.arme{background:#3a2e12;border-color:rgba(255,190,70,.5);color:#ffd98a}
 .eq-aidebox{max-height:100%;min-height:0}
@@ -102,6 +106,13 @@
 .eq-choix{flex:1;min-width:0;min-height:44px;border-radius:26px;border:0;background:transparent;color:#8b97ab;font-size:14px;font-weight:500;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .eq-choix.sel{background:linear-gradient(#3a414d,#2b313b);color:#fff}
 .eq-segs{width:180px;margin:0}
+/* V2.2 ha-ouvrants : piste de deux états (serrure, alarme, vanne, sirène) pleine largeur ; segment armé (deux appuis) ; boutons ▲ ■ ▼ d'un ouvrant sans position ; code masqué */
+.eq-segs.eq-segs-l{width:100%}
+.eq-segs .q-seg.arme{background:rgba(229,72,77,.2);color:#ffd0d1;box-shadow:inset 0 0 0 1px rgba(229,72,77,.8)}
+.eq-sens > .eq-bouton{flex:1}
+.eq-aller.arme{border-color:rgba(229,72,77,.8);background:rgba(229,72,77,.2);color:#ffd0d1}
+.eq-codesaisi{letter-spacing:.2em}
+.eq-codesaisi::placeholder{letter-spacing:normal}
 .eq-rangee{display:flex;align-items:center;gap:10px;justify-content:space-between}
 .eq-rangee > .eq-l{flex:1}
 .eq-rangee > .eq-piste{flex:none;width:180px}
@@ -116,6 +127,32 @@
 .eq-qa-bon{background:#3fb97a}
 .eq-qa-moyen{background:#e9eef7}
 .eq-qa-mauvais{background:#ff9f5a}
+.eq-qa-chauffe{background:#ff6a4c}
+.eq-qa-froid{background:#5aa8ff}
+/* V2.2 ha-thermostat : halo du chauffage (rouge : chauffe, bleu : refroidit ; --hc couleur, --ha fond, --hb rayon, --hs lueur : APP.cartes.halo), sous le contenu, carte et tuile */
+.eq-halo::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;background:radial-gradient(ellipse 90% 60% at 50% 42%,rgba(var(--hc),var(--ha)) 0,rgba(var(--hc),0) 72%);box-shadow:0 0 var(--hb) rgba(var(--hc),var(--hs))}
+.eq-tuile.eq-halo::before{background:radial-gradient(ellipse 120% 90% at 50% 110%,rgba(var(--hc),var(--ha)) 0,rgba(var(--hc),0) 70%)}
+.eq-chauffe-carte{position:relative}
+.eq-chauffe-carte > :not(.eq-notif){position:relative;z-index:1}
+.eq-chauffe-carte > .eq-lbl{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.eq-thermo-puce{font-size:13px;font-weight:500;padding:3px 12px;border-radius:14px;color:#c9d3e3;background:rgba(140,165,210,.12);text-transform:none;letter-spacing:0}
+.eq-thermo-puce.chaud{color:#ffcfc4;background:rgba(255,72,48,.18)}
+.eq-thermo-puce.froid{color:#cfe3ff;background:rgba(64,150,255,.18)}
+/* Cadran de température (géométrie du cadran de luminosité, panneau.css) */
+.eq-thermo-rang{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.eq-thermo-cadran{position:relative;flex:none;width:184px;height:184px}
+.eq-thermo-svg{width:100%;height:100%;overflow:visible;touch-action:none;cursor:pointer}
+.eq-thermo-svg path{fill:none;stroke-width:10}
+.eq-thermo-piste{opacity:.28}
+.eq-thermo-lueur path{stroke-width:22}
+.eq-thermo-mesure{fill:#e9eef7;stroke:#0a0d13;stroke-width:2}
+.eq-thermo-pouce{fill:#f3f4f7;stroke-width:4}
+.eq-thermo-centre{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.eq-thermo-num{font-weight:300;font-size:36px;line-height:1.05;color:#f1f4fa}
+.eq-thermo-u{font-size:13px;color:#aab4c5}
+.eq-thermo-mes{font-size:12px;color:var(--muted);margin-top:4px}
+.eq-thermo.inactif .eq-thermo-svg{cursor:default;opacity:.55}
+.eq-thermo.inactif .eq-thermo-num{color:#8a97ad}
 .eq-qual{display:flex;align-items:center;gap:10px}
 .eq-qual .eq-qa{width:14px;height:14px}
 .eq-mot{font-size:15px;color:#c9d3e3}
@@ -124,6 +161,11 @@
 .eq-minmax{margin:-6px 0 0 18px}
 .eq-pas{display:flex;align-items:center;gap:8px;flex:none}
 .eq-pas b{font-size:15px;font-weight:500;min-width:64px;text-align:center}
+/* V2.2 ha-ecriture : repli par type (APP.cartes.reglage) : libellé au-dessus, commande dessous ; bouton Appliquer / Envoyer à droite */
+.eq-reglage{display:flex;flex-direction:column;gap:6px}
+.eq-reglage .eq-rangee > .eq-action{width:auto;flex:none;padding:0 18px}
+.eq-reglage .eq-action:disabled,.eq-reglage .eq-rond:disabled{opacity:.4}
+.eq-saisie{flex:1;min-width:0;height:44px;padding:0 14px;border-radius:12px;border:1px solid #262c37;background:#0d1117;color:#e9eef7;font-size:16px;color-scheme:dark}
 .eq-gris{opacity:.55}
 .eq-lecteur{display:flex;align-items:center;justify-content:center;gap:18px}
 .eq-grandrond{width:56px;height:56px;min-height:56px}

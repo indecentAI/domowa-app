@@ -4,7 +4,8 @@
 // Preréglages de position communs a tous les stores : GET /api/equipements/positions, POST /api/equipements/positions {position}, POST /api/equipements/positions/supprimer {position}
 // (donnees/stores-positions.json {v: 1, positions} ; analyserPositions, ajouterPosition, retirerPosition : purs).
 // Icones (V2.1 etape icones) : GET /api/equipements/icones -> {equipements, elements, pack, lisible}, POST /api/equipements/icone {id, icone|null} (donnees/icones.json).
-// Alarmes (V2.1 etape alarmes) : GET /api/equipements/alarmes -> {alarmes: [{id, nom, piece, cap, depuis}]}.
+// Alarmes (V2.1 etape alarmes) : GET /api/equipements/alarmes -> {alarmes: [{id, nom, piece, cap, depuis}]}. Presence (V2.2 ha-localisation) : GET /api/equipements/presence ->
+// {presence: [{id, nom, zone, maison}]} (personnes, zone seulement).
 // Ecriture generique (V2.1 etape ecriture-generique) : POST /api/equipements/:id/capacite {element, cap, valeur?, confirm?} -> {ok, equipement} (core/appareils.mjs ecrireCapacite).
 // Contrats « Capacités » et « Données sensibles » de .claude/rules/equipements.md. Lampes et prises de la vue Lumières : leurs routes (inchangées).
 import fs from 'node:fs';
@@ -170,6 +171,17 @@ export function alarmes(liste) {
   }
   return r.sort((a, b) => (b.depuis || '').localeCompare(a.depuis || '') || a.nom.localeCompare(b.nom, 'fr') || a.cap.localeCompare(b.cap)).slice(0, 20);
 }
+// Presence (V2.2 ha-localisation ; carte « Présence » de l'accueil, public/presence.js) : personnes (capacite localisation marquee personne) d'un equipement present -> [{id, nom, zone, maison}]
+// (zone : texte de la capacite, « À la maison », « Absent » ou nom de zone ; jamais de coordonnees) ; ordre du nom ; 12 au plus. Pur (banc/unitaires/equipements.test.mjs).
+export function presence(liste) {
+  const r = [];
+  for (const e of liste || []) {
+    if (!e || e.absent || !Array.isArray(e.capacites)) continue;
+    const c = e.capacites.find((x) => x && x.cap === 'localisation' && x.personne === true);
+    if (c) r.push({ id: e.id, nom: nom(e.nom), zone: typeof c.valeur === 'string' && c.valeur.length <= 200 ? c.valeur : null, maison: c.maison === true });
+  }
+  return r.sort((a, b) => a.nom.localeCompare(b.nom, 'fr') || a.id.localeCompare(b.id)).slice(0, 12);
+}
 export const routes = [
   // ?frais=1 : sans le cache court (bouton Actualiser de la vue)
   ['GET', '/api/equipements', async (c) => {
@@ -194,6 +206,11 @@ export const routes = [
     const r = await equipements(false), reg = lireRegistre(), piecesHub = new Map();
     for (const e of r.equipements) if (e.piece && e.piece.id) piecesHub.set(e.piece.id, String(e.piece.name || e.piece.id));
     return { alarmes: alarmes(r.equipements.map((e) => ({ ...e, piece: pieceDe(e, reg.rangement, reg.locales, piecesHub) }))), time: new Date().toISOString() };
+  }],
+  // Presence (V2.2 ha-localisation) : carte « Présence » de l'accueil, depuis le cache court des equipements ; zone seulement, jamais de coordonnees
+  ['GET', '/api/equipements/presence', async () => {
+    const r = await equipements(false);
+    return { presence: presence(r.equipements), time: new Date().toISOString() };
   }],
   // Icones (etape icones) : par equipement et par element (une lampe : la meme icone dans les vues Lumieres et Equipements)
   ['GET', '/api/equipements/icones', async () => {
@@ -245,13 +262,13 @@ export const routes = [
   ['GET', '/api/equipements/positions', async () => { const f = lirePositions(); return { positions: f.positions, lisible: f.lisible, time: new Date().toISOString() }; }],
   ['POST', '/api/equipements/positions', async (c) => { const b = await c.corps(); return changerPositions((l) => ajouterPosition(l, b && b.position)); }],
   ['POST', '/api/equipements/positions/supprimer', async (c) => { const b = await c.corps(); return changerPositions((l) => retirerPosition(l, b && b.position)); }],
-  // {element, cap, valeur?, confirm?} : une capacite ecrivable de l'equipement (validee par son descripteur ; une commande a la fois par equipement ; relu 1 s apres)
+  // {element, cap, valeur?, confirm?, options?} (options, V2.2 ha-ouvrants : code d'alarme ou de serrure, ton, volume, duree ; jamais gardees ni journalisees) : une capacite ecrivable de l'equipement (validee par son descripteur ; une commande a la fois par equipement ; relu 1 s apres)
   ['POST', /^\/api\/equipements\/([^/]{1,220})\/capacite$/, async (c) => {
     let id;
     try { id = decodeURIComponent(c.m[1]); } catch (e) { throw new HttpError(400, 'Équipement invalide.'); }
     const b = await c.corps();
     if (!CLE_RE.test(id) || !b || !pour(b.element) || !b.element || !pour(b.cap) || !/^[a-z_]{1,40}$/.test(b.cap)) throw new HttpError(400, 'Commande invalide.');
-    const e = await ecrireCapacite(id, b.element, b.cap, b.valeur === undefined ? null : b.valeur, b.confirm === true);
+    const e = await ecrireCapacite(id, b.element, b.cap, b.valeur === undefined ? null : b.valeur, b.confirm === true, b.options);
     return { ok: true, equipement: e, time: new Date().toISOString() };
   }],
   // {id, element, cap} : code d'appairage (capacite secrete) d'un element, sur demande ; ecoute locale seulement (contrat « Mode distant » : req.distant pose par server.mjs) ;

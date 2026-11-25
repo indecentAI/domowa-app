@@ -15,6 +15,16 @@
   const mille = (v, d) => { const s = nb(v, d), i = s.indexOf(","), e = i < 0 ? s : s.slice(0, i); return e.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + (i < 0 ? "" : s.slice(i)); };
   const unite = (u) => (!u ? "" : u === "%" ? " %" : " " + u);
   const ALERTES = { fuite: ["Aucune fuite", "Fuite détectée"], fumee: ["Aucune fumée", "Fumée détectée"], monoxyde: ["Aucun CO", "CO détecté"], gaz: ["Aucun gaz", "Gaz détecté"] };
+  // V2.2 ha-ouvrants : états lus (verrou, alarme, ouvrant), distincts des commandes proposées (options : Verrouiller, Désarmer, Ouvrir…)
+  const ETATS = {
+    verrou: { locked: "Verrouillée", unlocked: "Déverrouillée", locking: "Verrouillage…", unlocking: "Déverrouillage…", jammed: "Bloquée", open: "Ouverte", opening: "Ouverture…" },
+    alarme: { disarmed: "Désarmée", armed_home: "Armée (présence)", armed_away: "Armée (absence)", armed_night: "Armée (nuit)", armed_vacation: "Armée (vacances)",
+      armed_custom_bypass: "Armée (personnalisé)", pending: "En attente", arming: "Armement…", disarming: "Désarmement…", triggered: "Déclenchée" },
+    ouverture: { open: "Ouverte", closed: "Fermée", opening: "Ouverture…", closing: "Fermeture…", stopped: "Arrêtée", up: "Monte", down: "Descend" },
+    // V2.2 ha-media-robots : aspirateur, tondeuse ; lecteur
+    robot: { cleaning: "Nettoie", mowing: "Tond", docked: "À la base", idle: "Arrêté", paused: "En pause", returning: "Retour à la base", error: "Erreur" },
+    lecture: { playing: "Lecture", paused: "En pause", idle: "Inactif", buffering: "Chargement…", on: "ON", off: "OFF", standby: "Veille" },
+  };
   function option(c, k) { const o = ((c && c.options) || []).filter((x) => x.code === k)[0]; return o ? o.libelle : String(k); }
 
   // ---------- qualité de l'air (cartes, section 3) ----------
@@ -52,7 +62,7 @@
       return v ? "ON" : "OFF";
     }
     if (typeof v === "number") return c.cap === "cov" ? mille(v, 0) + " (" + qualite("cov", v) + ")" : mille(v, Math.abs(v) >= 100 ? 0 : 1) + unite(c.unite);
-    if (c.type === "choix") return option(c, v);
+    if (c.type === "choix") return ETATS[c.cap] && ETATS[c.cap][v] ? ETATS[c.cap][v] : option(c, v);
     if (c.type === "plage" && typeof v === "object") return nb(v.bas) + " – " + nb(v.haut) + unite(c.unite);
     if (c.type === "couleur" && typeof v === "object") return "teinte " + Math.round(v.hue || 0) + "°";
     return typeof v === "object" ? "—" : String(v);
@@ -70,6 +80,14 @@
     if (m < 60) return "depuis " + m + " min";
     return new Date(n).toDateString() === d.toDateString() ? "depuis " + heure(iso) : "depuis le " + date(iso, true);
   }
+  // V2.2 ha-depuis : dernier appui, dernière activation, dernier lancement (bouton, scène, script) : « 08:15 » le même jour, sinon « 24/11 à 08:15 » ; illisible : ""
+  function quand(iso, maintenant) {
+    const d = new Date(iso || ""), n = typeof maintenant === "number" ? maintenant : Date.now();
+    if (!iso || isNaN(d.getTime())) return "";
+    return new Date(n).toDateString() === d.toDateString() ? heure(iso) : date(iso, true) + " à " + heure(iso);
+  }
+  // Libellé d'une heure d'action (bouton, scène, script) ; null : capacité sans heure à montrer
+  const dernier = (c) => (!c || !c.depuis || !quand(c.depuis) ? null : c.cap === "scene" ? "Dernière activation" : c.script ? "Dernier lancement" : c.cap === "action" || c.cap === "identifier" ? "Dernier appui" : null);
   // Dernier passage (mouvement) : « vu à 08:15 », ou « vu le JJ/MM à 08:15 » un autre jour
   function vu(iso, maintenant) {
     const d = new Date(iso || ""), n = typeof maintenant === "number" ? maintenant : Date.now();
@@ -108,6 +126,8 @@
     const corps = { element: c.element, cap: c.cap };
     if (valeur !== undefined && valeur !== null) corps.valeur = valeur;
     if (o.confirm) corps.confirm = true;
+    // V2.2 ha-ouvrants : paramètres de la commande (code d'alarme ou de serrure, ton, volume, durée) ; jamais gardés après l'envoi
+    if (o.options) corps.options = o.options;
     APP.api("POST", "/api/equipements/" + encodeURIComponent(eq.id) + "/capacite", corps, (err, d) => {
       delete occupes[eq.id];
       if (err) { APP.banner(err, "warn"); auditeurs.forEach((f) => { try { f(null, eq.id); } catch (e) { /* auditeur isolé */ } }); return; }
@@ -189,6 +209,8 @@
   function identifier(eq) {
     const i = de(eq, "identifier"), st = caps(eq).filter((x) => x.cap === "identifier_arret" && i && x.element === i.element)[0];
     if (!expose(i)) return null;
+    // Sans arrêt déclaré (Home Assistant : bouton identify, un appui) : bouton simple, sans compte à rebours
+    if (!st) { const s = action("Identifier"); return lier(s, i, () => ecrire(eq, i, undefined, { ok: "Identification demandée." })); }
     const k = eq.id + "|" + i.element, b = action("");
     const peindre = () => {
       const r = Math.ceil(((clignote[k] || 0) - Date.now()) / 1000);
@@ -296,10 +318,12 @@
   const LECT = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
   const PAUSE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>';
   const joue = (eq) => { const l = de(eq, "lecture"); return !!(l && typeof l.valeur === "string" && /playing$/i.test(l.valeur)); };
-  // Lecture / pause (tuile et configuration) : lecture playbackPaused ou playbackPlaying
+  // Lecture / pause (tuile et configuration) : code de l'option selon le hub (DIRIGERA playbackPlaying, playbackPaused… ; Home Assistant play, pause… : V2.2 ha-media-robots)
+  const SENS_LECTURE = { play: ["playbackPlaying", "play"], pause: ["playbackPaused", "pause"], previous: ["playbackPrevious", "previous"], next: ["playbackNext", "next"] };
+  function codeLecture(c, k) { const o = ((c && c.options) || []).map((x) => x.code); return (SENS_LECTURE[k] || []).filter((x) => o.indexOf(x) >= 0)[0] || null; }
   function lecturePause(eq, cls) {
-    const l = de(eq, "lecture"), jo = joue(eq);
-    return lier(rond(jo ? PAUSE : LECT, jo ? "Pause" : "Lecture", cls + (jo ? " on" : "")), l, () => ecrire(eq, l, jo ? "playbackPaused" : "playbackPlaying"));
+    const l = de(eq, "lecture"), jo = joue(eq), k = codeLecture(l, jo ? "pause" : "play"), b = rond(jo ? PAUSE : LECT, jo ? "Pause" : "Lecture", cls + (jo ? " on" : ""));
+    return k ? lier(b, l, () => ecrire(eq, l, k)) : inactif(b);
   }
   // Répétition : valeurs de repeat non documentées par la bibliothèque, jamais écrivable : non affichée (commande non exposée)
   function enceinte(eq, box) {
@@ -308,9 +332,10 @@
     c.appendChild(el("div", "eq-media", m && m.valeur ? m.valeur : "Rien en cours"));
     if (expose(l)) {
       const r = el("div", "eq-lecteur");
-      r.appendChild(lier(rond("⏮", "Précédent"), l, () => ecrire(eq, l, "playbackPrevious")));
+      const pr = codeLecture(l, "previous"), su = codeLecture(l, "next");
+      r.appendChild(pr ? lier(rond("⏮", "Précédent"), l, () => ecrire(eq, l, pr)) : inactif(rond("⏮", "Précédent")));
       r.appendChild(lecturePause(eq, "eq-grandrond eq-lect"));
-      r.appendChild(lier(rond("⏭", "Suivant"), l, () => ecrire(eq, l, "playbackNext")));
+      r.appendChild(su ? lier(rond("⏭", "Suivant"), l, () => ecrire(eq, l, su)) : inactif(rond("⏭", "Suivant")));
       c.appendChild(r);
     }
     if (vol) {
@@ -322,6 +347,10 @@
     }
     box.appendChild(c);
     const o = carte("Options"), al = de(eq, "aleatoire"), i = identifier(eq);
+    // V2.2 ha-media-robots : ON / OFF, source, mode sonore, répétition (lecteurs de Home Assistant) : commandes par type, seulement si exposées
+    // libellés propres à la carte (une source de Home Assistant porte le nom de l'entité)
+    const LIB = { onoff: "ON / OFF", source: "Source", repetition: "Répétition" };
+    ["onoff", "source", "mode", "repetition"].forEach((k) => { const x = de(eq, k); if (expose(x)) o.appendChild(reglage(eq, LIB[k] ? Object.assign({}, x, { libelle: LIB[k] }) : x)); });
     if (expose(al)) o.appendChild(rangee("Lecture aléatoire", onoffCap(eq, al, "Lecture aléatoire")));
     if (i) o.appendChild(i);
     if (o.childNodes.length > 1) box.appendChild(o);
@@ -485,7 +514,50 @@
   // ---------- hub (vue Équipements et fenêtre « Hubs ») ----------
   // Code d'appairage sur demande (deux appuis, écoute locale seulement ; effacé après 30 s, au changement de sélection, de vue ou à la fermeture de la fenêtre)
   let code = null, codeT = null, arme = null, armeT = null, redessiner = null;
-  function effacerCode() { const r = redessiner; code = null; if (codeT) { clearTimeout(codeT); codeT = null; } arme = null; if (armeT) { clearTimeout(armeT); armeT = null; } if (r) r(); }
+  // V2.2 ha-localisation : position GPS (capacité privée coordonnees, hub et traceurs) affichée de même sur demande (deux appuis, 30 s, effacée avec le code)
+  let pos = null, posT = null;
+  function effacerCode() { const r = redessiner; code = null; pos = null; oublierSaisie(); if (codeT) { clearTimeout(codeT); codeT = null; } if (posT) { clearTimeout(posT); posT = null; } arme = null; if (armeT) { clearTimeout(armeT); armeT = null; } if (r) r(); }
+  // Coordonnées « lat, lon (± m) » -> lien geo: (application de cartes de l'appareil : notre application ne contacte aucun service de cartes) ; illisible : null
+  function lienGeo(t) {
+    // Nombres repris tels qu'écrits (jamais réécrits par JavaScript, qui peut donner 1e-7) : forme stricte attendue par l'APK (logique/Origine.cartes)
+    const m = /^\s*(-?\d{1,2}(?:\.\d{1,17})?),\s*(-?\d{1,3}(?:\.\d{1,17})?)(?![\d.])/.exec(String(t || ""));
+    if (!m) return null;
+    const la = +m[1], lo = +m[2];
+    return la >= -90 && la <= 90 && lo >= -180 && lo <= 180 ? "geo:" + m[1] + "," + m[2] + "?q=" + m[1] + "," + m[2] : null;
+  }
+  function boutonPosition(eq, k, rendre) {
+    const b = el("div", "eq-code"), cle = eq.id + "|" + k.element + "|" + k.cap;
+    if (pos && pos.cle === cle) {
+      b.appendChild(el("span", "eq-l", "Position"));
+      b.appendChild(el("b", "eq-codev", String(k.valeur)));
+      const g = lienGeo(k.valeur);
+      // Application Android (APK) : depuis la V2.2 (apk-geo), elle ouvre les liens geo: et l'annonce (APP.apk.geo) ; un ancien APK les refuse : pas de lien, dit
+      if (g && (!(APP.apk && APP.apk.present) || APP.apk.geo)) { const a = el("a", "eq-bouton eq-carte-lien", "Ouvrir dans Cartes"); a.href = g; a.rel = "noopener"; b.appendChild(a); }
+      else if (g) b.appendChild(el("span", "eq-note", "« Ouvrir dans Cartes » : mettez à jour l'application Android, ou ouvrez Domowa dans un navigateur."));
+      const x = el("button", "eq-bouton eq-masquer", "Masquer"); x.onclick = effacerCode; b.appendChild(x);
+      return b;
+    }
+    const a = arme === cle, btn = el("button", "eq-bouton eq-position" + (a ? " arme" : ""), a ? "Toucher encore pour afficher" : "Afficher la position");
+    btn.onclick = () => {
+      redessiner = rendre;
+      if (arme !== cle) { arme = cle; if (armeT) clearTimeout(armeT); armeT = setTimeout(() => { arme = null; rendre(); }, 5000); rendre(); return; }
+      arme = null; if (armeT) { clearTimeout(armeT); armeT = null; }
+      pos = { id: eq.id, cle };
+      if (posT) clearTimeout(posT);
+      posT = setTimeout(effacerCode, 30000); // jamais gardée
+      rendre();
+    };
+    b.appendChild(btn);
+    return b;
+  }
+  // Présence (personne, traceur : capacité localisation) : zone en grand, position sur demande
+  function presence(eq, box, rendre) {
+    const z = de(eq, "localisation"), c = carte("Présence");
+    c.appendChild(grand(z && z.valeur ? String(z.valeur) : "—", z && z.maison ? "vert" : ""));
+    const k = de(eq, "coordonnees");
+    if (k) { c.appendChild(boutonPosition(eq, k, rendre)); c.appendChild(el("div", "eq-note", "Position à l'écran seulement, 30 secondes, jamais enregistrée. « Ouvrir dans Cartes » la passe à l'application de cartes de l'appareil.")); }
+    box.appendChild(c);
+  }
   function boutonCode(eq, k, rendre, distant) {
     const b = el("div", "eq-code");
     const ici = code && code.id === eq.id && code.element === k.element && code.cap === k.cap;
@@ -547,8 +619,9 @@
       if (fz) c.appendChild(ligne("Fuseau", texte(fz)));
       box.appendChild(c);
     }
+    // Localisation : zone en texte ; coordonnées sur demande (V2.2 ha-localisation, décision du 24/11 : position affichable sur demande seulement)
     const loc = caps(eq).filter((x) => x.cap === "localisation" || x.cap === "coordonnees");
-    if (loc.length) { const c = carte("Localisation"); loc.forEach((x) => c.appendChild(ligne(x.libelle, texte(x)))); c.appendChild(el("div", "eq-note", "À l'écran seulement, jamais enregistrée.")); box.appendChild(c); }
+    if (loc.length) { const c = carte("Localisation"); loc.forEach((x) => c.appendChild(x.cap === "coordonnees" ? boutonPosition(eq, x, rendre) : ligne(x.libelle, texte(x)))); c.appendChild(el("div", "eq-note", "À l'écran seulement, jamais enregistrée.")); box.appendChild(c); }
     if ((eq.codes || []).length) { const c = carte("Code d'appairage"); eq.codes.forEach((k) => c.appendChild(boutonCode(eq, k, rendre, distant))); box.appendChild(c); }
     const o = options(eq);
     if (o) box.appendChild(o);
@@ -562,10 +635,404 @@
     return { v: "À jour", p: "" };
   }
 
+  // ---------- repli par type (V2.2 ha-ecriture ; conception §5) : commande d'une capacité sans widget propre, d'après son type ----------
+  // Construit seulement si la capacité est exposée en écriture (sinon : sa valeur en texte). Booléen : ON / OFF ; choix : piste (3 au plus) ou pastilles ; nombre : − valeur + locaux
+  // puis « Appliquer » (un seul envoi) ; texte, date, heure : champ puis « Envoyer » ; aucune valeur : bouton (sensible : deux appuis, confirm). Autres types : valeur en texte.
+  // Brouillons (valeur choisie non envoyée) gardés par capacité jusqu'à l'envoi ou au rechargement de la page.
+  const brouillons = {};
+  const TYPES_REGLAGE = ["booleen", "choix", "nombre", "texte", "aucune"];
+  const regle = (c) => !!(c && expose(c) && TYPES_REGLAGE.indexOf(c.type) >= 0);
+  function bloc(lib) { const r = el("div", "eq-reglage"); r.appendChild(el("span", "eq-l", lib)); return r; }
+  function reglage(eq, c) {
+    const lib = c.libelle || c.cap;
+    if (!regle(c)) return ligne(lib, texte(c));
+    const k = eq.id + "|" + c.element + "|" + c.cap;
+    if (c.type === "booleen") return rangee(lib, onoffCap(eq, c, lib));
+    if (c.type === "choix") {
+      const o = (c.options || []).map((x) => [x.code, x.libelle]), r = bloc(lib);
+      if (o.length <= 3) { r.appendChild(pisteCap(eq, c, o, lib)); return r; }
+      const g = el("div", "eq-pres"); g.setAttribute("role", "group"); g.setAttribute("aria-label", lib);
+      o.forEach((x) => {
+        const b = el("button", "eq-pre" + (x[0] === c.valeur ? " sel" : ""), x[1]); b.setAttribute("aria-pressed", x[0] === c.valeur ? "true" : "false");
+        if (peut(c)) b.onclick = (e) => { if (e) e.stopPropagation(); if (x[0] !== c.valeur) ecrire(eq, c, x[0]); }; else inactif(b);
+        g.appendChild(b);
+      });
+      r.appendChild(g); return r;
+    }
+    if (c.type === "nombre") return reglageNombre(eq, c, lib, k);
+    if (c.type === "texte") return reglageTexte(eq, c, lib, k);
+    const b = action(lib);
+    if (!peut(c)) return inactif(b);
+    if (c.sensible) return deuxAppuis(b, k, "Confirmer : " + lib, () => ecrire(eq, c, undefined, { confirm: true, ok: "Commande envoyée." }));
+    return lier(b, c, () => ecrire(eq, c, undefined, { ok: "Commande envoyée." }));
+  }
+  function reglageNombre(eq, c, lib, k) {
+    const p = typeof c.pas === "number" && c.pas > 0 ? c.pas : 1, mi = typeof c.min === "number" ? c.min : null, ma = typeof c.max === "number" ? c.max : null;
+    const dec = Math.min(4, (String(p).split(".")[1] || "").length);
+    const v0 = typeof c.valeur === "number" ? c.valeur : (mi !== null ? mi : 0);
+    let v = typeof brouillons[k] === "number" ? brouillons[k] : v0;
+    const r = bloc(lib), l = el("div", "eq-rangee"), val = el("b", "", ""), moins = rond("−", lib + " : moins"), plus = rond("+", lib + " : plus"), env = action("Appliquer");
+    const pasD = el("div", "eq-pas"); pasD.appendChild(moins); pasD.appendChild(val); pasD.appendChild(plus);
+    const envoyer = () => { if (v === v0) return; delete brouillons[k]; ecrire(eq, c, v, c.sensible ? { confirm: true } : undefined); };
+    l.appendChild(pasD); l.appendChild(env); r.appendChild(l);
+    // valeur sur la grille du pas (comptée depuis le minimum, comme le serveur), bornée
+    const grille = (x) => { const b = mi !== null ? mi : 0; let y = +(b + Math.round((x - b) / p) * p).toFixed(dec); if (mi !== null) y = Math.max(mi, y); if (ma !== null) y = Math.min(ma, y); return y; };
+    const peindre = () => {
+      val.textContent = nb(v, dec) + unite(c.unite);
+      moins.disabled = mi !== null && v <= mi; plus.disabled = ma !== null && v >= ma; env.disabled = v === v0;
+    };
+    if (!peut(c)) { inactif(moins); inactif(plus); inactif(env); peindre(); return r; }
+    const changer = (d) => (e) => { if (e) e.stopPropagation(); v = grille(v + d); brouillons[k] = v; peindre(); };
+    moins.onclick = changer(-p); plus.onclick = changer(p);
+    // V2.2 ha-ouvrants : commande sensible (position d'une vanne, d'une porte de garage) : deux appuis, confirm
+    if (c.sensible) deuxAppuis(env, k, "Confirmer ?", envoyer); else env.onclick = (e) => { if (e) e.stopPropagation(); envoyer(); };
+    peindre(); return r;
+  }
+  // Texte et date / heure (widget date) : champ du navigateur (date, time, datetime-local), envoyé tel quel (le serveur vérifie le format)
+  function valeurChamp(c) {
+    const v = typeof c.valeur === "string" ? c.valeur : "";
+    if (c.format === "time") return v.slice(0, 5);
+    if (c.format === "datetime") { const d = new Date(v); return isNaN(d.getTime()) ? "" : d.getFullYear() + "-" + deux(d.getMonth() + 1) + "-" + deux(d.getDate()) + "T" + deux(d.getHours()) + ":" + deux(d.getMinutes()); }
+    return v;
+  }
+  function reglageTexte(eq, c, lib, k) {
+    const r = bloc(lib), l = el("div", "eq-rangee"), i = el("input", "eq-saisie"), env = action("Envoyer");
+    i.type = c.format === "date" ? "date" : c.format === "time" ? "time" : c.format === "datetime" ? "datetime-local" : "text";
+    i.setAttribute("aria-label", lib);
+    if (typeof c.longueur_max === "number" && c.longueur_max > 0) i.maxLength = c.longueur_max;
+    const v0 = valeurChamp(c);
+    i.value = typeof brouillons[k] === "string" ? brouillons[k] : v0;
+    const peindre = () => { env.disabled = i.value === v0 || (c.format && !i.value); };
+    l.appendChild(i); l.appendChild(env); r.appendChild(l);
+    if (!peut(c)) { i.disabled = true; inactif(env); return r; }
+    i.oninput = () => { brouillons[k] = i.value; peindre(); };
+    i.onclick = (e) => { if (e) e.stopPropagation(); };
+    env.onclick = (e) => { if (e) e.stopPropagation(); if (env.disabled) return; const s = i.value; delete brouillons[k]; ecrire(eq, c, s); };
+    peindre(); return r;
+  }
+  // ---------- ouvrants et sécurité (V2.2 ha-ouvrants ; décision du 24/11 : basiques, « un peu comme des switch », piste ON / OFF q-segs) ----------
+  // Serrure, alarme, vanne, sirène : piste de deux états (q-segs) ; le sens risqué (déverrouiller, désarmer, ouvrir une vanne, déclencher la sirène) en deux appuis
+  // (« Confirmer ? », 5 s), l'autre en un appui ; toutes sensibles pour le serveur : confirm envoyé dans les deux cas. Jamais dans un groupe, une scène, une animation ni Tout OFF.
+  // Code d'alarme ou de serrure (code_format déclaré) : champ masqué tapé à chaque fois, clavier chiffres ou texte (clavier_code) ; gardé en mémoire 30 s au plus après la
+  // dernière frappe (reconstruction de la configuration), effacé à l'envoi, au changement de sélection ou de vue (effacerCode) ; jamais stocké, journalisé ni renvoyé.
+  let saisie = null, saisieT = null;
+  function oublierSaisie() { saisie = null; if (saisieT) { clearTimeout(saisieT); saisieT = null; } }
+  function champCode(eq, c) {
+    const cle = eq.id + "|" + c.element, i = el("input", "eq-saisie eq-codesaisi");
+    i.type = "password"; i.autocomplete = "off"; i.setAttribute("autocomplete", "off"); i.setAttribute("aria-label", "Code");
+    i.setAttribute("inputmode", c.clavier_code === "chiffres" ? "numeric" : "text"); i.maxLength = 64; i.spellcheck = false;
+    i.placeholder = "Code";
+    if (saisie && saisie.cle === cle) i.value = saisie.v;
+    i.oninput = () => { saisie = { cle, v: i.value }; if (saisieT) clearTimeout(saisieT); saisieT = setTimeout(() => { oublierSaisie(); i.value = ""; }, 30000); };
+    i.onclick = (e) => { if (e) e.stopPropagation(); };
+    const r = el("div", "eq-rangee"); r.appendChild(el("span", "eq-l", "Code")); r.appendChild(i);
+    return { r, lire: () => i.value, vider: () => { i.value = ""; oublierSaisie(); } };
+  }
+  // Piste de deux états : choix [[code, libellé, classe (on | off), risqué]] ; actif : code actif ; choisir(code) : envoi (sans fonction : inactive)
+  function deuxEtats(cle, choix, actif, lib, choisir) {
+    const s = el("div", "q-segs eq-segs eq-segs-l"); if (lib) s.setAttribute("aria-label", lib);
+    choix.forEach((x) => {
+      const b = el("button", "q-seg" + (x[0] === actif ? " sel " + x[2] : ""), x[1]); b.setAttribute("aria-pressed", x[0] === actif ? "true" : "false");
+      if (!choisir) inactif(b);
+      else if (x[3] && x[0] !== actif) deuxAppuis(b, cle + "|" + x[0], "Confirmer ?", () => choisir(x[0]));
+      else b.onclick = (e) => { if (e) e.stopPropagation(); if (x[0] !== actif) choisir(x[0]); };
+      s.appendChild(b);
+    });
+    return s;
+  }
+  const ETAT_VERROU = { locked: "lock", locking: "lock", unlocked: "unlock", unlocking: "unlock", open: "unlock", opening: "unlock" };
+  // Code requis avant l'envoi (le serveur le vérifie aussi) : bandeau, rien envoyé
+  function avecCode(eq, c, champ, requis, valeur, ok) {
+    const v = champ ? champ.lire() : "";
+    if (requis && !v) { APP.banner("Tapez le code.", "warn"); return; }
+    const o = { confirm: true, ok };
+    if (champ && v) o.options = { code: v };
+    if (champ) champ.vider();
+    ecrire(eq, c, valeur, o);
+  }
+  function serrure(eq, box) {
+    const c = de(eq, "verrou"), k = carte("Serrure"), v = c && c.valeur;
+    k.appendChild(grand(texte(c), v === "unlocked" || v === "open" ? "orange" : v === "jammed" ? "rouge" : v === "locked" ? "vert" : ""));
+    if (expose(c)) {
+      const champ = c.clavier_code ? champCode(eq, c) : null;
+      if (champ) k.appendChild(champ.r);
+      k.appendChild(deuxEtats(eq.id + "|verrou", [["lock", "Verrouillée", "on", false], ["unlock", "Déverrouillée", "off", true]], ETAT_VERROU[v] || null, "Serrure",
+        peut(c) ? (x) => avecCode(eq, c, champ, !!champ, x, x === "lock" ? "Verrouillage demandé." : "Déverrouillage demandé.") : null));
+      if (v === "jammed") k.appendChild(el("div", "eq-note", "La serrure signale un blocage : vérifiez la porte."));
+    }
+    box.appendChild(k);
+  }
+  function centrale(eq, box) {
+    const c = de(eq, "alarme"), k = carte("Alarme"), v = c && typeof c.valeur === "string" ? c.valeur : null;
+    const arme = !!v && v !== "disarmed" && v !== "disarming";
+    k.appendChild(grand(texte(c), v === "triggered" ? "rouge" : arme ? "vert" : ""));
+    if (expose(c)) {
+      const modes = (c.options || []).filter((x) => x.code !== "disarm"), champ = c.clavier_code ? champCode(eq, c) : null;
+      const reqArme = !!champ && c.code_requis !== false;
+      if (champ) k.appendChild(champ.r);
+      const envoi = (x) => avecCode(eq, c, champ, x === "disarm" ? !!champ : reqArme, x, x === "disarm" ? "Désarmement demandé." : "Armement demandé.");
+      const choisir = peut(c) ? (x) => { if (x !== "arm") return envoi(x); if (modes.length === 1) return envoi(modes[0].code); APP.banner("Choisissez le mode d'armement ci-dessous.", "warn"); } : null;
+      k.appendChild(deuxEtats(eq.id + "|alarme", [["disarm", "Désarmée", "off", true], ["arm", "Armée", "on", false]], v ? (arme ? "arm" : "disarm") : null, "Alarme", choisir));
+      // Plusieurs modes d'armement : pastilles (le mode actif en surbrillance), un appui
+      if (modes.length > 1) {
+        const g = el("div", "eq-pres"); g.setAttribute("role", "group"); g.setAttribute("aria-label", "Mode d'armement");
+        modes.forEach((x) => {
+          const actif = v === x.code.replace(/^arm_/, "armed_"), b = el("button", "eq-pre" + (actif ? " sel" : ""), x.libelle.replace(/^Armer \((.*)\)$/, "$1").replace(/^./, (m) => m.toUpperCase()));
+          b.setAttribute("aria-pressed", actif ? "true" : "false"); b.setAttribute("aria-label", x.libelle);
+          if (peut(c)) b.onclick = (e) => { if (e) e.stopPropagation(); if (!actif) envoi(x.code); }; else inactif(b);
+          g.appendChild(b);
+        });
+        k.appendChild(g);
+      }
+    }
+    box.appendChild(k);
+  }
+  function vanne(eq, box) {
+    const c = de(eq, "ouverture"), p = de(eq, "position"), k = carte("Vanne"), v = c && c.valeur;
+    const ouverte = v === "open" || v === "opening", pos = num(p);
+    k.appendChild(grand(texte(c), ouverte ? "bleu" : "", pos !== null ? nb(pos, 0) + " %" : ""));
+    if (expose(c)) {
+      const o = (c.options || []).map((x) => x.code), ch = [];
+      if (o.indexOf("open") >= 0) ch.push(["open", "Ouverte", "on", true]);
+      if (o.indexOf("close") >= 0) ch.push(["close", "Fermée", "off", false]);
+      k.appendChild(deuxEtats(eq.id + "|vanne", ch, v === "open" || v === "opening" ? "open" : v === "closed" || v === "closing" ? "close" : null, "Vanne",
+        peut(c) ? (x) => ecrire(eq, c, x, { confirm: true, ok: x === "open" ? "Ouverture demandée." : "Fermeture demandée." }) : null));
+      if (o.indexOf("stop") >= 0 && (v === "opening" || v === "closing")) { const b = action("■ Arrêt"); lier(b, c, () => ecrire(eq, c, "stop", { confirm: true })); k.appendChild(b); }
+    }
+    if (p && expose(p)) k.appendChild(reglage(eq, p));
+    box.appendChild(k);
+  }
+  // Sirène : ON en deux appuis (déclencher), OFF en un ; ton, volume et durée seulement s'ils sont déclarés : choisis ici, envoyés avec le ON (sinon : ceux de l'appareil)
+  const sons = {};
+  function sirene(eq, box, rendre) {
+    const c = de(eq, "sirene"), k = carte("Sirène"), cle = eq.id + "|" + (c ? c.element : "");
+    const p = sons[cle] || (sons[cle] = { ton: null, volume: null, duree: null });
+    k.appendChild(grand(c && c.valeur === true ? "ON" : c && c.valeur === false ? "OFF" : "—", c && c.valeur === true ? "rouge" : ""));
+    if (!expose(c)) { box.appendChild(k); return; }
+    const opts = () => { const o = {}; if (p.ton !== null) o.ton = p.ton; if (p.volume !== null) o.volume = p.volume; if (p.duree !== null) o.duree = p.duree; return Object.keys(o).length ? o : undefined; };
+    k.appendChild(deuxEtats(cle, [[true, "ON", "on", true], [false, "OFF", "off", false]], typeof c.valeur === "boolean" ? c.valeur : null, "Sirène",
+      peut(c) ? (x) => ecrire(eq, c, x, { confirm: true, options: x === true ? opts() : undefined, ok: x === true ? "Sirène déclenchée." : "Sirène arrêtée." }) : null));
+    const re = () => { if (rendre) rendre(); };
+    if (Array.isArray(c.tons) && c.tons.length) {
+      const r = bloc("Ton"), g = el("div", "eq-pres"); g.setAttribute("role", "group"); g.setAttribute("aria-label", "Ton");
+      [{ code: null, libelle: "Par défaut" }].concat(c.tons).forEach((x) => {
+        const b = el("button", "eq-pre" + (p.ton === x.code ? " sel" : ""), x.libelle); b.setAttribute("aria-pressed", p.ton === x.code ? "true" : "false");
+        b.onclick = (e) => { if (e) e.stopPropagation(); p.ton = x.code; re(); };
+        g.appendChild(b);
+      });
+      r.appendChild(g); k.appendChild(r);
+    }
+    if (c.volume_reglable) k.appendChild(rangee("Volume", pas(p.volume === null ? "Par défaut" : p.volume + " %", "Volume",
+      p.volume === 0 ? null : () => { p.volume = p.volume === null ? 50 : Math.max(0, p.volume - 10); re(); }, p.volume === 100 ? null : () => { p.volume = p.volume === null ? 50 : Math.min(100, p.volume + 10); re(); })));
+    if (c.duree_reglable) k.appendChild(rangee("Durée", pas(p.duree === null ? "Par défaut" : p.duree + " s", "Durée",
+      p.duree === 5 ? null : () => { p.duree = p.duree === null ? 30 : Math.max(5, p.duree - 5); re(); }, p.duree === 300 ? null : () => { p.duree = p.duree === null ? 30 : Math.min(300, p.duree + 5); re(); })));
+    if (c.tons || c.volume_reglable || c.duree_reglable) k.appendChild(el("div", "eq-note", "Ton, volume et durée : envoyés avec le prochain ON."));
+    box.appendChild(k);
+  }
+  // Robot (aspirateur, tondeuse ; V2.2 ha-media-robots) : état, commandes déclarées en boutons (un appui), vitesse d'aspiration par type ; rien de sensible
+  const ORDRE_ROBOT = ["start", "start_mowing", "pause", "stop", "return_to_base", "dock", "clean_spot", "locate"];
+  function robot(eq, box) {
+    const c = de(eq, "robot"), k = carte("Robot"), v = c && c.valeur;
+    k.appendChild(grand(texte(c), v === "error" ? "rouge" : v === "cleaning" || v === "mowing" ? "vert" : ""));
+    if (expose(c)) {
+      const g = el("div", "eq-pres"); g.setAttribute("role", "group"); g.setAttribute("aria-label", "Commandes du robot");
+      (c.options || []).slice().sort((a, b) => ORDRE_ROBOT.indexOf(a.code) - ORDRE_ROBOT.indexOf(b.code)).forEach((x) => {
+        const b = el("button", "eq-pre", x.libelle);
+        lier(b, c, () => ecrire(eq, c, x.code, { ok: x.libelle + " : demandé." }));
+        g.appendChild(b);
+      });
+      k.appendChild(g);
+    }
+    const vi = de(eq, "vitesse_predefinie");
+    if (vi) k.appendChild(reglage(eq, vi));
+    box.appendChild(k);
+  }
+  // Ouvrant (store, volet, porte de garage) : code de l'option qui correspond à un sens (DIRIGERA : up, down, stopped ; Home Assistant : open, close, stop) ; absente : null
+  const SENS_OUVERTURE = { monte: ["up", "open"], descend: ["down", "close"], stop: ["stopped", "stop"] };
+  function codeOuverture(c, sens) { const o = ((c && c.options) || []).map((x) => x.code); return (SENS_OUVERTURE[sens] || []).filter((x) => o.indexOf(x) >= 0)[0] || null; }
+  // ---------- chauffage (V2.2 ha-climat, cadran ha-thermostat ; décisions du 24/11) ----------
+  // Cadran de température (même géométrie que le cadran de luminosité de reglages.js : arc de 270°, rayon 80, curseur rond, lueur floue) : arc bleu (froid) -> rouge (chaud),
+  // échelle d'un climat intérieur 14-26 °C (57-79 °F), jaune de 19 à 21 °C ; appareil dont les bornes sortent de ce climat (chauffe-eau) : ses propres bornes ; consigne choisie
+  // sur les bornes déclarées dans cette échelle, au pas déclaré (0,5 par défaut) ; envoi au lâcher du doigt (un envoi), − / + : un envoi 0,9 s après le dernier appui ;
+  // refusée en mode OFF (en_off) ; repère de la température mesurée sur l'arc.
+  // Halo (rouge : chauffe, bleu : refroidit) qui éclaire la carte et la tuile : activité de Home Assistant (hvac_action) si connue ; sinon déduite du mode et de l'écart
+  // consigne - mesure (0,2 °C de tolérance) ; sans mesure : du mode seul (chauffe : rouge, clim : bleu, intensité fixe ; auto : rien) ; déduite : puce « Mode chauffe ».
+  // Intensité : 0,25 à 1 selon l'écart (5 °C ou plus : 1) ; sans écart connu : 0,35.
+  const ACTIVITE = { heating: "Chauffe", idle: "Au repos", off: "Arrêté", cooling: "Refroidit", drying: "Déshumidification", fan: "Ventilation", preheating: "Préchauffage", defrosting: "Dégivrage" };
+  const absorbee = (c, k) => ((c && c.absorbees) || []).filter((x) => x.cap === k)[0] || null;
+  const MODES_CHAUD = ["heat", "heat_cool", "auto"], MODES_FROID = ["cool", "heat_cool", "auto"];
+  function chaud(eq) {
+    const cs = de(eq, "consigne_temperature"), m = de(eq, "mode"), o = de(eq, "onoff"), a = de(eq, "activite");
+    const mesure = absorbee(cs, "temperature") || de(eq, "temperature");
+    const ao = absorbee(m, "onoff"), off = !!(m && m.valeur === "off") || !!(o && o.valeur === false) || !!(ao && ao.valeur === false);
+    const r = { cs, m, o: o && o.role === "chauffage" ? o : null, a, mesure, off, chauffe: false, refroidit: false, estime: false, intensite: 0, activite: null };
+    if (off) { r.activite = "Arrêté"; return r; }
+    const v = (c) => (c && typeof c.valeur === "number" ? c.valeur : null), ecart = v(cs) !== null && v(mesure) !== null ? v(cs) - v(mesure) : null;
+    const force = ecart === null ? 0.35 : 0.25 + 0.75 * Math.min(Math.abs(ecart), 5) / 5;
+    if (a && typeof a.valeur === "string" && a.valeur) {
+      r.chauffe = a.valeur === "heating" || a.valeur === "preheating"; r.refroidit = a.valeur === "cooling";
+      r.activite = ACTIVITE[a.valeur] || a.valeur;
+    } else {
+      // Sans activité : appareil de chauffage seul (modes sans heat ni cool, ex. chauffe-eau ; ou sans mode) : chauffe ; sinon d'après le mode
+      const mv = m && m.valeur, opts = ((m && m.options) || []).map((x) => x.code);
+      const chauffant = !mv || (opts.indexOf("heat") < 0 && opts.indexOf("cool") < 0), peutChaud = chauffant || MODES_CHAUD.indexOf(mv) >= 0, peutFroid = !chauffant && MODES_FROID.indexOf(mv) >= 0;
+      if (ecart !== null) { r.chauffe = peutChaud && ecart > 0.2; r.refroidit = peutFroid && ecart < -0.2; }
+      else { r.chauffe = chauffant || mv === "heat"; r.refroidit = mv === "cool"; }
+      r.estime = true;
+      r.activite = r.chauffe ? "Mode chauffe" : r.refroidit ? "Mode clim" : ecart !== null ? "Au repos" : null;
+    }
+    if (r.chauffe || r.refroidit) r.intensite = force;
+    return r;
+  }
+  // Plage de consigne (climatiseur) : « 19–24 °C »
+  const plage = (c) => (c && c.valeur && typeof c.valeur.bas === "number" && typeof c.valeur.haut === "number" ? nb(c.valeur.bas, 1) + "–" + nb(c.valeur.haut, 1) + unite(c.unite || "°C") : "—");
+  const degres = (c) => (c && typeof c.valeur === "number" ? nb(c.valeur, 1) + unite(c.unite || "°C") : "—");
+  // Halo : variables CSS de la carte ou de la tuile (classe eq-halo ; .eq-halo::before de equipements.css)
+  function halo(n, h, tuile) {
+    const i = h && (h.chauffe || h.refroidit) ? h.intensite : 0;
+    n.classList.toggle("eq-halo", i > 0);
+    if (!i) return;
+    n.style.setProperty("--hc", h.chauffe ? "255,72,48" : "64,150,255");
+    n.style.setProperty("--ha", (0.08 + (tuile ? 0.3 : 0.32) * i).toFixed(2));
+    n.style.setProperty("--hb", Math.round((tuile ? 8 : 10) + (tuile ? 16 : 14) * i) + "px"); // 24 px au plus : plafond des lueurs fonctionnelles (banc, LUMIERES)
+    n.style.setProperty("--hs", (0.12 + 0.33 * i).toFixed(2));
+  }
+  // Échelle du cadran (pure, essais unitaires) : {bas, haut, min, max} ; teinte(f) bleu -> jaune (19-21 °C) -> rouge
+  function echelle(c) {
+    const f = !!(c && c.unite && /F/.test(c.unite)), bas = f ? 57 : 14, haut = f ? 79 : 26;
+    const mi = c && typeof c.min === "number" ? c.min : bas, ma = c && typeof c.max === "number" ? c.max : haut;
+    if (mi > haut || ma < bas) return { bas: mi, haut: ma, min: mi, max: ma, propre: true };
+    const a = Math.max(mi, bas), b = Math.min(ma, haut);
+    return b - a >= 1 ? { bas, haut, min: a, max: b, propre: false } : { bas: mi, haut: ma, min: mi, max: ma, propre: true };
+  }
+  const STOPS = [[0, [61, 123, 255]], [0.24, [127, 196, 255]], [5 / 12, [255, 214, 120]], [7 / 12, [255, 214, 120]], [0.8, [255, 138, 76]], [1, [255, 64, 64]]];
+  function teinte(f) {
+    f = Math.max(0, Math.min(1, f));
+    for (let i = 1; i < STOPS.length; i++) if (f <= STOPS[i][0]) { const a = STOPS[i - 1], b = STOPS[i], t = (f - a[0]) / (b[0] - a[0] || 1); return "rgb(" + a[1].map((x, k) => Math.round(x + (b[1][k] - x) * t)).join(",") + ")"; }
+    return "rgb(255,64,64)";
+  }
+  const SVGNS = "http://www.w3.org/2000/svg", RAYON = 80;
+  function sv(tag, at) { const e = document.createElementNS(SVGNS, tag); for (const k in at) e.setAttribute(k, at[k]); return e; }
+  const point = (f) => { const a = (135 + 270 * f) * Math.PI / 180; return [100 + RAYON * Math.cos(a), 100 + RAYON * Math.sin(a)]; };
+  const arcD = (f0, f1) => { const a = point(f0), b = point(f1); return "M" + a[0].toFixed(2) + " " + a[1].toFixed(2) + " A" + RAYON + " " + RAYON + " 0 0 1 " + b[0].toFixed(2) + " " + b[1].toFixed(2); };
+  let numCadran = 0;
+  function cadran(eq, c, h) {
+    const E = echelle(c), p = typeof c.pas === "number" && c.pas > 0 ? c.pas : 0.5, dec = Math.min(2, (String(p).split(".")[1] || "").length), N = 54;
+    const k = eq.id + "|" + c.element + "|consigne", fr = (x) => (x - E.bas) / (E.haut - E.bas);
+    const v0 = typeof c.valeur === "number" ? c.valeur : E.min;
+    let v = typeof brouillons[k] === "number" ? brouillons[k] : v0, attente = null, glisse = false;
+    const actif = peut(c) && !c.en_off;
+    const r = el("div", "eq-thermo" + (actif ? "" : " inactif")), rang = el("div", "eq-thermo-rang");
+    const moins = rond("−", "Consigne : moins"), plus = rond("+", "Consigne : plus"), boite = el("div", "eq-thermo-cadran");
+    const fid = "eqth" + (++numCadran), svg = sv("svg", { viewBox: "0 0 200 200", "class": "eq-thermo-svg", role: "slider", "aria-label": "Consigne", tabindex: actif ? "0" : "-1" });
+    const defs = sv("defs", {}), flt = sv("filter", { id: fid, x: "-50%", y: "-50%", width: "200%", height: "200%" });
+    flt.appendChild(sv("feGaussianBlur", { stdDeviation: "7" })); defs.appendChild(flt); svg.appendChild(defs);
+    const piste = sv("g", { "class": "eq-thermo-piste" });
+    for (let i = 0; i < N; i++) piste.appendChild(sv("path", { d: arcD(i / N, Math.min(1, (i + 1) / N + 0.004)), stroke: teinte((i + 0.5) / N) }));
+    svg.appendChild(piste);
+    svg.appendChild(sv("circle", { cx: 100, cy: 100, r: 64, fill: "#11151c", stroke: "#262c37", "stroke-width": 1 }));
+    const lueur = sv("g", { "class": "eq-thermo-lueur", filter: "url(#" + fid + ")" }), rempli = sv("g", { "class": "eq-thermo-rempli" });
+    svg.appendChild(lueur); svg.appendChild(rempli);
+    const mes = h.mesure && typeof h.mesure.valeur === "number" ? h.mesure.valeur : null;
+    if (mes !== null) { const q = point(Math.max(0, Math.min(1, fr(mes)))); svg.appendChild(sv("circle", { cx: q[0].toFixed(1), cy: q[1].toFixed(1), r: 4, "class": "eq-thermo-mesure" })); }
+    const ombre = sv("circle", { r: 12, fill: "#000", "fill-opacity": 0.55, filter: "url(#" + fid + ")" }), pouce = sv("circle", { r: 11, "class": "eq-thermo-pouce" });
+    svg.appendChild(ombre); svg.appendChild(pouce);
+    boite.appendChild(svg);
+    const centre = el("div", "eq-thermo-centre"), num = el("div", "eq-thermo-num", ""), u = el("div", "eq-thermo-u", unite(c.unite || "°C").trim());
+    centre.appendChild(num); centre.appendChild(u);
+    if (mes !== null) centre.appendChild(el("div", "eq-thermo-mes", "mesuré " + nb(mes, 1) + unite(h.mesure.unite || c.unite || "°C")));
+    boite.appendChild(centre);
+    rang.appendChild(moins); rang.appendChild(boite); rang.appendChild(plus); r.appendChild(rang);
+    const lumiere = (h.chauffe || h.refroidit) ? (h.chauffe ? "rgb(255,72,48)" : "rgb(64,150,255)") : null;
+    const peindre = () => {
+      const fv = Math.max(0, Math.min(1, fr(v))), n = Math.max(1, Math.round(fv * N));
+      rempli.textContent = ""; lueur.textContent = "";
+      for (let i = 0; i < n && fv > 0; i++) {
+        const d = arcD(i * fv / n, Math.min(fv, (i + 1) * fv / n + 0.004));
+        rempli.appendChild(sv("path", { d, stroke: teinte((i + 0.5) * fv / n) }));
+        if (lumiere && !glisse) lueur.appendChild(sv("path", { d, stroke: lumiere }));
+      }
+      lueur.style.opacity = lumiere ? (0.35 + 0.65 * h.intensite).toFixed(2) : "0";
+      const q = point(fv);
+      pouce.setAttribute("cx", q[0].toFixed(1)); pouce.setAttribute("cy", q[1].toFixed(1)); pouce.setAttribute("stroke", actif ? teinte(fv) : "#6b7280");
+      ombre.setAttribute("cx", q[0].toFixed(1)); ombre.setAttribute("cy", (q[1] + 2).toFixed(1));
+      num.textContent = c.en_off ? "OFF" : nb(v, dec);
+      svg.setAttribute("aria-valuenow", String(v)); svg.setAttribute("aria-valuetext", nb(v, dec) + unite(c.unite || "°C"));
+      moins.disabled = !actif || v <= E.min; plus.disabled = !actif || v >= E.max;
+    };
+    const grille = (x) => { let y = +(E.min + Math.round((x - E.min) / p) * p).toFixed(dec); return Math.max(E.min, Math.min(E.max, y)); };
+    const envoyer = () => { clearTimeout(attente); attente = null; if (v === v0) { delete brouillons[k]; return; } delete brouillons[k]; ecrire(eq, c, v, { ok: "Consigne envoyée." }); };
+    peindre();
+    if (!actif) { inactif(moins); inactif(plus); if (c.en_off) r.appendChild(el("div", "eq-note", "Consigne indisponible en mode OFF.")); return r; }
+    const pas = (d) => (e) => { if (e) e.stopPropagation(); v = grille(v + d); brouillons[k] = v; peindre(); clearTimeout(attente); attente = setTimeout(envoyer, 900); };
+    moins.onclick = pas(-p); plus.onclick = pas(p);
+    const versValeur = (e) => {
+      const b = svg.getBoundingClientRect(), dx = e.clientX - (b.left + b.width / 2), dy = e.clientY - (b.top + b.height / 2);
+      let a = (Math.atan2(dy, dx) * 180 / Math.PI - 135 + 720) % 360;
+      if (a > 270) a = a > 315 ? 0 : 270;
+      return grille(E.bas + (a / 270) * (E.haut - E.bas));
+    };
+    svg.onpointerdown = (e) => {
+      e.stopPropagation(); glisse = true; APP.dragging = true; clearTimeout(attente);
+      try { svg.setPointerCapture(e.pointerId); } catch (x) { /* capture refusée : glissé sans capture */ }
+      v = versValeur(e); brouillons[k] = v; peindre();
+      svg.onpointermove = (ev) => { v = versValeur(ev); brouillons[k] = v; peindre(); };
+      svg.onpointerup = svg.onpointercancel = () => { svg.onpointermove = svg.onpointerup = svg.onpointercancel = null; glisse = false; APP.dragging = false; peindre(); envoyer(); };
+    };
+    svg.onkeydown = (e) => { const d = e.key === "ArrowUp" || e.key === "ArrowRight" ? p : e.key === "ArrowDown" || e.key === "ArrowLeft" ? -p : 0; if (d) { e.preventDefault(); pas(d)(); } };
+    return r;
+  }
+  // Pastilles de choix (mode, préréglage) ; OFF en deux appuis si deuxOff
+  function pastilles(eq, c, lib, deuxOff) {
+    const r = bloc(lib), g = el("div", "eq-pres"); g.setAttribute("role", "group"); g.setAttribute("aria-label", lib);
+    (c.options || []).forEach((x) => {
+      const b = el("button", "eq-pre" + (x.code === c.valeur ? " sel" : ""), x.libelle); b.setAttribute("aria-pressed", x.code === c.valeur ? "true" : "false");
+      if (!peut(c)) inactif(b);
+      else if (deuxOff && x.code === "off" && c.valeur !== "off") deuxAppuis(b, eq.id + "|" + c.element + "|off", "OFF ?", () => ecrire(eq, c, "off", { ok: "OFF." }));
+      else b.onclick = (e) => { if (e) e.stopPropagation(); if (x.code !== c.valeur) ecrire(eq, c, x.code); };
+      g.appendChild(b);
+    });
+    r.appendChild(g); return r;
+  }
+  function chauffage(eq, box) {
+    const h = chaud(eq), c = carte("Chauffage", "eq-chauffe-carte");
+    halo(c, h, false);
+    if (h.activite) { const t = c.firstChild; const pu = el("span", "eq-thermo-puce" + (h.chauffe ? " chaud" : h.refroidit ? " froid" : ""), h.activite); if (t) t.appendChild(pu); else c.appendChild(pu); }
+    if (expose(h.o)) c.appendChild(rangee("ON / OFF", onoffCap(eq, h.o, "ON / OFF")));
+    if (h.cs) c.appendChild(expose(h.cs) ? cadran(eq, h.cs, h) : grand(h.off ? "OFF" : degres(h.cs), "", h.mesure && typeof h.mesure.valeur === "number" ? "mesuré " + degres(h.mesure) : ""));
+    else c.appendChild(grand(h.off ? "OFF" : plage(de(eq, "consigne_plage")), "", h.mesure && typeof h.mesure.valeur === "number" ? "mesuré " + degres(h.mesure) : ""));
+    if (expose(h.m)) c.appendChild(pastilles(eq, h.m, "Mode", true)); else if (h.m && h.m.valeur) c.appendChild(ligne("Mode", option(h.m, h.m.valeur)));
+    const pr = de(eq, "prereglage");
+    if (expose(pr)) c.appendChild(pastilles(eq, pr, pr.libelle && pr.libelle !== "Préréglage" ? pr.libelle : "Préréglage", false)); else if (pr && pr.valeur) c.appendChild(ligne("Préréglage", option(pr, pr.valeur)));
+    box.appendChild(c);
+    // Autres capacités principales (plage, humidité, ventilation, oscillation, absence…) : repli par type
+    const pris = [h.cs, h.m, h.o, h.a, pr].filter(Boolean);
+    const autres = caps(eq).filter((x) => pris.indexOf(x) < 0 && x.groupe !== "mesures" && x.groupe !== "informations" && x.widget !== "puce" && x.cap !== "maj_installer" && x.cap !== "onoff");
+    if (autres.length) {
+      const k = carte("Réglages");
+      autres.forEach((x) => k.appendChild(reglage(eq, x)));
+      if (autres.some((x) => x.ecriture && !regle(x))) k.appendChild(el("div", "eq-note", "Certains réglages de cet équipement n'ont pas encore de widget dans l'application."));
+      box.appendChild(k);
+    }
+  }
+
+  // Mise à jour d'un équipement (hors hub, qui a sa carte Logiciel) : « Installer… » en deux appuis, confirm (commande sensible)
+  function majInstaller(eq) {
+    const k = de(eq, "maj_installer");
+    if (!expose(k)) return null;
+    const c = carte("Logiciel"), l = de(eq, "logiciel");
+    c.appendChild(grand("Mise à jour", "orange", l && l.derniere ? l.derniere + " disponible" : "disponible"));
+    const b = action("Installer…");
+    if (peut(k)) deuxAppuis(b, eq.id + "|maj|" + k.element, "Confirmer l'installation", () => ecrire(eq, k, undefined, { confirm: true, ok: "Installation demandée." })); else inactif(b);
+    c.appendChild(b);
+    if (l && l.valeur) c.appendChild(ligne("Version installée", String(l.valeur)));
+    return c;
+  }
+
   APP.cartes = {
-    ALERTES, ecrire, surEquipement, peut, expose, lier, deuxAppuis, lecturePause, joue, SEUILS, MOT, nb, mille, unite, option, texte, date, heure, pluriel, depuis, vu, caps, de, num, qualite, pire, raisonAir, logiciel,
+    ALERTES, ecrire, surEquipement, peut, expose, lier, deuxAppuis, lecturePause, joue, SEUILS, MOT, nb, mille, unite, option, texte, date, heure, pluriel, depuis, vu, quand, dernier, caps, de, num, qualite, pire, raisonAir, logiciel,
     inactif, carte, ligne, grand, piste, onoff, onoffCap, pisteCap, action, pastille, barre, options, infos, consommation, purificateur, enceinte, air, etat, mouvement, telecommande, lies,
-    hub, tuileHub, boutonCode, effacerCode, codeAffiche: () => code,
+    hub, tuileHub, boutonCode, effacerCode, codeAffiche: () => code || pos || (saisie ? { id: saisie.cle.split("|")[0] } : null), presence, ETATS, serrure, centrale, vanne, sirene, codeOuverture, deuxEtats, robot, codeLecture, lienGeo, reglage, regle, majInstaller, valeurChamp, chaud, chauffage, degres, plage, ACTIVITE, halo, echelle, teinte,
   };
 })();
 // FIN

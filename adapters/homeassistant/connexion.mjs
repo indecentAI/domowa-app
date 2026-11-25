@@ -1,4 +1,4 @@
-// @zone homeassistant | Connexion a Home Assistant : adresse et port (donnees/homeassistant.json, sans secret), jeton d'acces longue duree (donnees/homeassistant-token.txt, 600, jamais renvoye ni journalise), requetes de l'API REST en liste fermee (GET : obtenir ; POST d'une action : envoyer, jamais renvoyee), deconnexion, traduction des erreurs.
+// @zone homeassistant | Connexion a Home Assistant : adresse et port (donnees/homeassistant.json, sans secret), jeton d'acces longue duree (donnees/homeassistant-token.txt, 600, jamais renvoye ni journalise), requetes de l'API REST en liste fermee (GET : obtenir ; POST d'une action de ACTIONS : envoyer, jamais renvoyee), deconnexion, traduction des erreurs.
 // HTTP local seulement (choix de l'utilisateur, V2.0 ; exception ecrite dans CLAUDE.md « Home Assistant ») : adresse IPv4 privee (core/reseau.mjs, privee), aucune redirection suivie,
 // reponse JSON de 8 Mo au plus, delai borne, sans connexion persistante. En-tetes : Authorization: Bearer <jeton> (documentation REST de Home Assistant). Erreurs : codes HA_* sans message
 // d'origine (jamais e.message : il peut porter l'adresse).
@@ -41,9 +41,46 @@ export function cible() {
 }
 
 // Chemins permis (listes fermees) : GET /api/config, /api/states, /api/states/<light|switch>.<objet> ; POST (V2.0 etape 3, documentation REST : corps = donnees de l'action,
-// entity_id compris ; reponse = etats changes ; 500 si l'action echoue) /api/services/light/turn_on|turn_off, /api/services/switch/turn_on|turn_off.
+// entity_id compris ; reponse = etats changes ; 400 si donnees invalides, 500 si l'action echoue) : une action par ligne, jamais de joker (V2.0 : lumieres et prises ; V2.2 ha-ecriture :
+// ecriture generique, ecriture.mjs ; chaque action lue dans le code de Home Assistant avant d'etre ajoutee).
 const CHEMINS = [/^\/api\/config$/, /^\/api\/states$/, /^\/api\/states\/(light|switch)\.[a-z0-9_]{1,70}$/];
-const ACTIONS = /^\/api\/services\/(light|switch)\/(turn_on|turn_off)$/;
+export const ACTIONS = Object.freeze([
+  '/api/services/light/turn_on', '/api/services/light/turn_off',
+  '/api/services/switch/turn_on', '/api/services/switch/turn_off',
+  '/api/services/input_boolean/turn_on', '/api/services/input_boolean/turn_off',
+  '/api/services/number/set_value', '/api/services/input_number/set_value',
+  '/api/services/select/select_option', '/api/services/input_select/select_option',
+  '/api/services/text/set_value', '/api/services/input_text/set_value',
+  '/api/services/date/set_value', '/api/services/time/set_value', '/api/services/datetime/set_value',
+  '/api/services/button/press', '/api/services/input_button/press',
+  '/api/services/scene/turn_on', '/api/services/script/turn_on',
+  '/api/services/update/install',
+  // V2.2 ha-climat
+  '/api/services/climate/turn_on', '/api/services/climate/turn_off', '/api/services/climate/set_hvac_mode', '/api/services/climate/set_temperature',
+  '/api/services/climate/set_humidity', '/api/services/climate/set_fan_mode', '/api/services/climate/set_preset_mode', '/api/services/climate/set_swing_mode',
+  '/api/services/water_heater/turn_on', '/api/services/water_heater/turn_off', '/api/services/water_heater/set_operation_mode', '/api/services/water_heater/set_temperature',
+  '/api/services/water_heater/set_away_mode',
+  '/api/services/humidifier/turn_on', '/api/services/humidifier/turn_off', '/api/services/humidifier/set_humidity', '/api/services/humidifier/set_mode',
+  '/api/services/fan/turn_on', '/api/services/fan/turn_off', '/api/services/fan/set_percentage', '/api/services/fan/oscillate', '/api/services/fan/set_direction',
+  '/api/services/fan/set_preset_mode',
+  // V2.2 ha-ouvrants
+  '/api/services/cover/open_cover', '/api/services/cover/close_cover', '/api/services/cover/stop_cover', '/api/services/cover/set_cover_position',
+  '/api/services/cover/set_cover_tilt_position',
+  '/api/services/valve/open_valve', '/api/services/valve/close_valve', '/api/services/valve/stop_valve', '/api/services/valve/set_valve_position',
+  '/api/services/lock/lock', '/api/services/lock/unlock',
+  '/api/services/alarm_control_panel/alarm_disarm', '/api/services/alarm_control_panel/alarm_arm_home', '/api/services/alarm_control_panel/alarm_arm_away',
+  '/api/services/alarm_control_panel/alarm_arm_night', '/api/services/alarm_control_panel/alarm_arm_vacation', '/api/services/alarm_control_panel/alarm_arm_custom_bypass',
+  '/api/services/siren/turn_on', '/api/services/siren/turn_off',
+  // V2.2 ha-media-robots
+  '/api/services/media_player/turn_on', '/api/services/media_player/turn_off', '/api/services/media_player/media_play', '/api/services/media_player/media_pause',
+  '/api/services/media_player/media_stop', '/api/services/media_player/media_next_track', '/api/services/media_player/media_previous_track',
+  '/api/services/media_player/volume_set', '/api/services/media_player/volume_mute', '/api/services/media_player/select_source', '/api/services/media_player/select_sound_mode',
+  '/api/services/media_player/repeat_set', '/api/services/media_player/shuffle_set',
+  '/api/services/remote/turn_on', '/api/services/remote/turn_off',
+  '/api/services/vacuum/start', '/api/services/vacuum/pause', '/api/services/vacuum/stop', '/api/services/vacuum/return_to_base', '/api/services/vacuum/clean_spot',
+  '/api/services/vacuum/locate', '/api/services/vacuum/set_fan_speed',
+  '/api/services/lawn_mower/start_mowing', '/api/services/lawn_mower/pause', '/api/services/lawn_mower/dock',
+]);
 // GET vers une adresse donnee (appairage) ou celle du fichier ; -> JSON. Codes : HA_RESEAU, HA_DELAI, HA_JETON (401, 403), HA_REDIRECTION (3xx), HA_HTTP (autre statut, statut),
 // HA_REPONSE (pas du JSON), HA_TROP (plus de 8 Mo).
 export const obtenir = (chemin, opts = {}) => demande('GET', chemin, null, opts);
@@ -54,7 +91,7 @@ function demande(methode, chemin, corps, { adresse, port, jeton, delai = 8000 } 
   return new Promise((resolve, reject) => {
     let t, texte = null;
     try {
-      if (methode === 'GET' ? !CHEMINS.some((re) => re.test(chemin)) : !ACTIONS.test(chemin)) throw erreurCode('HA_CHEMIN');
+      if (methode === 'GET' ? !CHEMINS.some((re) => re.test(chemin)) : !ACTIONS.includes(chemin)) throw erreurCode('HA_CHEMIN');
       if (methode === 'POST') texte = JSON.stringify(corps);
       t = adresse ? { adresse, port, jeton } : cible();
       if (!privee(t.adresse) || !portValide(t.port)) throw erreurCode('HA_ADRESSE');

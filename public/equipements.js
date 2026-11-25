@@ -26,7 +26,18 @@
     const o = de(eq, "onoff");
     if (o && o.role === "eclairage") return "lampe";
     if (o && o.role === "prise") return "prise";
+    // V2.2 ha-climat : chauffage (consigne de température, ou ON / OFF de rôle chauffage, absorbé ou non par le mode), avant purificateur et air
+    if (de(eq, "consigne_temperature") || de(eq, "consigne_plage") || (o && o.role === "chauffage") || caps(eq).some((c) => (c.absorbees || []).some((x) => x.cap === "onoff" && x.role === "chauffage"))) return "chauffage";
     // Mode de commande : capacité propre aux boutons de commande (21/11 : un bouton genericSwitch réel déclare aussi isOpen par bouton, sans sens pour lui : jamais « Fermée »)
+    // V2.2 ha-localisation : personne, traceur (zone)
+    if (de(eq, "localisation")) return "presence";
+    // V2.2 ha-ouvrants : serrure, centrale d'alarme, sirène, vanne (ouverture marquée vanne), avant le store
+    if (de(eq, "verrou")) return "serrure";
+    if (de(eq, "alarme")) return "centrale";
+    if (de(eq, "sirene")) return "sirene";
+    if ((de(eq, "ouverture") || {}).vanne || (de(eq, "position") || {}).vanne) return "vanne";
+    // V2.2 ha-media-robots : aspirateur, tondeuse (avant purificateur : un aspirateur déclare aussi une vitesse prédéfinie)
+    if (de(eq, "robot")) return "robot";
     if (de(eq, "mode_commande")) return "telecommande";
     if (de(eq, "position") || de(eq, "ouverture")) return "store";
     if (de(eq, "lecture")) return "enceinte";
@@ -75,8 +86,16 @@
     hub: S('<rect x="5" y="5" width="14" height="14" rx="7"/><path d="M12 9v6M9 12h6"/>'),
     telecommande: S('<rect x="8" y="3" width="8" height="18" rx="3"/><path d="M12 7v3M12 14h.01M12 17h.01"/>'),
     enceinte: S('<rect x="6" y="3" width="12" height="18" rx="2.5"/><circle cx="12" cy="14" r="3.2"/><path d="M12 7h.01"/>'),
+    presence: S('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
+    chauffage: S('<path d="M5 5v14M19 5v14M9 7v10M12 7v10M15 7v10M5 9h14M5 15h14"/>'),
     purificateur: S('<rect x="6" y="3" width="12" height="18" rx="3"/><path d="M9 8h6M9 11h6M9 14h6"/>'),
     repli: S('<rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 9h6M9 13h6"/>'),
+    // V2.2 ha-ouvrants
+    serrure: S('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4M12 15v2"/>'),
+    centrale: S('<path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z"/><path d="M12 9v4M12 16h.01"/>'),
+    sirene: S('<path d="M7 18v-6a5 5 0 0 1 10 0v6M5 18h14v3H5zM12 3v2M4.5 6.5 6 8M19.5 6.5 18 8"/>'),
+    vanne: S('<path d="M4 15h16M4 19h16M12 15V9M8 6h8M12 6V4"/>'),
+    robot: S('<circle cx="12" cy="13" r="8"/><circle cx="12" cy="13" r="3"/><path d="M8 7.5 6.5 5M16 7.5 17.5 5"/>'),
   };
   ICONES.absent = ICONES.repli;
   const POWER = S('<path d="M12 3v8M6.3 6.8a8 8 0 1 0 11.4 0"/>');
@@ -98,7 +117,8 @@
   function inactif(b, eq) { b.classList.add("eq-inactif"); b.setAttribute("aria-disabled", "true"); b.title = "Commande indisponible."; b.onclick = (e) => { if (e) e.stopPropagation(); ouvrir(eq); }; return b; }
   // Action rapide d'une capacité : envoi par APP.cartes.ecrire si elle est écrivable, sinon inactive
   // Commande non exposée par le hub : aucun bouton (un élément vide garde la place) ; exposée mais injoignable : inactive
-  function rapide(b, eq, c, valeur) { if (!C.expose(c)) return el("span", "eq-sansaction", ""); if (!C.peut(c)) return inactif(b, eq); b.onclick = (e) => { if (e) e.stopPropagation(); C.ecrire(eq, c, valeur); }; return b; }
+  // V2.2 ha-ouvrants : valeur absente des options (sens non déclaré) : aucun bouton ; capacité sensible : confirm (le sens risqué passe par ouvrirSeul)
+  function rapide(b, eq, c, valeur) { if (!C.expose(c) || valeur === null) return el("span", "eq-sansaction", ""); if (!C.peut(c)) return inactif(b, eq); b.onclick = (e) => { if (e) e.stopPropagation(); C.ecrire(eq, c, valeur, c.sensible ? { confirm: true } : undefined); }; return b; }
   function precision(t, txt, cls) { const p = el("div", "eq-prec" + (cls ? " " + cls : "")); if (txt) p.appendChild(el("span", "", txt)); t.appendChild(p); return p; }
   function tuile(eq) {
     const f = famille(eq), hs = !eq.absent && eq.joignable === false, n = raisons(eq), al = alarme(eq), jo = joue(eq);
@@ -139,11 +159,18 @@
     if (f === "store") {
       t.classList.add("eq-trois");
       const pos = num(de(eq, "position")), m = mouvement(eq), l2 = el("div", "eq-l2");
-      l2.appendChild(el("span", "eq-v2", pos === null ? "—" : nb(pos, 0) + " %"));
+      // V2.2 ha-ouvrants : sans position (porte de garage), l'état lu (Ouverte, Fermée…)
+      const ov1 = de(eq, "ouverture");
+      l2.appendChild(el("span", "eq-v2", pos !== null ? nb(pos, 0) + " %" : ov1 && C.ETATS.ouverture[ov1.valeur] ? C.ETATS.ouverture[ov1.valeur] : "—"));
       // ▲ ▼ directs (ouverture up / down) ; le sens en cours devient ■ (stopped)
-      const ov = de(eq, "ouverture");
-      l2.appendChild(m === "monte" ? rapide(rond("eq-stop", "■", "Stop"), eq, ov, "stopped") : rapide(rond("", "▲", "Monter"), eq, ov, "up"));
-      l2.appendChild(m === "descend" ? rapide(rond("eq-stop", "■", "Stop"), eq, ov, "stopped") : rapide(rond("", "▼", "Descendre"), eq, ov, "down"));
+      // V2.2 ha-ouvrants : code de l'option selon le hub (up / open, down / close, stopped / stop) ; ouvrant sensible (porte de garage, portail ; demande du 25/11) : un seul bouton,
+      // ▼ (fermer, un appui) ou ■ pendant un mouvement ; l'ouverture passe par la configuration (deux appuis), le texte de l'état garde la place
+      const ov = de(eq, "ouverture"), sens = (x) => C.codeOuverture(ov, x), stopR = () => rapide(rond("eq-stop", "■", "Stop"), eq, ov, sens("stop"));
+      if (ov && ov.sensible) l2.appendChild(m ? stopR() : rapide(rond("", "▼", "Fermer"), eq, ov, sens("descend")));
+      else {
+        l2.appendChild(m === "monte" ? stopR() : rapide(rond("", "▲", "Monter"), eq, ov, sens("monte")));
+        l2.appendChild(m === "descend" ? stopR() : rapide(rond("", "▼", "Descendre"), eq, ov, sens("descend")));
+      }
       t.appendChild(l2);
       const p = el("div", "eq-prec eq-barre"), barre = el("div", "eq-pbar"), r = el("i", "");
       r.style.width = (pos === null ? 0 : Math.max(0, Math.min(100, pos))) + "%"; barre.appendChild(r); p.appendChild(barre);
@@ -154,7 +181,9 @@
     }
     if (f === "enceinte") {
       if (C.expose(de(eq, "lecture"))) { const b = C.lecturePause(eq, "eq-lect"); if (!C.peut(de(eq, "lecture"))) inactif(b, eq); l1.appendChild(b); }
-      val(jo ? "Lecture" : "En pause");
+      // V2.2 ha-media-robots : lecteur OFF (Home Assistant) : « OFF »
+      const on0 = de(eq, "onoff");
+      val(on0 && on0.valeur === false ? "OFF" : jo ? "Lecture" : "En pause", on0 && on0.valeur === false ? "eteint" : "");
       const vol = de(eq, "volume"), p = precision(t, "", "eq-vol");
       if (vol) {
         const r = document.createElement("input"); r.type = "range"; r.min = 0; r.max = 100; r.value = num(vol) || 0; r.className = "eq-rng";
@@ -174,6 +203,26 @@
       const pm = de(eq, "pm25"), filtre = caps(eq).some((x) => x.cap === "probleme" && x.valeur === true && /filtre/i.test(x.libelle || ""));
       const p = precision(t, filtre ? "Filtre à changer" : "", filtre ? "orange" : "");
       if (!filtre && pm && num(pm) !== null) { const q = C.qualite("pm25", num(pm)); if (q) C.pastille(p, q); p.appendChild(el("span", "", "PM2,5 " + texte(pm))); }
+      fin(p);
+      return t;
+    }
+    if (f === "presence") {
+      const z = de(eq, "localisation"), b = num(de(eq, "batterie"));
+      val(z && z.valeur ? String(z.valeur) : "—", z && z.maison ? "vert" : "");
+      fin(precision(t, b !== null ? "Batterie " + nb(b, 0) + " %" : ""));
+      return t;
+    }
+    if (f === "chauffage") {
+      // ON / OFF sans option off dans les modes : rond ⏻ comme les lumières (un appui) ; sinon aucune action rapide (OFF en deux appuis dans la configuration)
+      const h = C.chaud(eq);
+      if (h.o) l1.appendChild(rapide(rond("eq-power" + (h.off ? "" : " on"), POWER, h.off ? "ON" : "OFF"), eq, h.o, h.off));
+      val(h.off ? "OFF" : h.cs ? C.degres(h.cs) : C.plage(de(eq, "consigne_plage")), h.off ? "eteint" : "");
+      // Halo rouge (chauffe) ou bleu (refroidit), intensité selon l'écart (V2.2 ha-thermostat)
+      C.halo(t, h, true);
+      const p = precision(t, ""), actif = h.chauffe || h.refroidit;
+      if (actif) { C.pastille(p, h.chauffe ? "chauffe" : "froid"); p.appendChild(el("span", "", h.estime ? (h.chauffe ? "Mode chauffe" : "Mode clim") : h.chauffe ? "Chauffe" : "Refroidit")); }
+      // Avec une activité : « Chauffe · 19,5 °C » (la tuile de 200 px ne tient pas « mesurés » après « Mode chauffe ») ; sans : « 19,5 °C mesurés »
+      if (h.mesure && typeof h.mesure.valeur === "number") p.appendChild(el("span", "", actif ? " · " + C.degres(h.mesure) : C.degres(h.mesure) + " mesurés"));
       fin(p);
       return t;
     }
@@ -207,9 +256,18 @@
       fin(precision(t, c.valeur === true ? C.depuis(c.depuis) : b !== null ? "Batterie " + nb(b, 0) + " %" : "", c.valeur !== true && b !== null && b < 20 ? "orange" : ""));
       return t;
     }
+    // V2.2 ha-ouvrants : état seul sur la tuile (commandes sensibles : configuration, deux appuis pour le sens risqué)
+    if (f === "serrure") { const c = de(eq, "verrou"), b = num(de(eq, "batterie")); val(texte(c), c.valeur === "unlocked" || c.valeur === "open" || c.valeur === "jammed" ? "orange" : ""); fin(precision(t, b !== null ? "Batterie " + nb(b, 0) + " %" : "", b !== null && b < 20 ? "orange" : "")); return t; }
+    if (f === "centrale") { const c = de(eq, "alarme"); val(texte(c), c.valeur === "triggered" ? "rouge" : ""); fin(precision(t, c.valeur && c.valeur !== "disarmed" && c.valeur !== "triggered" ? "Surveillance active" : "")); return t; }
+    if (f === "sirene") { const c = de(eq, "sirene"); val(c.valeur === true ? "ON" : c.valeur === false ? "OFF" : "—", c.valeur === true ? "rouge" : "eteint"); fin(precision(t, "")); return t; }
+    if (f === "robot") { const c = de(eq, "robot"), b = num(de(eq, "batterie")); val(texte(c), c.valeur === "error" ? "rouge" : ""); fin(precision(t, b !== null ? "Batterie " + nb(b, 0) + " %" : "", b !== null && b < 20 ? "orange" : "")); return t; }
+    if (f === "vanne") { const c = de(eq, "ouverture"), p = num(de(eq, "position")); val(c ? texte(c) : "—", ""); fin(precision(t, p !== null ? nb(p, 0) + " %" : "")); return t; }
     if (f === "mouvement") { const c = de(eq, "presence"); val(texte(c), c.valeur === true ? "bleu" : ""); fin(precision(t, c.valeur === true ? "à l'instant" : C.vu(c.derniere))); return t; }
     // Repli : première valeur, aucune action
     const c = caps(eq).filter((x) => !x.prive && x.valeur !== null && x.valeur !== undefined && x.groupe !== "informations")[0];
+    // V2.2 ha-depuis : bouton, scène, script sans valeur : heure du dernier appui, de la dernière activation ou du dernier lancement
+    const h = c ? null : caps(eq).filter((x) => C.dernier(x))[0];
+    if (h) { val(C.quand(h.depuis)); fin(precision(t, C.dernier(h))); return t; }
     val(c ? texte(c) : "—");
     fin(precision(t, c ? c.libelle : ""));
     return t;
@@ -271,6 +329,13 @@
     if (f === "lampe" || f === "prise") { configLumiere(eq, f, box, hs); const k = C.consommation(eq); if (k) fin.appendChild(k); }
     else if (f === "store") configStore(eq, box, hs);
     else if (f === "hub") C.hub(eq, fin, () => rendreDetail(), distant);
+    else if (f === "chauffage") C.chauffage(eq, fin);
+    else if (f === "presence") C.presence(eq, fin, () => rendreDetail());
+    else if (f === "serrure") C.serrure(eq, fin);
+    else if (f === "centrale") C.centrale(eq, fin);
+    else if (f === "vanne") C.vanne(eq, fin);
+    else if (f === "sirene") C.sirene(eq, fin, () => rendreDetail());
+    else if (f === "robot") C.robot(eq, fin);
     else if (f === "purificateur") C.purificateur(eq, fin);
     else if (f === "enceinte") C.enceinte(eq, fin);
     else if (f === "air") C.air(eq, fin);
@@ -279,7 +344,8 @@
     else if (f === "mouvement") C.mouvement(eq, fin);
     else if (f === "telecommande") C.telecommande(eq, fin, { basculer: (d) => commander([d.id], { on: d.isOn !== true }, d.isOn === true ? "OFF." : "ON."), ouvrirElement: ouvrirElement, rendre: () => rendreDetail() });
     else configSimple(eq, f, fin);
-    if (["lampe", "prise", "purificateur", "air", "ouverture", "alarme", "mouvement", "telecommande", "store"].indexOf(f) >= 0) { const o = C.options(eq); if (o) fin.appendChild(o); }
+    if (["lampe", "prise", "purificateur", "air", "ouverture", "alarme", "mouvement", "telecommande", "store", "serrure", "centrale", "vanne", "sirene", "robot"].indexOf(f) >= 0) { const o = C.options(eq); if (o) fin.appendChild(o); }
+    if (f !== "hub" && f !== "repli") { const mi = C.majInstaller(eq); if (mi) fin.appendChild(mi); }
     if (hs) fin.setAttribute("inert", "");
     if (fin.childNodes.length) box.appendChild(fin);
     const i = C.infos(eq);
@@ -324,21 +390,38 @@
     const v = el("span", "eq-posv", pos === null ? "—" : nb(pos, 0) + " %");
     v.appendChild(el("small", "", m ? " · " + m + " vers " + (pc && typeof pc.cible === "number" ? nb(pc.cible, 0) + " %" : "…") : " · immobile"));
     h.appendChild(v); c.appendChild(h);
-    // Position non écrivable : position seule (ni position visée, ni Aller, ni préréglages)
-    if (!C.expose(pc)) { if (hs) c.setAttribute("inert", ""); box.appendChild(c); return; }
+    // Position non écrivable : position seule (ni position visée, ni Aller, ni préréglages) ; V2.2 ha-ouvrants : ouverture seule exposée (porte de garage) : ▲ ■ ▼ (▲ en deux appuis si sensible)
+    const ov0 = de(eq, "ouverture");
+    if (!C.expose(pc)) {
+      if (C.expose(ov0)) {
+        const r0 = el("div", "eq-posrow eq-sens"), ajout = (txt, sens, risque) => {
+          const code = C.codeOuverture(ov0, sens); if (!code) return;
+          const b = el("button", "eq-bouton", txt);
+          if (!C.peut(ov0)) inactif(b, eq);
+          else if (risque && ov0.sensible) C.deuxAppuis(b, eq.id + "|ouvrir", "Confirmer ?", () => C.ecrire(eq, ov0, code, { confirm: true }));
+          else b.onclick = () => C.ecrire(eq, ov0, code, ov0.sensible ? { confirm: true } : undefined);
+          r0.appendChild(b);
+        };
+        ajout("▲ Ouvrir", "monte", true); ajout("■ Arrêt", "stop", false); ajout("▼ Fermer", "descend", false);
+        if (r0.firstChild) c.appendChild(r0);
+      }
+      if (hs) c.setAttribute("inert", ""); box.appendChild(c); inclinaison(eq, box, hs); return;
+    }
     const r = el("div", "eq-posrow"), haut = rond("", "▲", "Position visée : monter de 5 %"), bas = rond("", "▼", "Position visée : descendre de 5 %");
     const s = document.createElement("input"); s.type = "range"; s.min = 0; s.max = 100; s.step = 1; s.value = cible(); s.className = "eq-rng eq-cible"; s.setAttribute("aria-label", "Position visée");
     const stop = !!m && C.expose(de(eq, "ouverture")); // « Stop » seulement si l'arrêt est exposé
     const aller = el("button", "eq-aller" + (stop ? " stop" : ""), "");
     const peindre = () => { s.value = cible(); aller.innerHTML = stop ? '<span>■</span>Stop' : "<span>▶</span>Aller à " + cible() + " %"; majPre(); };
-    const poser = (x) => { cibles[eq.id] = Math.max(0, Math.min(100, Math.round(x))); peindre(); };
+    const poser = (x) => { cibles[eq.id] = Math.max(0, Math.min(100, Math.round(x))); allerT = 0; aller.classList.remove("arme"); peindre(); };
     haut.onclick = () => poser(Math.ceil(cible() / 5) * 5 - 5);
     bas.onclick = () => poser(Math.floor(cible() / 5) * 5 + 5);
     s.oninput = () => poser(+s.value);
     r.appendChild(haut); r.appendChild(s); r.appendChild(bas); c.appendChild(r);
     // ▶ « Aller à N % » (position visée : blindsTargetLevel, sens à vérifier sur un vrai store) ; ■ « Stop » (ouverture stopped)
-    const ov = de(eq, "ouverture");
-    if (stop) { if (C.peut(ov)) aller.onclick = () => C.ecrire(eq, ov, "stopped"); else inactif(aller, eq); }
+    // V2.2 ha-ouvrants : code d'arrêt selon le hub ; position sensible (porte de garage) : « Aller à » en deux appuis, confirm
+    const ov = de(eq, "ouverture"), arret = C.codeOuverture(ov, "stop");
+    if (stop) { if (C.peut(ov) && arret) aller.onclick = () => C.ecrire(eq, ov, arret, ov.sensible ? { confirm: true } : undefined); else inactif(aller, eq); }
+    else if (C.peut(pc) && pc.sensible) aller.onclick = (e) => { if (e) e.stopPropagation(); if (!allerArme()) return; C.ecrire(eq, pc, cible(), { confirm: true }); };
     else if (C.peut(pc)) aller.onclick = () => C.ecrire(eq, pc, cible()); else inactif(aller, eq);
     c.appendChild(aller);
     if (hs) c.setAttribute("inert", "");
@@ -364,7 +447,24 @@
     p.appendChild(el("div", "eq-note", "« + » ajoute la position visée ; appui long sur un préréglage pour le supprimer."));
     if (hs) p.setAttribute("inert", "");
     box.appendChild(p);
+    inclinaison(eq, box, hs);
     peindre();
+    // « Aller à » d'une position sensible : premier appui = « Confirmer ? » 5 s, second = envoi
+    function allerArme() {
+      if (allerT > Date.now()) { allerT = 0; return true; }
+      allerT = Date.now() + 5000; aller.innerHTML = "<span>▶</span>Confirmer ?"; aller.classList.add("arme");
+      setTimeout(() => { if (!(allerT > Date.now())) { aller.classList.remove("arme"); peindre(); } }, 5100);
+      return false;
+    }
+  }
+  let allerT = 0;
+  // V2.2 ha-ouvrants : inclinaison des lamelles (en %), commande générique (− + puis « Appliquer ») ; lamelles ouvrir / fermer : lecture seule
+  function inclinaison(eq, box, hs) {
+    const k = de(eq, "inclinaison");
+    if (!k) return;
+    const c = el("div", "eq-carte"); c.appendChild(C.reglage(eq, k));
+    if (hs) c.setAttribute("inert", "");
+    box.appendChild(c);
   }
   // Mode suppression des préréglages : quitté par « Terminé », un autre équipement ou une autre vue
   function modeSupprimer(v) { supprimer = v; rendreDetail(); }
@@ -378,12 +478,15 @@
     APP.api("POST", "/api/equipements/positions/supprimer", { position: x }, (err, d) => { if (err) { APP.banner(err, "warn"); return; } positions = d.positions; if (!positions.length) supprimer = false; rendreDetail(); });
   }
   // Repli : valeurs, « Mesures » en grille
+  // V2.2 ha-ecriture : commandes exposées construites par type (APP.cartes.reglage : ON / OFF, choix, nombre, texte, date, bouton) ; mise à jour : carte Logiciel
   function configSimple(eq, f, box) {
-    const c = el("div", "eq-carte"), w = caps(eq).filter((x) => x.groupe !== "mesures" && x.groupe !== "informations" && x.widget !== "puce");
-    w.forEach((x) => c.appendChild(ligne(x.libelle, texte(x))));
-    if (w.some((x) => x.ecriture)) c.appendChild(el("div", "eq-note", "Réglages de cet équipement : pas encore de widget dans l'application."));
+    const c = el("div", "eq-carte"), w = caps(eq).filter((x) => x.groupe !== "mesures" && x.groupe !== "informations" && x.widget !== "puce" && x.cap !== "maj_installer");
+    w.forEach((x) => { c.appendChild(C.reglage(eq, x)); const d = C.dernier(x); if (d) c.appendChild(ligne(d, C.quand(x.depuis) + (x.en_cours ? " · en cours" : ""))); });
+    if (w.some((x) => x.ecriture && !C.regle(x))) c.appendChild(el("div", "eq-note", "Certains réglages de cet équipement n'ont pas encore de widget dans l'application."));
     (eq.codes || []).forEach((k) => c.appendChild(C.boutonCode(eq, k, () => rendreDetail(), distant)));
     if (c.firstChild) box.appendChild(c);
+    const mi = C.majInstaller(eq);
+    if (mi) box.appendChild(mi);
     const m = mesures(eq);
     if (m) box.appendChild(m);
   }
@@ -419,12 +522,14 @@
     ["Qualité de l'air", "Mot précédé d'une pastille : vert « bon », blanc « moyen », orange « mauvais ». Seuils : PM2,5 35 et 85 µg/m³, COV 150 et 250, CO₂ 1 000 et 1 600 ppm. La tuile donne le mot de la mesure la moins bonne."],
     ["Configuration", "Lampe et prise : le panneau des lumières, avec seulement ce que l'appareil sait faire, puis la consommation (prise à mesure) et les options. Store : position visée (curseur, ▲ ▼ par 5 %, préréglages communs à tous les stores, gardés sur cet appareil ; « + » ajoute, appui long supprime). Autres équipements : seulement ce que le hub expose. En bas : la batterie."],
     ["Commandes", "Store (▲ ▼, « Aller à N % », Stop), enceinte (lecture, piste, volume, muet, aléatoire), purificateur (ON / OFF, mode, vitesse), options (au retour du courant, verrou enfant, voyant, Identifier), compteur d'une prise (deux appuis), capteur de mouvement (durée, programmation, début et fin), mode de commande d'un bouton, groupe d'une télécommande (ON / OFF, luminosité, blanc), lampes ajoutées à un mode, mise à jour du hub (deux appuis : le hub redémarre). Une commande à la fois par équipement, relue une seconde après ; grisée si le hub ne la permet pas. Par POST /api/equipements/<id>/capacite."],
+    ["Home Assistant", "Commandés depuis cette vue (V2.2) : interrupteurs, entrées (ON / OFF, nombre, liste, texte, bouton), nombres, listes, textes, dates et heures, boutons (dont Identifier), scènes, scripts et mises à jour. Nombre : − et + choisissent sans rien envoyer, « Appliquer » envoie une fois. Texte, date, heure : saisissez puis « Envoyer ». Script et mise à jour : deux appuis (« Confirmer »). Texte masqué (mot de passe) : jamais affiché ni modifié ici. Chauffage : cadran de 14 à 26 °C, du bleu au rouge (jaune de 19 à 21 °C) ; glissez puis relâchez pour envoyer la consigne, ou − et + (envoi une seconde après le dernier appui) ; impossible en mode OFF ; le point blanc marque la température mesurée. Halo rouge quand ça chauffe, bleu quand ça refroidit, plus lumineux quand l'écart avec la consigne est grand ; « Mode chauffe » ou « Mode clim » quand Home Assistant ne dit pas ce que fait l'appareil (déduit du mode et de l'écart). Mode et préréglage d'un appui, OFF en deux appuis (« OFF ? ») ; un radiateur sans mode OFF a un bouton ⏻ comme les lumières. Humidificateur, ventilateur : commandes par type. Personnes et traceurs : zone (« À la maison », « Absent », nom de zone) ; « Afficher la position » (deux appuis, effacée après 30 s, jamais enregistrée) puis « Ouvrir dans Cartes » passe la position à l'application de cartes de l'appareil. Les personnes apparaissent aussi dans la carte « Présence » de l'accueil. Jamais dans Tout OFF ni les pièces. Lecteur (comme une enceinte) : lecture, pause, piste, volume, muet, ON / OFF, source, mode sonore, répétition et aléatoire selon ce qu'il déclare. Télécommande de Home Assistant : ON / OFF et activité. Aspirateur, tondeuse : état et boutons (Démarrer, Pause, Arrêt, Retour à la base…, un appui), vitesse d'aspiration. Par POST /api/equipements/<id>/capacite, une action de Home Assistant par commande."],
+    ["Volets, serrures, alarmes, vannes, sirènes", "Volet et store : comme un store (▲ ▼, « Aller à N % », Stop, préréglages) ; inclinaison des lamelles : − et + puis « Appliquer ». Porte de garage ou portail : la tuile ferme d'un appui (▼, ou ■ pendant un mouvement si l'arrêt existe) ; ouvrir se fait dans la configuration, en deux appuis (« Confirmer ? »), comme « Aller à ». Serrure, alarme, vanne, sirène : deux états comme un ON / OFF ; le sens risqué demande deux appuis (déverrouiller, désarmer, ouvrir la vanne, déclencher la sirène), l'autre un seul. Alarme à plusieurs modes : touchez le mode d'armement voulu. Code : tapé à chaque commande dans le champ masqué, envoyé une fois à Home Assistant (en clair sur le réseau local, comme le jeton), jamais enregistré ; effacé 30 secondes après la dernière frappe ou en changeant d'équipement. Sirène : ton, volume et durée (s'ils existent) partent avec le prochain ON. Ouvrir la porte depuis la serrure et déclencher l'alarme : non proposés. Jamais dans Tout OFF, les pièces, les scènes ni les animations."],
     ["Icône", "Touchez l'icône en haut de la configuration (petit crayon) : choisissez une icône du pack, ou « Icône par défaut ». Une lampe garde la même icône dans la vue Lumières."],
     ["Alarme", "Fuite, fumée, CO ou gaz : un bandeau rouge reste en haut de toutes les vues tant que l'alarme dure. Le toucher ouvre l'équipement ; la croix le ferme, il revient à l'alarme suivante."],
-    ["Depuis…", "Ouverture, fuite : « depuis 12 min » ou « depuis 08:15 » ; mouvement : « vu à 08:15 ». Ces heures viennent des événements du hub, retenues par le serveur : elles sont perdues à son redémarrage (valeur affichée sans heure jusqu'au changement suivant)."],
+    ["Depuis…", "Ouverture, fuite : « depuis 12 min » ou « depuis 08:15 » ; mouvement : « vu à 08:15 ». Hub IKEA : ces heures viennent des événements du hub, retenues par le serveur ; elles sont perdues à son redémarrage (valeur affichée sans heure jusqu'au changement suivant). Home Assistant : heure du dernier changement tenue par Home Assistant (remise à l'heure de son redémarrage quand il redémarre) ; boutons, scènes et scripts : heure du dernier appui, de la dernière activation ou du dernier lancement."],
     ["Télécommande et capteur de mouvement", "Les lampes liées sont listées : ⏻ commande la lampe, › ouvre sa configuration. Télécommande à plusieurs modes : une carte par mode. Si les lampes d'un mode sont rangées dans un même groupe du hub : ON / OFF, luminosité et blanc du groupe. « Ajouter des lampes… » : cochez des lumières ou des prises, puis « Ajouter » (quelques secondes par lampe ; une lampe rangée dans un groupe du hub y reste). Retirer une lampe d'un mode : application IKEA."],
     ["Nouveau et absent", "« Nouveau » reste jusqu'à ce que vous ouvriez l'équipement (filtre « Nouveaux », « Tout marquer comme vu »). Retiré du hub : grisé « Absent depuis … », oublié après 30 jours ou par « Oublier maintenant » (deux appuis) ; son rangement est gardé."],
-    ["Hub", "Logiciel, soleil et heure, localisation en texte (jamais enregistrée). Code d'appairage : « Afficher », puis un second appui, sur cet appareil seulement, effacé après 30 secondes. Les mêmes informations s'affichent dans la fenêtre « Hubs » (toucher l'état en haut de l'écran)."],
+    ["Hub", "Logiciel, soleil et heure, localisation (position sur demande : deux appuis, jamais enregistrée). Code d'appairage : « Afficher », puis un second appui, sur cet appareil seulement, effacé après 30 secondes. Les mêmes informations s'affichent dans la fenêtre « Hubs » (toucher l'état en haut de l'écran)."],
     ["En cas de panne", "Hub injoignable : signalé en tête de la vue. Équipement injoignable : grisé, dernières valeurs, aucune commande. Lecture GET /api/equipements toutes les 15 secondes, vue ouverte ; commandes des lampes et prises par POST /api/lights/apply."],
   ];
   function rendreAide(box) {

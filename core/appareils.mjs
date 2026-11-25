@@ -289,9 +289,27 @@ export async function actionScene(id, action) {
 // Ecriture generique (V2.1 etape ecriture-generique ; contrat « Capacités ») : une capacite d'un equipement, validee par son descripteur (valider : ecriture declaree,
 // bornes, pas, options), commande sensible : confirm exige ; une commande a la fois par equipement (409 sinon) ; l'adaptateur traduit (ecrire(element, cap, valeur, descripteur) :
 // sa liste fermee) ; relu 1 s apres (sans cache), jamais renvoye. -> equipement compose relu, ou null s'il a disparu. Adaptateur sans ecrire : 501.
+// V2.2 ha-ouvrants : parametres d'une commande (options : code d'alarme ou de serrure, ton, volume, duree d'une sirene), objet plat de 4 cles au plus, valeurs texte (64 caracteres
+// imprimables au plus), nombre fini ou booleen ; transmis tels quels a l'adaptateur (ecrire(element, cap, valeur, descripteur, options) : sa liste fermee les verifie) ; jamais gardes,
+// journalises ni renvoyes (le code d'alarme est tape a chaque fois).
 const enCours = new Set();
 export const RELECTURE_MS = 1000;
-export async function ecrireCapacite(id, element, cap, valeur, confirm) {
+const OPTION_CLE = /^[a-z_]{1,20}$/, OPTION_TEXTE = /^[\x20-\x7e\u00a0-\uffff]{1,64}$/;
+export function optionsCommande(o) {
+  if (o === undefined || o === null) return {};
+  if (typeof o !== 'object' || Array.isArray(o) || Object.getPrototypeOf(o) !== Object.prototype) throw new HttpError(400, 'Paramètres de commande invalides.');
+  const k = Object.keys(o);
+  if (k.length > 4) throw new HttpError(400, 'Paramètres de commande invalides.');
+  const r = {};
+  for (const c of k) {
+    const v = o[c];
+    if (!OPTION_CLE.test(c) || !((typeof v === 'string' && OPTION_TEXTE.test(v)) || (typeof v === 'number' && Number.isFinite(v)) || typeof v === 'boolean')) throw new HttpError(400, 'Paramètres de commande invalides.');
+    r[c] = v;
+  }
+  return r;
+}
+export async function ecrireCapacite(id, element, cap, valeur, confirm, options) {
+  const o = optionsCommande(options);
   await charger();
   const x = adaptateurs.find((y) => typeof y.a.equipements === 'function' && !retrait(y) && String(id).startsWith(y.id + ':'));
   if (!x) throw new HttpError(404, 'Équipement inconnu.');
@@ -305,7 +323,7 @@ export async function ecrireCapacite(id, element, cap, valeur, confirm) {
   if (enCours.has(id)) throw new HttpError(409, 'Une commande est déjà en cours pour cet équipement.');
   enCours.add(id);
   try {
-    await borne(() => x.a.ecrire(element, cap, v, c), DELAI);
+    await borne(() => x.a.ecrire(element, cap, v, c, o), DELAI);
     await new Promise((r) => setTimeout(r, RELECTURE_MS));
     const apres = (await equipUn(x, true)).find((y) => y.id === id);
     return apres ? composerEquipement(apres) : null;

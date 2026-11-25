@@ -9,10 +9,12 @@
 import { projeter } from '../../core/modele.mjs';
 import { sansSecret, groupe } from '../../core/capacites.mjs';
 
-// Domaines integres (conception v2.1 §9) ; exclus : calendar, todo, notify, tts, stt, conversation, assist_satellite, wake_word, ai_task, image_processing, geo_location, weather,
+// Domaines integres (conception v2.1 §9 ; V2.2 ha-ecriture : entrees de Home Assistant input_boolean, input_number, input_select, input_text, input_button et script, jusque-la
+// en lecture seule comme domaines inconnus, memes identifiants) ; exclus : calendar, todo, notify, tts, stt, conversation, assist_satellite, wake_word, ai_task, image_processing, geo_location, weather,
 // infrared, radio_frequency, zone ; camera et image : plus tard. Ordre : choix de l'element principal d'un equipement.
 export const DOMAINES = Object.freeze(['light', 'switch', 'climate', 'water_heater', 'humidifier', 'fan', 'cover', 'valve', 'lock', 'alarm_control_panel', 'siren', 'media_player', 'remote',
-  'vacuum', 'lawn_mower', 'number', 'select', 'text', 'date', 'time', 'datetime', 'button', 'scene', 'sensor', 'binary_sensor', 'air_quality', 'event', 'update', 'device_tracker', 'person']);
+  'vacuum', 'lawn_mower', 'number', 'select', 'text', 'date', 'time', 'datetime', 'button', 'scene', 'input_boolean', 'input_number', 'input_select', 'input_text', 'input_button', 'script',
+  'sensor', 'binary_sensor', 'air_quality', 'event', 'update', 'device_tracker', 'person']);
 const DOM = DOMAINES.join('|');
 const ENTITE = new RegExp('^(' + DOM + ')\\.([a-z0-9_]{1,70})$');
 const ID = new RegExp('^ha-(' + DOM + ')-([a-z0-9_]{1,70})$');
@@ -54,9 +56,11 @@ export function retenue(st) {
 
 // Libelles des codes d'options connus (sinon le code tel quel)
 const LIBELLES = {
-  off: 'OFF', on: 'ON', heat: 'Chauffage', cool: 'Climatisation', heat_cool: 'Chaud / froid', auto: 'Auto', dry: 'Déshumidification', fan_only: 'Ventilation',
+  off: 'OFF', on: 'ON', heat: 'Chauffe', cool: 'Climatisation', heat_cool: 'Chaud / froid', auto: 'Auto', dry: 'Déshumidification', fan_only: 'Ventilation',
   eco: 'Éco', away: 'Absent', boost: 'Boost', comfort: 'Confort', home: 'Maison', sleep: 'Nuit', activity: 'Activité', none: 'Aucun', low: 'Faible', medium: 'Moyenne', high: 'Forte',
   forward: 'Avant', reverse: 'Arrière', all: 'Tout', one: 'Un seul', electric: 'Électrique', gas: 'Gaz', heat_pump: 'Pompe à chaleur', high_demand: 'Forte demande', performance: 'Performance',
+  // V2.2 ha-climat : libelles de la specification V2.0 du climat (mode heat « Chauffe », prereglages)
+  frost_protection: 'Hors-gel', 'comfort-1': 'Confort −1', 'comfort-2': 'Confort −2', external: 'Externe', prog: 'Programme',
 };
 const options = (l) => liste(l).map((code) => ({ code, libelle: LIBELLES[code] || code }));
 // Options fixees par drapeaux : [[drapeau, code, libelle]] -> celles que le hub declare
@@ -85,7 +89,12 @@ const AIR = [['particulate_matter_2_5', 'pm25'], ['particulate_matter_10', 'pm10
   ['air_quality_index', 'mesure', 'Indice de qualité de l\'air'], ['carbon_monoxide', 'mesure', 'Monoxyde de carbone'], ['nitrogen_oxide', 'mesure', 'Protoxyde d\'azote'],
   ['nitrogen_monoxide', 'mesure', 'Monoxyde d\'azote'], ['nitrogen_dioxide', 'mesure', 'Dioxyde d\'azote'], ['ozone', 'mesure', 'Ozone'], ['sulphur_dioxide', 'mesure', 'Dioxyde de soufre']];
 const PCT = { min: 0, max: 100, pas: 1, unite: '%' };
+// V2.2 ha-depuis : capacites d'un capteur binaire qui portent « depuis… » ; horodatage ISO lisible ou null
+const DEPUIS = ['ouvert', 'fuite', 'fumee', 'monoxyde', 'gaz', 'probleme'];
+const horodatage = (v) => (typeof v === 'string' && v.length <= 40 && Number.isFinite(Date.parse(v)) ? v : null);
 const nombre = (s) => { if (typeof s !== 'string' || !s.trim()) return null; const v = Number(s); return Number.isFinite(v) ? v : null; };
+// Clavier du code (V2.2 ha-ouvrants) : alarme : code_format number -> chiffres ; serrure : expression de chiffres seuls (^\d{4}$, ^\d+$, ^[0-9]{4,6}$) -> chiffres ; sinon texte
+const clavierCode = (cf, alarme) => (cf === null ? null : (alarme ? cf === 'number' : /^\^?(\\d|\[0-9\])(\{\d+(,\d*)?\}|[+*])?\$?$/.test(cf)) ? 'chiffres' : 'texte');
 const connu = (s) => (typeof s === 'string' && s && s !== 'unknown' && s !== 'unavailable' ? s : null);
 const coordonnees = (a) => (Number.isFinite(a.latitude) && Number.isFinite(a.longitude)
   ? a.latitude.toFixed(5) + ', ' + a.longitude.toFixed(5) + (Number.isFinite(a.gps_accuracy) ? ' (± ' + Math.round(a.gps_accuracy) + ' m)' : '') : null);
@@ -131,8 +140,10 @@ const D = {
   },
   climate(x) {
     const { a, f, s } = x, u = x.ctx.uniteTemp ? { unite: x.ctx.uniteTemp } : {};
-    const modes = liste(a.hvac_modes), bornes = { min: nb(a.min_temp), max: nb(a.max_temp), pas: nb(a.target_temp_step) };
-    for (const k of ['min', 'max', 'pas']) if (bornes[k] === null) delete bornes[k];
+    // V2.2 ha-climat (decision du 24/11) : pas de la consigne 0,5 quand l'entite n'en declare pas ; consigne en mode off : en_off (commande refusee, ecriture.mjs)
+    const modes = liste(a.hvac_modes), bornes = { min: nb(a.min_temp), max: nb(a.max_temp), pas: nb(a.target_temp_step) === null ? 0.5 : a.target_temp_step };
+    for (const k of ['min', 'max']) if (bornes[k] === null) delete bornes[k];
+    if (s === 'off') bornes.en_off = true;
     x.pris('hvac_modes', 'min_temp', 'max_temp', 'target_temp_step', 'temperature', 'target_temp_low', 'target_temp_high', 'target_humidity', 'min_humidity', 'max_humidity',
       'target_humidity_step', 'current_temperature', 'current_humidity', 'fan_mode', 'fan_modes', 'preset_mode', 'preset_modes', 'swing_mode', 'swing_modes', 'swing_horizontal_mode',
       'swing_horizontal_modes', 'hvac_action');
@@ -151,7 +162,7 @@ const D = {
     if (bit(f, 16) || a_(a, 'preset_mode')) x.aj('prereglage', tx(a.preset_mode), { ecriture: bit(f, 16) && liste(a.preset_modes).length > 0, options: options(a.preset_modes) });
     // swing_mode : liste d'options (pas un ON/OFF) -> sens, libelle « Oscillation » (jamais mode : une option off y absorberait le ON/OFF)
     if (bit(f, 32) || a_(a, 'swing_mode')) x.aj('sens', tx(a.swing_mode), { libelle: 'Oscillation', ecriture: bit(f, 32) && liste(a.swing_modes).length > 0, options: options(a.swing_modes) });
-    if (bit(f, 512) || a_(a, 'swing_horizontal_mode')) x.aj('sens', tx(a.swing_horizontal_mode), { libelle: 'Oscillation horizontale', ecriture: bit(f, 512) && liste(a.swing_horizontal_modes).length > 0, options: options(a.swing_horizontal_modes) });
+    if (bit(f, 512) || a_(a, 'swing_horizontal_mode')) x.aj('sens', tx(a.swing_horizontal_mode), { libelle: 'Oscillation horizontale', horizontal: true, ecriture: bit(f, 512) && liste(a.swing_horizontal_modes).length > 0, options: options(a.swing_horizontal_modes) });
     if (a_(a, 'hvac_action')) x.aj('activite', tx(a.hvac_action));
   },
   water_heater(x) {
@@ -186,31 +197,37 @@ const D = {
     // Position d'un ouvrant (V2.1, cartes) : 0 % = remonte (ouvert), 100 % = entierement descendu ; Home Assistant documente l'inverse (current_position 100 = ouvert) :
     // valeur convertie ici (sens: 'inverse' : l'ecriture de l'etape 5 convertit de meme)
     if (bit(f, 4) || a_(a, 'current_position')) x.aj('position', nb(a.current_position) === null ? null : 100 - nb(a.current_position), { ecriture: bit(f, 4), ...PCT, ...sensible, sens: 'inverse' });
-    const l = parDrapeaux(f, [[16, 'open_tilt', 'Ouvrir'], [64, 'stop_tilt', 'Arrêt'], [32, 'close_tilt', 'Fermer']]);
-    if (l.length) x.aj('ouverture', null, { libelle: 'Lamelles', ecriture: true, options: l, ...sensible });
+    // V2.2 ha-ouvrants : lamelles ouvrir / fermer / arreter (open_cover_tilt...) non decrites : sans etat propre, et une seconde capacite ouverture du meme element serait
+    // prise pour celle du volet (premiere trouvee, ordre des libelles) ; l'inclinaison en % est commandee
     if (bit(f, 128) || a_(a, 'current_tilt_position')) x.aj('inclinaison', nb(a.current_tilt_position), { ecriture: bit(f, 128), ...PCT, ...sensible });
   },
   valve(x) {
     const { a, f, s } = x;
     x.pris('current_position');
     const o = parDrapeaux(f, [[1, 'open', 'Ouvrir'], [8, 'stop', 'Arrêt'], [2, 'close', 'Fermer']]);
-    x.aj('ouverture', connu(s), { ecriture: o.length > 0, options: o, sensible: true });
-    if (bit(f, 4) || a_(a, 'current_position')) x.aj('position', nb(a.current_position), { ecriture: bit(f, 4), ...PCT, sensible: true });
+    // V2.2 ha-ouvrants : vanne marquee (famille « vanne » de la vue Equipements : piste Ouverte / Fermee, et non un store) ; position : 100 = ouverte (sens de Home Assistant, non inverse)
+    x.aj('ouverture', connu(s), { ecriture: o.length > 0, options: o, sensible: true, vanne: true });
+    if (bit(f, 4) || a_(a, 'current_position')) x.aj('position', nb(a.current_position), { ecriture: bit(f, 4), ...PCT, sensible: true, vanne: true });
   },
+  // V2.2 ha-ouvrants (decisions du 24-25/11) : ouverture de la porte (lock.open, drapeau OPEN) et declenchement de l'alarme (alarm_trigger) non proposes ; clavier du code
+  // (clavierCode : chiffres ou texte) d'apres code_format (serrure : expression reguliere ; alarme : number | text) ; le code lui-meme n'est jamais recu ni garde
   lock(x) {
     x.pris('code_format');
-    x.aj('verrou', connu(x.s), { ecriture: true, sensible: true, options: parDrapeaux(x.f, [[0, 'lock', 'Verrouiller'], [0, 'unlock', 'Déverrouiller'], [1, 'open', 'Ouvrir']]), code_format: tx(x.a.code_format) });
+    const cf = tx(x.a.code_format);
+    x.aj('verrou', connu(x.s), { ecriture: true, sensible: true, options: [{ code: 'lock', libelle: 'Verrouiller' }, { code: 'unlock', libelle: 'Déverrouiller' }], code_format: cf, clavier_code: clavierCode(cf, false) });
   },
   alarm_control_panel(x) {
     x.pris('code_format', 'code_arm_required');
     const o = parDrapeaux(x.f, [[0, 'disarm', 'Désarmer'], [1, 'arm_home', 'Armer (présence)'], [2, 'arm_away', 'Armer (absence)'], [4, 'arm_night', 'Armer (nuit)'],
-      [32, 'arm_vacation', 'Armer (vacances)'], [16, 'arm_custom_bypass', 'Armer (personnalisé)'], [8, 'trigger', 'Déclencher']]);
-    x.aj('alarme', connu(x.s), { ecriture: true, sensible: true, options: o, code_format: tx(x.a.code_format), code_requis: bo(x.a.code_arm_required) });
+      [32, 'arm_vacation', 'Armer (vacances)'], [16, 'arm_custom_bypass', 'Armer (personnalisé)']]);
+    const cf = tx(x.a.code_format);
+    x.aj('alarme', connu(x.s), { ecriture: true, sensible: true, options: o, code_format: cf, code_requis: bo(x.a.code_arm_required), clavier_code: clavierCode(cf, true) });
   },
   siren(x) {
     const { a, f } = x;
     x.pris('available_tones');
-    const tons = Array.isArray(a.available_tones) ? options(a.available_tones) : Object.entries(objet(a.available_tones)).map(([code, l]) => ({ code, libelle: tx(l) || code }));
+    // Tons : liste, ou dictionnaire {cle: nom} dont Home Assistant accepte le nom (process_turn_on_params de components/siren) : code = nom (une cle entiere ne survit pas au JSON)
+    const tons = Array.isArray(a.available_tones) ? options(a.available_tones) : Object.values(objet(a.available_tones)).filter((l) => typeof l === 'string' && l).map((l) => ({ code: l, libelle: l }));
     x.aj('sirene', x.on, { ecriture: bit(f, 1) && bit(f, 2), sensible: true, ...(bit(f, 4) ? { tons } : {}), volume_reglable: bit(f, 8), duree_reglable: bit(f, 16) });
   },
   media_player(x) {
@@ -222,7 +239,8 @@ const D = {
     if (bit(f, 4) || a_(a, 'volume_level')) x.aj('volume', nb(a.volume_level) === null ? null : Math.round(a.volume_level * 100), { ecriture: bit(f, 4), ...PCT, pas_a_pas: bit(f, 1024) });
     if (bit(f, 8) || a_(a, 'is_volume_muted')) x.aj('muet', bo(a.is_volume_muted), { ecriture: bit(f, 8) });
     if (bit(f, 2048) || a_(a, 'source')) x.aj('source', tx(a.source), { ecriture: bit(f, 2048) && liste(a.source_list).length > 0, options: options(a.source_list) });
-    if (bit(f, 65536) || a_(a, 'sound_mode')) x.aj('source', tx(a.sound_mode), { libelle: 'Mode sonore', ecriture: bit(f, 65536) && liste(a.sound_mode_list).length > 0, options: options(a.sound_mode_list) });
+    // V2.2 ha-media-robots : mode sonore en capacite mode (une seconde source du meme element serait prise pour la source : premiere trouvee, ordre des libelles)
+    if (bit(f, 65536) || a_(a, 'sound_mode')) x.aj('mode', tx(a.sound_mode), { libelle: 'Mode sonore', ecriture: bit(f, 65536) && liste(a.sound_mode_list).length > 0, options: options(a.sound_mode_list) });
     if (a_(a, 'media_title') || a_(a, 'media_artist')) x.aj('media', [a.media_title, a.media_artist].filter(tx).join(' — ') || null);
     if (bit(f, 262144) || a_(a, 'repeat')) x.aj('repetition', tx(a.repeat), { ecriture: bit(f, 262144), options: options(['off', 'all', 'one']) });
     if (bit(f, 32768) || a_(a, 'shuffle')) x.aj('aleatoire', bo(a.shuffle), { ecriture: bit(f, 32768) });
@@ -242,28 +260,27 @@ const D = {
     if (a_(a, 'battery_level')) x.aj('batterie', nb(a.battery_level), { unite: '%' });
   },
   lawn_mower(x) {
-    const o = parDrapeaux(x.f, [[1, 'start_mowing', 'Démarrer'], [2, 'pause', 'Pause'], [8, 'stop', 'Arrêt'], [4, 'dock', 'Retour à la base']]);
+    // LawnMowerEntityFeature (code de HA 2026.2.3) : START_MOWING 1, PAUSE 2, DOCK 4 ; aucun arret
+    const o = parDrapeaux(x.f, [[1, 'start_mowing', 'Démarrer'], [2, 'pause', 'Pause'], [4, 'dock', 'Retour à la base']]);
     x.aj('robot', connu(x.s), { ecriture: o.length > 0, options: o });
   },
-  number(x) {
-    const { a } = x, o = { ecriture: true };
-    for (const [k, c] of [['min', 'min'], ['max', 'max'], ['step', 'pas']]) if (nb(a[k]) !== null) o[c] = a[k];
-    if (tx(a.unit_of_measurement)) o.unite = a.unit_of_measurement;
-    x.pris('min', 'max', 'step', 'unit_of_measurement');
-    x.aj('niveau', nombre(x.s), o);
-  },
-  select(x) { x.pris('options'); x.aj('source', connu(x.s), { ecriture: liste(x.a.options).length > 0, options: options(x.a.options) }); },
-  text(x) {
-    const { a } = x;
-    x.pris('min', 'max', 'pattern', 'mode');
-    // mode password : valeur secrete (jamais dans une liste ni un journal)
-    x.aj('texte', x.s === 'unknown' || x.s === 'unavailable' ? null : (typeof x.s === 'string' ? x.s : null), { ecriture: true, longueur_min: nb(a.min), longueur_max: nb(a.max), motif: tx(a.pattern), ...(a.mode === 'password' ? { secret: true } : {}) });
-  },
+  number(x) { niveau(x); },
+  select(x) { choix(x); },
+  text(x) { texte(x); },
   date(x) { x.aj('date_heure', connu(x.s), { ecriture: true, format: 'date' }); },
   time(x) { x.aj('date_heure', connu(x.s), { ecriture: true, format: 'time' }); },
   datetime(x) { x.aj('date_heure', connu(x.s), { ecriture: true, format: 'datetime' }); },
-  button(x) { x.aj(x.a.device_class === 'identify' ? 'identifier' : 'action', null, { ecriture: true, depuis: connu(x.s) }); },
-  scene(x) { x.aj('scene', null, { ecriture: true, depuis: connu(x.s) }); },
+  // depuis : etat de Home Assistant = heure du dernier appui (bouton) ou de la derniere activation (scene) ; « unknown » ou illisible : null
+  button(x) { x.aj(x.a.device_class === 'identify' ? 'identifier' : 'action', null, { ecriture: true, depuis: horodatage(connu(x.s)) }); },
+  scene(x) { x.aj('scene', null, { ecriture: true, depuis: horodatage(connu(x.s)) }); },
+  // V2.2 ha-ecriture : entrees (code de HA 2026.2, components/input_*/__init__.py : actions enregistrees sans drapeau) ; editable (modifiable par l'interface de HA) garde en inconnue
+  input_boolean(x) { x.aj('onoff', x.on, { ecriture: true, role: 'appareil' }); },
+  input_number(x) { x.pris('mode'); niveau(x); },
+  input_select(x) { choix(x); },
+  input_text(x) { texte(x); },
+  input_button(x) { x.aj('action', null, { ecriture: true, depuis: horodatage(connu(x.s)) }); },
+  // Script : lance sans variables (script.turn_on n'attend pas sa fin) ; sensible (deux appuis) : un script peut tout commander, verrous compris
+  script(x) { x.pris('last_triggered', 'mode', 'current', 'max'); x.aj('action', null, { ecriture: true, sensible: true, depuis: horodatage(x.a.last_triggered), en_cours: x.s === 'on', script: true }); },
   sensor(x) {
     const { a } = x, cap = SENSOR[a.device_class] || 'mesure', o = {};
     if (tx(a.unit_of_measurement)) o.unite = a.unit_of_measurement;
@@ -273,9 +290,12 @@ const D = {
     // valeur non numerique (enum, texte) : gardee telle quelle
     x.aj(cap, v !== null ? v : connu(x.s), o);
   },
+  // V2.2 ha-depuis : heure du dernier changement d'etat (last_changed, tenue par Home Assistant) : depuis pour une ouverture ou une alerte (« depuis 12 min »),
+  // derniere pour un mouvement (« vu à 08:15 » : debut s'il dure, fin sinon) ; absente ou illisible : rien (jamais inventee)
   binary_sensor(x) {
-    const cap = BINAIRE[x.a.device_class] || 'mesure';
-    x.aj(cap, x.on, x.a.device_class === 'battery' ? { libelle: 'Batterie faible' } : {});
+    const cap = BINAIRE[x.a.device_class] || 'mesure', o = x.a.device_class === 'battery' ? { libelle: 'Batterie faible' } : {};
+    if (x.change && x.on !== null) { if (cap === 'presence') o.derniere = x.change; else if (DEPUIS.includes(cap)) o.depuis = x.change; }
+    x.aj(cap, x.on, o);
   },
   air_quality(x) {
     const { a } = x, u = tx(a.unit_of_measurement);
@@ -288,19 +308,39 @@ const D = {
     if (!a_(a, 'particulate_matter_2_5')) x.aj('pm25', nombre(x.s), u ? { unite: u } : {});
   },
   event(x) { x.pris('event_type', 'event_types'); x.aj('appui', tx(x.a.event_type), { options: options(x.a.event_types), depuis: connu(x.s) }); },
+  // Mise a jour : version en information (lecture) ; installer (maj_installer, sensible) seulement si INSTALL (1) est declare, une mise a jour disponible (etat on) et aucune en cours
+  // (update.install refuse sinon : components/update/__init__.py async_install)
   update(x) {
     const { a } = x;
     x.pris('installed_version', 'latest_version', 'in_progress', 'update_percentage');
-    x.aj('logiciel', tx(a.installed_version), { ecriture: bit(x.f, 1), derniere: tx(a.latest_version), maj: x.on, en_cours: a.in_progress === true, progression: nb(a.update_percentage) });
+    x.aj('logiciel', tx(a.installed_version), { derniere: tx(a.latest_version), maj: x.on, en_cours: a.in_progress === true, progression: nb(a.update_percentage) });
+    if (bit(x.f, 1) && x.s === 'on' && a.in_progress !== true) x.aj('maj_installer', null, { lecture: false, ecriture: true, sensible: true });
   },
   device_tracker(x) { traceur(x); if (a_(x.a, 'battery_level')) { x.pris('battery_level'); x.aj('batterie', nb(x.a.battery_level), { unite: '%' }); } },
-  person(x) { traceur(x); },
+  person(x) { traceur(x, true); },
 };
+// Nombre (number, input_number) : bornes et pas declares, unite
+function niveau(x) {
+  const { a } = x, o = { ecriture: true };
+  for (const [k, c] of [['min', 'min'], ['max', 'max'], ['step', 'pas']]) if (nb(a[k]) !== null) o[c] = a[k];
+  if (tx(a.unit_of_measurement)) o.unite = a.unit_of_measurement;
+  x.pris('min', 'max', 'step', 'unit_of_measurement');
+  x.aj('niveau', nombre(x.s), o);
+}
+// Liste (select, input_select) : options declarees
+function choix(x) { x.pris('options'); x.aj('source', connu(x.s), { ecriture: liste(x.a.options).length > 0, options: options(x.a.options) }); }
+// Texte (text, input_text) : longueurs et motif declares ; mode password : valeur secrete (jamais dans une liste ni un journal, jamais ecrite : contrat « Capacités »)
+function texte(x) {
+  const { a } = x;
+  x.pris('min', 'max', 'pattern', 'mode');
+  x.aj('texte', x.s === 'unknown' || x.s === 'unavailable' ? null : (typeof x.s === 'string' ? x.s : null), { ecriture: true, longueur_min: nb(a.min), longueur_max: nb(a.max), motif: tx(a.pattern), ...(a.mode === 'password' ? { secret: true } : {}) });
+}
 // Traceur, personne : zone (localisation) et coordonnees GPS, capacites privees (a l'ecran seulement)
-function traceur(x) {
+// V2.2 ha-localisation : personne (person) marquee personne (resume « Présence » de l'accueil) ; maison : etat home
+function traceur(x, personne) {
   const s = x.s;
   x.pris('latitude', 'longitude', 'gps_accuracy');
-  x.aj('localisation', s === 'home' ? 'À la maison' : s === 'not_home' ? 'Absent' : connu(s), { prive: true });
+  x.aj('localisation', s === 'home' ? 'À la maison' : s === 'not_home' ? 'Absent' : connu(s), { prive: true, maison: s === 'home', ...(personne ? { personne: true } : {}) });
   const c = coordonnees(x.a);
   if (c !== null) x.aj('coordonnees', c, { prive: true });
 }
@@ -324,7 +364,7 @@ export function decrire(st, ctx = {}) {
   const disponible = s !== 'unavailable', nom = nomDe(st);
   const capacites = [], vus = new Set(['friendly_name', ...GARDES]);
   const x = {
-    a, s, f, ctx: ctx || {}, nom, on: s === 'on' ? true : s === 'off' ? false : null,
+    a, s, f, ctx: ctx || {}, nom, on: s === 'on' ? true : s === 'off' ? false : null, change: horodatage(st.last_changed),
     pris: (...k) => k.forEach((c) => vus.add(c)),
     aj: (cap, valeur, o = {}) => capacites.push({ cap, element, lecture: true, ecriture: false, disponible, valeur, ...(GENERIQUES.includes(cap) && !o.libelle ? { libelle: nom } : {}), ...o }),
   };
@@ -423,7 +463,8 @@ export function versEquipements(etats, registre, ctx = {}) {
     for (const m of membres) {
       const d = decrire(m.st, ctx);
       for (const c of d.capacites) {
-        if (m.categorie && groupe(c.cap) !== 'informations') capacites.push({ ...c, cap: m.categorie === 'config' ? 'configuration' : 'diagnostic', nature: c.cap, categorie: m.categorie, libelle: c.libelle || m.nom });
+        // installer une mise a jour : jamais enveloppee (commande de l'equipement, entite update souvent de categorie config)
+        if (m.categorie && groupe(c.cap) !== 'informations' && c.cap !== 'maj_installer') capacites.push({ ...c, cap: m.categorie === 'config' ? 'configuration' : 'diagnostic', nature: c.cap, categorie: m.categorie, libelle: c.libelle || m.nom });
         else capacites.push(m.categorie ? { ...c, categorie: m.categorie } : c);
       }
       inconnues.push(...d.inconnues.map((x) => ({ ...x, element: m.id })));

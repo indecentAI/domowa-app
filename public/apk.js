@@ -1,8 +1,10 @@
-// @zone apk | Lien avec l'application Android (V1.9) : sans effet hors de l'APK (APP.apk.present faux, aucun écouteur). Dans l'APK (User-Agent « Domowa-APK/ », APP_VERSION.apk de version.js) : reçoit le canal du pont (message « domowa-pont » portant un MessagePort, envoyé par l'application après chaque chargement ; le dernier reçu est adopté, comme dans l'assistant) et expose APP.apk {present, reglages(), retour(peut), video(etat)}. Requêtes {id, op, args} sur la liste fermée de l'application (reglages {version} : ouvrir les réglages de l'application, avec la version du serveur lue dans GET /api/clients (serveur.version ; 1,5 s au plus, sinon null) ; retour {peut} : la page sait traiter le bouton Retour ; video {joue, l, h} (étape apk-pip) : une caméra est en direct, dimensions de son image, envoyé quand cela change, de nouveau sur un canal neuf) ; une requête sans canal attend le canal, le dernier état de retour seul est gardé. Messages reçus de l'application : {evt: "bandeau"} (après le chemin A), texte fixe écrit ici ; {evt: "pip", actif} (étape apk-pip : image dans l'image, booléen strict -> APP.camPip). Aucune adresse, aucun secret.
+// @zone apk | Lien avec l'application Android (V1.9) : sans effet hors de l'APK (APP.apk.present faux, aucun écouteur). Dans l'APK (User-Agent « Domowa-APK/ », APP_VERSION.apk de version.js) : reçoit le canal du pont (message « domowa-pont » portant un MessagePort, envoyé par l'application après chaque chargement ; le dernier reçu est adopté, comme dans l'assistant) et expose APP.apk {present, geo, reglages(), retour(peut), video(etat)} (geo, V2.2 apk-geo : l'APK ouvre les liens geo:, « (geo) » dans le User-Agent). Requêtes {id, op, args} sur la liste fermée de l'application (reglages {version} : ouvrir les réglages de l'application, avec la version du serveur lue dans GET /api/clients (serveur.version ; 1,5 s au plus, sinon null) ; retour {peut} : la page sait traiter le bouton Retour ; video {joue, l, h} (étape apk-pip) : une caméra est en direct, dimensions de son image, envoyé quand cela change, de nouveau sur un canal neuf) ; une requête sans canal attend le canal, le dernier état de retour seul est gardé. Messages reçus de l'application : {evt: "bandeau"} (après le chemin A), texte fixe écrit ici ; {evt: "pip", actif} (étape apk-pip : image dans l'image, booléen strict -> APP.camPip). Aucune adresse, aucun secret.
 (function () {
   "use strict";
   const present = !!(window.APP_VERSION && window.APP_VERSION.apk);
-  if (!present) { APP.apk = { present: false, reglages() {}, retour() {}, video() {} }; return; }
+  // V2.2 apk-geo : l'APK qui ouvre les liens geo: (application de cartes) l'annonce par « (geo) » après sa version dans le User-Agent ; un ancien APK, non
+  const geo = present && /Domowa-APK\/\S+ \([^)]*\bgeo\b[^)]*\)/.test(navigator.userAgent || "");
+  if (!present) { APP.apk = { present: false, geo: false, reglages() {}, retour() {}, video() {} }; return; }
   let port = null, n = 0, attente = [], dernier = null, video = null; // video : dernier état annoncé ({joue, l, h}) ; null tant qu'aucune caméra n'a joué
   function envoyer(op, args) {
     const m = JSON.stringify({ id: "w" + (++n), op, args: args || {} });
@@ -26,6 +28,7 @@
   });
   APP.apk = {
     present: true,
+    geo,
     reglages() {
       // Version du serveur pour les réglages de l'application (1,5 s au plus : sinon sans version)
       let fait = false;

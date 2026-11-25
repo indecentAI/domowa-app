@@ -1,10 +1,12 @@
-// @zone homeassistant | Adaptateur Home Assistant (V2.0) : lister (GET /api/states : lumieres et prises, modele.mjs, capacites projetees V2.1), relire (GET /api/states/<entite>), equipements (V2.1 : toutes les entites des domaines integres, registre WebSocket, registre.mjs), appliquer (etape 3 : light.turn_on / turn_off, switch.turn_on / turn_off, une action par commande, jamais renvoyee) ; connexion dans connexion.mjs, contrat hub dans hub.mjs. Interface : core/appareils.mjs.
+// @zone homeassistant | Adaptateur Home Assistant (V2.0) : lister (GET /api/states : lumieres et prises, modele.mjs, capacites projetees V2.1), relire (GET /api/states/<entite>), equipements (V2.1 : toutes les entites des domaines integres, registre WebSocket, registre.mjs), ecrire (V2.2 : ecriture generique, ecriture.mjs), appliquer (etape 3 : light.turn_on / turn_off, switch.turn_on / turn_off, une action par commande, jamais renvoyee) ; connexion dans connexion.mjs, contrat hub dans hub.mjs. Interface : core/appareils.mjs.
 import { HttpError } from '../../core/http.mjs';
 import { log } from '../../core/outils.mjs';
 import { obtenir, envoyer, erreur } from './connexion.mjs';
 import { depuisEtats, versModele, versEquipements, retenue, entiteDe, actionDe, MAX_APPAREILS } from './modele.mjs';
 import { lireRegistre } from './registre.mjs';
+import { masquer } from './ecriture.mjs';
 export { erreur };
+export { ecrire } from './ecriture.mjs'; // V2.2 etape ha-ecriture : POST /api/equipements/:id/capacite (liste fermee, ecriture.mjs)
 export { hub } from './hub.mjs';
 
 let signale = false;
@@ -25,7 +27,8 @@ export async function equipements() {
   if (r.status === 'rejected') { if (!regSignale) { regSignale = true; log('homeassistant : registre illisible (' + String((r.reason && r.reason.code) || 'erreur') + '), une entite = un equipement'); } }
   else regSignale = false;
   const u = c.status === 'fulfilled' && c.value && c.value.unit_system && c.value.unit_system.temperature;
-  return versEquipements(e.value, r.status === 'fulfilled' ? r.value : null, { uniteTemp: typeof u === 'string' && u ? u.slice(0, 8) : null });
+  // V2.2 : capacites sans action dans la liste fermee d'ecriture.mjs rendues en lecture seule (aucune commande construite qui serait refusee)
+  return masquer(versEquipements(e.value, r.status === 'fulfilled' ? r.value : null, { uniteTemp: typeof u === 'string' && u ? u.slice(0, 8) : null }));
 }
 export async function relire(d) {
   const e = entiteDe(d.id);
