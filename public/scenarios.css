@@ -3,7 +3,7 @@
 .scenebar{display:flex;align-items:center;margin-bottom:14px}
 .scenes{display:flex;flex-wrap:wrap}
 .dots{display:flex;flex-wrap:wrap;margin-bottom:8px}
-.dot{width:14px;height:14px;border-radius:50%;margin:0 3px 3px 0;border:1px solid rgba(255,255,255,.2)}
+.dot{width:14px;height:14px;border-radius:50%;margin:0 3px 3px 0;border:1px solid var(--encre-a20)}
 .srow button{flex:1;margin-right:8px;min-height:46px;font-size:15px}
 .srow button:last-child{margin-right:0}
 body.busy .scenes{pointer-events:none}
@@ -12,36 +12,36 @@ body.busy .scenes{pointer-events:none}
 .shead{display:flex;align-items:center;margin-bottom:8px}
 .shead .sname{flex:1;min-width:0;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sicon{flex:none;width:44px;height:44px;min-height:0;padding:0;margin:0 0 0 8px;border-radius:50%;background:transparent;color:var(--muted);display:flex;align-items:center;justify-content:center}
-.sslot{flex:none;width:44px;height:44px;min-height:0;padding:0;margin:0 10px 0 0;border-radius:50%;background:rgba(255,255,255,.05);color:#dbe6f7;display:flex;align-items:center;justify-content:center}
-.sslot.empty{background:transparent;border:1px dashed rgba(140,165,210,.3);color:#566175}
-.sstar{flex:none;width:44px;height:44px;min-height:0;padding:0;margin:0 0 0 2px;border-radius:50%;background:transparent;color:#6b7687;display:flex;align-items:center;justify-content:center}
+.sslot{flex:none;width:44px;height:44px;min-height:0;padding:0;margin:0 10px 0 0;border-radius:50%;background:var(--encre-a5);color:var(--accent-91);display:flex;align-items:center;justify-content:center}
+.sslot.empty{background:transparent;border:1px dashed var(--ligne-a30);color:var(--texte-39)}
+.sstar{flex:none;width:44px;height:44px;min-height:0;padding:0;margin:0 0 0 2px;border-radius:50%;background:transparent;color:var(--texte-47);display:flex;align-items:center;justify-content:center}
 .sstar svg{fill:none}
-.sstar.on{color:#ffffff;filter:drop-shadow(0 0 3px rgba(255,255,255,.25))}
+.sstar.on{color:var(--neutre-100);filter:drop-shadow(0 0 3px var(--encre-a25))}
 .sstar.on svg{fill:currentColor}
-.ipick{position:fixed;left:0;top:0;right:0;bottom:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(3,5,9,.7)}
+.ipick{position:fixed;left:0;top:0;right:0;bottom:0;z-index:30;display:flex;align-items:center;justify-content:center;background:var(--voile-a70)}
 .ipanel{display:flex;flex-direction:column;width:400px;max-width:92%;max-height:90%;padding:16px;border-radius:24px;background:var(--carte-fond);border:1px solid var(--carte-bord);box-shadow:var(--carte-ombre)}
 .ititle{font-size:16px;font-weight:500;margin-bottom:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .igrid{flex:1;min-height:0;display:flex;flex-wrap:wrap;margin-bottom:6px;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.iopt{flex:none;width:64px;height:58px;min-height:0;padding:0;margin:0 8px 8px 0;border-radius:16px;background:#0d1117;border:1px solid rgba(140,165,210,.16);color:#dbe6f7;display:flex;align-items:center;justify-content:center}
-.iopt.sel{border-color:#cfe6ff;box-shadow:0 0 0 1px #cfe6ff,var(--sel-lueur)}
-.inone{width:100%;min-height:46px;margin-top:4px;border-radius:16px;background:transparent;border:1px solid rgba(140,165,210,.25);color:var(--muted);font-size:15px;font-weight:400}
+.iopt{flex:none;width:64px;height:58px;min-height:0;padding:0;margin:0 8px 8px 0;border-radius:16px;background:var(--surface-7);border:1px solid var(--ligne-a16);color:var(--accent-91);display:flex;align-items:center;justify-content:center}
+.iopt.sel{border-color:var(--sel);box-shadow:0 0 0 1px var(--sel),var(--sel-lueur)}
+.inone{width:100%;min-height:46px;margin-top:4px;border-radius:16px;background:transparent;border:1px solid var(--ligne-a25);color:var(--muted);font-size:15px;font-weight:400}
 .srow{display:flex;align-items:center}
 .srow .sapply{flex:1;min-width:0;margin-right:28px}
 .hint{margin-left:14px;font-size:13px;color:var(--muted)}
 .scard{padding:14px;margin:0 12px 12px 0;width:300px;max-width:100%;background:var(--carte-fond);border:1px solid var(--carte-bord);border-radius:24px;box-shadow:var(--carte-ombre)}
 .sname{margin-bottom:8px;font-size:18px;font-weight:500}
 .tsub{color:var(--muted);margin-bottom:8px;font-size:13px}
-.srow .sdel{flex:none;width:46px;height:46px;min-height:0;padding:0;margin:0;border-radius:50%;background:rgba(255,90,95,.14);border:1px solid rgba(255,90,95,.35);color:#ff8a8e;display:flex;align-items:center;justify-content:center;box-shadow:var(--relief-ombre),inset 0 1px 0 rgba(255,255,255,.08)}
+.srow .sdel{flex:none;width:46px;height:46px;min-height:0;padding:0;margin:0;border-radius:50%;background:var(--danger-68-a14);border:1px solid var(--danger-68-a35);color:var(--danger-77);display:flex;align-items:center;justify-content:center;box-shadow:var(--relief-ombre),inset 0 1px 0 var(--reflet-a8)}
 /* V1.6 : smartphone (classe tel) : cartes pleine largeur (2 colonnes en paysage ; aussi les cartes des animations), « Enregistrer comme scénario » dans un pied en bas de l'écran */
 .tel .scenes{gap:12px}
 .tel .scard{width:100%;margin:0}
 @media (orientation:landscape){.tel .scard{width:calc(50% - 6px)}}
-.tel .scenebar{order:1;align-self:stretch;position:sticky;bottom:-24px;z-index:2;flex-wrap:wrap;margin:auto -12px -24px;padding:10px 12px 12px;background:#0a0d13;border-top:1px solid rgba(140,165,210,.14)}
+.tel .scenebar{order:1;align-self:stretch;position:sticky;bottom:-24px;z-index:2;flex-wrap:wrap;margin:auto -12px -24px;padding:10px 12px 12px;background:var(--bg);border-top:1px solid var(--ligne-a14)}
 .tel .scenebar .hint{order:-1;flex:1 1 100%;margin:0 0 8px}
 .tel #saveScene{flex:1}
 @media (orientation:landscape){.tel .scenebar .hint{display:none}}
 /* V1.6 : tablette en portrait : cartes des scénarios (et des animations, .scard) en grille sur toute la largeur */
 @media (orientation:portrait){.tab .scenes{align-self:stretch;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}.tab .scard{width:auto;margin:0}}
 /* V2.1 étape scenes-hub : scènes du hub (scenes.js, carteHub) : puce « hub », bouton Annuler pendant le délai du hub */
-.shub-puce{flex:none;margin-left:8px;padding:2px 8px;border-radius:10px;background:#1f2a3d;color:#a9c3ea;font-size:12px;font-weight:500}
-.srow .sannuler{flex:none;min-height:46px;padding:0 14px;border-radius:23px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:#e6ecf5;font-size:14px}
+.shub-puce{flex:none;margin-left:8px;padding:2px 8px;border-radius:10px;background:var(--surface-18-c);color:var(--accent-79);font-size:12px;font-weight:500}
+.srow .sannuler{flex:none;min-height:46px;padding:0 14px;border-radius:23px;background:var(--encre-a6);border:1px solid var(--encre-a14);color:var(--texte-93);font-size:14px}

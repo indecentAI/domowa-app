@@ -1,10 +1,11 @@
-// @zone socle | Navigation commune aux deux versions (V1.6) : menu « ⋯ » de l'en-tête (#plusBtn, #plusMenu : Actualiser, Plein écran, Affichage ; V1.9 dans l'APK : Plein écran masqué, « Réglages de l'application » #apkBtn, état du Retour signalé par APP.apk.retour), réglage « Affichage » (APP.affichage : Automatique / Smartphone / Tablette, localStorage « affichage », page rechargée), fermeture de la fenêtre du dessus (APP.fermerDessus : touche Échap, bouton Retour d'Android ; V1.9 révision 3 : puis un mode d'écran, APP.modesDessus) et retour à l'écran précédent (pile des vues, crochet APP.surVue 60, history.pushState).
+// @zone socle | Navigation commune aux deux versions (V1.6) : menu « ⋯ » de l'en-tête (#plusBtn, #plusMenu : Actualiser, Plein écran, Affichage ; V1.9 dans l'APK : Plein écran masqué, « Réglages de l'application » #apkBtn, état du Retour signalé par APP.apk.retour), réglage « Thème » (V2.2 étape 6 : APP.theme {choisir, nom}, localStorage « theme », page rechargée ; V2.2 étape 10 : choisi dans la fenêtre « Thèmes », #themesBtn), réglage « Affichage » (APP.affichage : Automatique / Smartphone / Tablette, localStorage « affichage », page rechargée), fermeture de la fenêtre du dessus (APP.fermerDessus : touche Échap, bouton Retour d'Android ; V1.9 révision 3 : puis un mode d'écran, APP.modesDessus) et retour à l'écran précédent (pile des vues, crochet APP.surVue 60, history.pushState).
 (function () {
   const $ = APP.$, el = APP.el;
   APP.tel = !!(window.APP_VERSION && window.APP_VERSION.tel);
 
   // Réglage « Affichage » : pris en compte au rechargement de la page (version.js le lit avant le premier affichage)
   const CHOIX = [["auto", "Automatique"], ["tel", "Smartphone"], ["tab", "Tablette"]];
+  const VOILES = ".hb-scrim, .sc-scrim, .cj-scrim, .tf-voile"; // voiles des fenetres (Retour et APK)
   const choix = () => (window.APP_VERSION && window.APP_VERSION.choix) || "auto";
   function regler(c) {
     if (c === choix()) return;
@@ -13,7 +14,7 @@
     window.location.reload();
   }
   function boutons(box, cls) {
-    box.innerHTML = "";
+    box.replaceChildren();
     CHOIX.forEach(([c, nom]) => {
       const b = el("button", cls + (c === choix() ? " sel" : ""), nom);
       b.setAttribute("aria-pressed", c === choix() ? "true" : "false");
@@ -21,7 +22,20 @@
       box.appendChild(b);
     });
   }
-  APP.affichage = { choix: choix, regler: regler, boutons: boutons };
+  APP.affichage = { boutons: boutons };
+
+  // V2.2 étape 6 : réglage « Thème » (Automatique, puis les thèmes du registre APP_THEMES de version.js, dans son ordre) ; localStorage « theme », gardé sur cet appareil ;
+  // pris en compte au rechargement comme « Affichage » (version.js pose data-theme avant le premier affichage) ; Automatique suit ensuite le système en direct (version.js).
+  const choixTheme = () => (window.APP_THEME && window.APP_THEME.choix) || "sombre";
+  function reglerTheme(c) {
+    if (c === choixTheme()) return;
+    try { if (c === (window.APP_THEMES || [])[0].id) window.localStorage.removeItem("theme"); else window.localStorage.setItem("theme", c); }
+    catch (e) { APP.banner("Réglage non enregistré : stockage du navigateur indisponible.", "err"); return; }
+    window.location.reload();
+  }
+  // V2.2 étape 10 : le choix se fait dans la fenêtre « Thèmes » (themes-edition.js), ouverte par « Thème » du menu « ⋯ » et de l'écran Plus
+  const nomTheme = () => { const c = choixTheme(); if (c === "auto") return "Automatique"; const t = (window.APP_THEMES || []).find((x) => x.id === c); return t ? t.nom : ""; };
+  APP.theme = { choisir: reglerTheme, nom: nomTheme };
 
   // Menu « ⋯ » de l'en-tête (tablette ; sur téléphone, son contenu est dans l'écran « Plus »)
   const btn = $("plusBtn"), menu = $("plusMenu");
@@ -29,7 +43,7 @@
   function menuPlus(o) {
     menu.classList.toggle("hidden", !o);
     btn.setAttribute("aria-expanded", o ? "true" : "false");
-    if (o) { boutons($("affichage"), "paffb"); $("pmStamp").textContent = $("stamp").textContent || ""; } // V1.6 : heure de la dernière lecture (masquée de l'en-tête sur une tablette étroite)
+    if (o) { boutons($("affichage"), "paffb"); $("themesBtn").textContent = "Thème : " + nomTheme(); $("pmStamp").textContent = $("stamp").textContent || ""; } // V1.6 : heure de la dernière lecture (masquée de l'en-tête sur une tablette étroite)
   }
   btn.onclick = (e) => { e.stopPropagation(); menuPlus(!ouvert()); };
   // V1.9, dans l'APK : l'application est déjà en plein écran (« Plein écran » masqué) ; « Réglages de l'application » ouvre ceux de l'APK
@@ -38,6 +52,7 @@
     $("apkBtn").classList.remove("hidden");
     $("apkBtn").onclick = () => APP.apk.reglages();
   }
+  $("themesBtn").onclick = () => APP.themes.ouvrir();
   menu.addEventListener("click", (e) => { if (e.target.closest(".pitem")) menuPlus(false); });
   document.addEventListener("click", (e) => { if (ouvert() && !menu.contains(e.target)) menuPlus(false); });
 
@@ -49,7 +64,7 @@
   const modes = APP.modesDessus = APP.modesDessus || [];
   APP.fermerDessus = function () {
     if (ouvert()) { menuPlus(false); return true; }
-    const L = [...document.querySelectorAll(".hb-scrim, .sc-scrim, .cj-scrim, .tf-voile")].filter(visible);
+    const L = [...document.querySelectorAll(VOILES)].filter(visible);
     if (L.length) { const v = L[L.length - 1]; if (v.onclick) v.onclick({ target: v }); return true; }
     const m = modes.find((x) => x.actif());
     if (m) { m.quitter(); return true; }
@@ -94,7 +109,7 @@
   // V1.9, dans l'APK : l'application est prévenue chaque fois que la page sait, ou ne sait plus, traiter le bouton Retour (fenêtre, menu ou écran
   // précédent) ; sinon le Retour revient à l'application (assistant, sortie). Recalculé à chaque changement de vue et de page (fenêtres ouvertes ou fermées).
   if (APP.apk && APP.apk.present) {
-    const peut = () => ouvert() || [...document.querySelectorAll(".hb-scrim, .sc-scrim, .cj-scrim, .tf-voile")].some(visible) || modes.some((x) => x.actif()) || $("scrim").classList.contains("open") || pile.length > 1;
+    const peut = () => ouvert() || [...document.querySelectorAll(VOILES)].some(visible) || modes.some((x) => x.actif()) || $("scrim").classList.contains("open") || pile.length > 1;
     let t = null;
     const signaler = () => { if (t) return; t = setTimeout(() => { t = null; APP.apk.retour(peut()); }, 100); };
     APP.surVue(signaler, 61);

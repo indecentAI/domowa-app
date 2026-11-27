@@ -1,6 +1,6 @@
 {
   "id": "homeassistant",
-  "nom": "Home Assistant : lumieres et prises (HTTP local, adresse IPv4 privee, adresse donnees/homeassistant.json, jeton donnees/homeassistant-token.txt ; contrat hub ; V2.0 etape 3 : commandes ON/OFF, luminosite, couleur, blanc)",
+  "nom": "Home Assistant (HTTP local, adresse IPv4 privee, adresse donnees/homeassistant.json, jeton donnees/homeassistant-token.txt ; contrat hub) : lumieres et prises (V2.0), toutes les entites en capacites (V2.1, vue Equipements), ecriture generique en liste fermee (V2.2)",
   "module": "index.mjs",
   "types": ["light", "outlet"],
   "libelle": "Home Assistant"

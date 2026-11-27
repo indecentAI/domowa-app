@@ -1,10 +1,10 @@
-// @zone hubs | Routes generiques des hubs (contrat : CLAUDE.md, « Hubs » ; aucun nom de marque) : GET /api/hubs (types declares par les adaptateurs, hubs et leur etat, champs en liste blanche, sans secret), POST /api/hubs/:id/deconnexion {confirm: true},
+// @zone hubs | Routes generiques des hubs (contrat « Hubs » de .claude/rules/hubs.md ; aucun nom de marque) : GET /api/hubs (types declares par les adaptateurs, hubs et leur etat, champs en liste blanche, sans secret), POST /api/hubs/:id/deconnexion {confirm: true},
 // POST /api/hubs/recherche {type?} (reseau local, adresses privees ; sans type : tous les types libres, V2.0), POST /api/hubs/identifier {adresse} (V2.0 : type du hub a cette adresse), appairage guide : POST /api/hubs/appairage {type, champs}, GET /api/hubs/appairage, POST /api/hubs/appairage/annuler.
 // Les champs saisis (dont les secrets, type secret) ne sont jamais renvoyes, gardes ni journalises ; le jeton obtenu reste dans l'adaptateur.
 import { HttpError, describe } from '../core/http.mjs';
 import { log, borne } from '../core/outils.mjs';
 import { hubs, invalider, hubBloque } from '../core/appareils.mjs';
-import { privee } from '../core/reseau.mjs';
+import { privee, ADRESSE_REFUSEE } from '../core/reseau.mjs';
 
 const ETATS = ['connecte', 'deconnecte', 'erreur'];
 const ID = /^[a-z0-9][a-z0-9-]{0,39}$/;
@@ -38,8 +38,9 @@ const prio = (x) => (Number.isInteger(x.hub.priorite) ? x.hub.priorite : 9);
 const ordonnes = () => hubs().map((x, i) => [x, i]).sort((a, b) => prio(a[0]) - prio(b[0]) || a[1] - b[1]).map((a) => a[0]);
 const libres = () => ordonnes().filter((x) => champsDe(x) && !hubBloque(x.id));
 // V2.0, un hub a la fois : appairage d'un type refuse tant qu'un hub d'un autre type porte un jeton (core/appareils.mjs, hubBloque) ; texte affiche par la fenetre.
-const bloqueDe = (x) => { const n = hubBloque(x.id); return n ? 'Un seul hub à la fois : déconnectez d\'abord le hub actuel.' : null; }; // V2.0 : sans nommer le type de hub
-export async function etatHubs() {
+const BLOQUE = 'Un seul hub à la fois : déconnectez d\'abord le hub actuel.'; // V2.0 : sans nommer le type de hub
+const bloqueDe = (x) => (hubBloque(x.id) ? BLOQUE : null);
+async function etatHubs() {
   const xs = ordonnes();
   const lus = await Promise.all(xs.map(lireUn));
   return {
@@ -86,10 +87,10 @@ let enIdentification = false;
 async function identifier(c) {
   const body = await c.corps();
   const a = typeof body.adresse === 'string' ? body.adresse.trim() : '';
-  if (!privee(a)) throw new HttpError(400, 'Adresse refusée : seules les adresses IPv4 privées du réseau local sont acceptées (ex. 192.168.1.20).');
+  if (!privee(a)) throw new HttpError(400, ADRESSE_REFUSEE);
   if (enIdentification) throw new HttpError(409, 'Une vérification est déjà en cours.');
   const xs = libres();
-  if (!xs.length) throw new HttpError(409, 'Un seul hub à la fois : déconnectez d\'abord le hub actuel.');
+  if (!xs.length) throw new HttpError(409, BLOQUE);
   enIdentification = true;
   const ctrl = new AbortController();
   let rep;

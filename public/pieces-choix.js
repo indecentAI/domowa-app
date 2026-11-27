@@ -23,7 +23,7 @@
   // Pièce d'un appareil d'après les données déjà lues (appareils ON/OFF, GET /api/pieces/liste) : {id, nom, icone} ; null id : « Autres »
   function pieceDe(id) {
     const liste = APP.piecesListe || [];
-    const d = APP.find ? APP.find(APP.devices || [], id) : null;
+    const d = APP.find(APP.devices || [], id);
     if (d) {
       if (!d.room) return { id: null, nom: AUTRES, icone: null };
       const p = liste.find((x) => x.id === d.room.id);
@@ -34,7 +34,7 @@
   }
   // Type d'un appareil : lumière ou prise (appareils ON/OFF), sinon genre déclaré par son adaptateur (GET /api/pieces/liste)
   function genreDe(id) {
-    const d = APP.find ? APP.find(APP.devices || [], id) : null;
+    const d = APP.find(APP.devices || [], id);
     if (d) return d.kind === "light" ? "lumiere" : d.kind === "outlet" ? "prise" : "appareil";
     const tous = (APP.piecesAutres || []).concat(...(APP.piecesListe || []).map((p) => p.independants));
     const a = tous.find((x) => x.id === id);
@@ -90,13 +90,7 @@
   function ouvrir(l, nom) {
     if (root) return;
     ids = [].concat(l); titreNom = nom || ""; choix = undefined; erreur = ""; envoi = false; desarmer();
-    root = el("div", "hb-scrim"); root.id = "pcFenetre";
-    root.onclick = (e) => { if (e.target === root) fermer(); };
-    const panel = el("div", "hb-panel pc-panel"), head = el("div", "hb-head"), ics = el("div", "hb-ics"), x = el("button", "hb-ic", "×");
-    head.appendChild(el("div", "hb-titre", "Ranger"));
-    x.title = "Fermer"; x.setAttribute("aria-label", "Fermer"); x.onclick = fermer; ics.appendChild(x); head.appendChild(ics);
-    body = el("div", "hb-body pc-body");
-    panel.appendChild(head); panel.appendChild(body); root.appendChild(panel); document.body.appendChild(root);
+    ({ root, body } = APP.pieces.cadre({ id: "pcFenetre", panneau: "pc-panel", corps: "pc-body", titre: "Ranger", fermer })); // cadre commun (pieces.js)
     body.appendChild(el("div", "hb-note", "Lecture des pièces…"));
     charger();
   }
@@ -110,7 +104,7 @@
   }
   function rendre() {
     if (!root) return;
-    body.innerHTML = "";
+    body.replaceChildren();
     const aps = appareils(), ps = pieces(), c = cible();
     root.querySelector(".hb-titre").textContent = aps.length === 1 ? "Ranger « " + aps[0].nom + " »" : "Ranger " + aps.length + " appareils";
     // En-tête : type, origine, pièce actuelle
@@ -190,7 +184,7 @@
     APP.banner((aps.length === 1 ? aps[0].nom + " rangé" : aps.length + " appareils rangés") + " dans « " + nomC + " ».", "ok");
   }
 
-  APP.piecesChoix = { pieceDe: pieceDe, genreDe: genreDe, etiquette: etiquette, pastille: pastille, ouvrir: ouvrir, type: (g) => typeDe(g)[0], libelle: (g) => typeDe(g)[1], AUTRES: AUTRES };
+  APP.piecesChoix = { pieceDe: pieceDe, genreDe: genreDe, etiquette: etiquette, pastille: pastille, ouvrir: ouvrir, type: (g) => typeDe(g)[0] };
 
   // Panneau des commandes (lumières, prises) : type et nom si un seul appareil, pièce à toucher (ranger)
   function panneau() {
@@ -201,7 +195,7 @@
     const sel = APP.selIds ? APP.selIds() : [], ps = sel.map(pieceDe);
     const sig = sel.join(",") + "|" + ps.map((p) => p.id + ":" + p.nom + ":" + p.icone).join(",");
     if (box.dataset.sig === sig) return;
-    box.dataset.sig = sig; box.innerHTML = "";
+    box.dataset.sig = sig; box.replaceChildren();
     if (!sel.length) return;
     // Une ligne : type dessiné et nom (ou nombre d'appareils), pastille de la pièce à droite
     const l = el("div", "pc-un"), d = sel.length === 1 ? APP.find(APP.devices, sel[0]) : null;

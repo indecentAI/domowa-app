@@ -2,7 +2,7 @@
 // node outils/ia.mjs              -> regenere INDEX.md (et index/<zone>.md s'il y a un dossier index/) : une ligne de sortie
 // node outils/ia.mjs couts        -> cout (tokens) de CLAUDE.md, des regles de zone et de chaque paquet
 // node outils/ia.mjs pack z1 [z2] -> ~/dirigera-ia-z1-z2.tgz = CLAUDE.md + regles de zone + INDEX.md + fichiers des zones ("tout" = tout le code)
-// node outils/ia.mjs check        -> syntaxe, en-tetes @zone, droits des .sh, demarrage a blanc, index a jour, aucun secret ; avertissements (budget de CLAUDE.md, motifs de regles) jamais bloquants
+// node outils/ia.mjs check        -> syntaxe, en-tetes @zone, droits des .sh, demarrage a blanc, index a jour, aucun secret ; avertissements (budget de CLAUDE.md, motifs de regles, // FIN absent) jamais bloquants
 // node outils/ia.mjs publier <dossier> -> arbre du depot public (V1.8) : code livre + node_modules, apres le controle de publication (aucune donnee personnelle)
 // node outils/ia.mjs release      -> ~/dirigera-tablette-v<VERSION>.tgz : code, docs, polices, package-lock (sans donnees, secrets ni node_modules)
 // Convention : chaque fichier de code a, sur sa 1re ligne (2e apres #! ou doctype), "@zone z1 [z2] | role" (role facultatif
@@ -24,7 +24,7 @@ const EXTRA = { 'adapters/cameras/cameras-marques.json': ['cameras-ajout', 'Base
 const MANIFESTE = /^adapters\/[^/]+\/manifest\.json$/; // manifeste d'adaptateur : zone appareils, role = champ nom
 const extra = (r) => EXTRA[r] || (MANIFESTE.test(r) ? ['appareils', null] : null);
 const COMPACT = new Set(['diagnostic']); // zones listees sur une seule ligne (noms et tailles)
-const ORDRE = ['socle', 'appareils', 'equipements', 'hubs', 'homeassistant', 'pieces', 'lumieres', 'plan', 'scenarios', 'animations', 'accueil', 'cameras', 'cameras-ajout', 'electromenager', 'telephone', 'distant', 'distribution', 'apk', 'diagnostic', 'outils'];
+const ORDRE = ['socle', 'appareils', 'equipements', 'equipements-vue', 'hubs', 'fenetres', 'homeassistant', 'pieces', 'lumieres', 'plan', 'scenarios', 'animations', 'accueil', 'cameras', 'cameras-ajout', 'electromenager', 'telephone', 'distant', 'distribution', 'apk', 'themes', 'diagnostic', 'outils'];
 const BUDGET_CLAUDE = 30000; // octets : budget de CLAUDE.md a la racine (~9k tokens charges a chaque session) ; depasse : avertissement de check, jamais un echec
 const BUDGET_REGLE = 40000; // octets : budget d'un fichier de regles (.claude/rules, android/CLAUDE.md, banc/CLAUDE.md) ; meme principe
 const GROS = 20000; // octets : au-dela, l'index donne les reperes de fonctions (nom@ligne) du fichier
@@ -65,11 +65,11 @@ function lire(r) {
   if (f.role.length > 110) f.role = f.role.slice(0, 107) + '...'; // la suite est dans l'en-tete du fichier
   const parMethode = {};
   for (const l of txt.split('\n')) {
-    const mm = l.match(/req\.method === '([A-Z]+)'/) || l.match(/^\s*\['([A-Z]+)',\s*['\/]/);
+    const mm = l.match(/^\s*\['([A-Z]+)',\s*['\/]/); // ligne de routes = [[methode, chemin ou /regex/, ...]] (seul format lu depuis la qualite 2026-11-10 b)
     if (!mm) continue;
-    let p = (l.match(/p === '([^']+)'/) || l.match(/^\s*\['[A-Z]+',\s*'([^']+)'/) || [])[1];
+    let p = (l.match(/^\s*\['[A-Z]+',\s*'([^']+)'/) || [])[1];
     if (!p) {
-      const rx = (l.match(/p\.match\(\/\^(.+?)\$\/\)/) || l.match(/^\s*\['[A-Z]+',\s*\/\^(.+?)\$\//) || [])[1];
+      const rx = (l.match(/^\s*\['[A-Z]+',\s*\/\^(.+?)\$\//) || [])[1];
       if (rx) p = rx.replace(/\\\//g, '/').replace(/\(\[[^\]]*\](?:\{[^}]*\}|[+*])?\)/g, ':id').replace(/\(([^()]*)\)/g, '$1').replace(/\\/g, '');
     }
     if (p) (parMethode[mm[1]] = parMethode[mm[1]] || []).push(p.replace(/^\/api/, ''));
@@ -149,7 +149,7 @@ function fichiersIndex(liste) {
 function secrets() {
   const s = [];
   const essai = (fn) => { try { fn(); } catch (e) { /* absent : rien a proteger */ } };
-  essai(() => { const t = fs.readFileSync(path.join(DON, 'dirigera-token.txt'), 'utf8').trim(); if (t.length >= 8) s.push(t); });
+  for (const n of ['dirigera-token.txt', 'homeassistant-token.txt']) essai(() => { const t = fs.readFileSync(path.join(DON, n), 'utf8').trim(); if (t.length >= 8) s.push(t); }); // jetons des hubs (V2.0 : Home Assistant)
   essai(() => { const j = JSON.parse(fs.readFileSync(path.join(DON, 'smartthings.json'), 'utf8')); for (const c of ['client_secret', 'access_token', 'refresh_token']) if (j && typeof j[c] === 'string' && j[c].length >= 8) s.push(j[c]); });
   const pwd = (p) => essai(() => { const j = JSON.parse(fs.readFileSync(p, 'utf8')); if (j && typeof j.pwd === 'string' && j.pwd.length >= 6) s.push(j.pwd); });
   essai(() => { for (const n of fs.readdirSync(path.join(DON, 'camera-secrets'))) pwd(path.join(DON, 'camera-secrets', n)); });
@@ -264,7 +264,7 @@ function check(liste) {
   // Donnees : dossier 700, secrets 600, aucune donnee restee a la racine.
   const droits = (p) => fs.statSync(p).mode & 0o777;
   if (fs.existsSync(DON) && droits(DON) !== 0o700) ko('donnees/ : droits ' + droits(DON).toString(8) + ' (700 attendu : chmod 700 donnees)');
-  const secs = ['dirigera-token.txt', 'smartthings.json', 'clients.json', 'tls/cle.pem'].concat(fs.existsSync(path.join(DON, 'camera-secrets')) ? fs.readdirSync(path.join(DON, 'camera-secrets')).map((n) => 'camera-secrets/' + n) : []);
+  const secs = ['dirigera-token.txt', 'homeassistant-token.txt', 'smartthings.json', 'clients.json', 'tls/cle.pem'].concat(fs.existsSync(path.join(DON, 'camera-secrets')) ? fs.readdirSync(path.join(DON, 'camera-secrets')).map((n) => 'camera-secrets/' + n) : []);
   if (fs.existsSync(path.join(DON, 'tls')) && droits(path.join(DON, 'tls')) !== 0o700) ko('donnees/tls/ : droits ' + droits(path.join(DON, 'tls')).toString(8) + ' (700 attendu)'); // V1.8 : cle TLS du mode distant
   for (const r of secs) if (fs.existsSync(path.join(DON, r)) && droits(path.join(DON, r)) !== 0o600) ko('donnees/' + r + ' : droits ' + droits(path.join(DON, r)).toString(8) + ' (600 attendu)');
   for (const r of ['dirigera-token.txt', 'smartthings.json', 'scenarios.json', 'layout.json', 'colors.json', 'cameras.json', 'camera-secrets']) if (fs.existsSync(path.join(DIR, r))) ko(r + ' est encore a la racine : sa place est dans donnees/');
@@ -287,6 +287,7 @@ function check(liste) {
   if (decoupe()) for (const nom of fs.readdirSync(path.join(DIR, 'index'))) if (!(('index/' + nom) in att)) ko('index/' + nom + ' : zone disparue (lancer "node outils/ia.mjs")');
   if (fs.existsSync(path.join(DIR, '.claude', 'settings.json'))) { try { JSON.parse(fs.readFileSync(path.join(DIR, '.claude', 'settings.json'), 'utf8')); } catch (e) { ko('.claude/settings.json : JSON illisible'); } }
   const av = avertissements();
+  for (const f of liste) if (/\.m?js$/.test(f.r) && !/\/\/ FIN\s*$/.test(f.txt)) av.push(f.r + ' : « // FIN » absent en fin de fichier (non bloquant).'); // CLAUDE.md : en-tete @zone et // FIN
   for (const m of av) console.log('AVERTISSEMENT ' + m); // jamais bloquant : ni ko(), ni code de sortie
   console.log(n ? n + ' probleme(s).' : 'OK : ' + liste.length + ' fichiers controles, aucun secret, index a jour' + (av.length ? ' (' + av.length + ' avertissement(s))' : '') + '.');
   process.exitCode = n ? 1 : 0;

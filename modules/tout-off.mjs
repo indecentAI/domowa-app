@@ -2,6 +2,7 @@
 import { HttpError } from '../core/http.mjs';
 import { log } from '../core/outils.mjs';
 import { lister, appliquer, piece } from '../core/appareils.mjs';
+import { estOnOff } from '../core/modele.mjs';
 import { confirmer } from '../core/confirmation.mjs';
 import { toutArreter } from './animations-moteur.mjs';
 
@@ -10,7 +11,7 @@ export const routes = [
     const body = await c.corps();
     if (body.confirm !== true) throw new HttpError(400, 'Confirmation requise.');
     toutArreter('Tout OFF'); // V1.5 : toutes les animations arretees, sans retour a l'etat de depart
-    const targets = (await lister()).filter((d) => d.state.on === true);
+    const targets = (await lister()).filter((d) => estOnOff(d) && d.state.on === true); // appareils ON/OFF seulement (CLAUDE.md, estOnOff)
     // Lumieres : UNE commande par piece (le hub les applique toutes ensemble : ~90 ms mesure).
     const parPiece = new Map();
     for (const t of targets) if (t.type === 'light' && t.reachable && t.room && !parPiece.has(t.room.id)) parPiece.set(t.room.id, t);

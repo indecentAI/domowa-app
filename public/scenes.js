@@ -1,10 +1,11 @@
-// @zone scenarios | Onglet Scenarios : liste, appliquer, renommer, supprimer, icone (ICONS = SCENE_ICONS de modules/scenarios.mjs ; APP.sceneIcons pour animations.js), favori ;
+// @zone scenarios | Onglet Scenarios : liste, appliquer, renommer, supprimer, icone (ICONS = SCENE_ICONS de modules/scenarios.mjs ; APP.sceneIcon, APP.pictos et
+// APP.choisirIcone (fenetre d'icone) pour animations.js), favori ; scenes du hub (V2.1 : GET /api/scenes-hub, tuiles « hub », Lancer, Annuler) ;
 // V1.5 : un scenario n'a pas d'animation (l'animation porte tout, onglet Animations).
 (function () {
   var $ = APP.$, el = APP.el;
 
   APP.renderScenes = function () {
-    var box = $("sceneList"); box.innerHTML = "";
+    var box = $("sceneList"); box.replaceChildren();
     var i;
     if (!APP.scenes.length && !scenesHub.length) { box.appendChild(el("p", "", "Aucun scénario enregistré.")); return; }
     for (i = 0; i < APP.scenes.length; i++) box.appendChild(card(APP.scenes[i]));
@@ -50,10 +51,7 @@
     c.appendChild(row);
     return c;
   }
-  function libelleLancer(b, charge) {
-    if (charge) { b.setAttribute("aria-busy", "true"); b.innerHTML = '<span class="b-anneau" aria-hidden="true"></span><span>Chargement…</span>'; }
-    else { b.removeAttribute("aria-busy"); b.innerHTML = ICON_OK + "<span>Lancer</span>"; }
-  }
+  function libelleLancer(b, charge) { libelleAction(b, charge, "Lancer"); }
   function lancerHub(s, b) {
     if (lancement) return;
     lancement = s.id; libelleLancer(b, true);
@@ -79,8 +77,6 @@
 
   function card(s) {
     var c = el("div", "scard"), dots = el("div", "dots"), head = el("div", "shead"), i, l, dot;
-    var nm = el("div", "sname", s.name);
-    nm.title = s.name;
     var slot = el("button", "sslot" + (s.icon && iconSvg(s.icon) ? "" : " empty"), "");
     slot.innerHTML = (s.icon && iconSvg(s.icon)) ? iconSvg(s.icon) : ICON_PLUS;
     slot.title = "Choisir une icône"; slot.setAttribute("aria-label", "Choisir une icône");
@@ -170,7 +166,7 @@
     return "";
   }
   APP.sceneIcon = iconSvg;
-  APP.sceneIcons = ICONS;
+  APP.pictos = { modifier: ICON_EDIT, favori: ICON_STAR }; // pictogrammes communs (animations.js)
   APP.applyScene = function (s) { applyScene(s); };
   function saveField(s, field, value, undo) {
     APP.api("POST", "/api/scenarios/" + s.id + "/" + field, field === "icon" ? { icon: value } : { fav: value }, function (err, r) {
@@ -190,31 +186,35 @@
     APP.renderScenes();
     saveField(s, "icon", k || null, function () { if (was) s.icon = was; else delete s.icon; });
   }
-  function openPicker(s) {
+  // Fenêtre de choix d'icône, commune aux scénarios et aux animations (APP.choisirIcone(titre, actuelle, fini(k | null)) ; fermée en touchant le fond)
+  function choisirIcone(titre, actuelle, fini) {
     var wrap = el("div", "ipick"), pan = el("div", "ipanel"), grid = el("div", "igrid"), none = el("button", "inone", "Aucune icône"), i;
     function close() { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); }
     function mk(ic) {
-      var b = el("button", "iopt" + (s.icon === ic.k ? " sel" : ""), "");
+      var b = el("button", "iopt" + (actuelle === ic.k ? " sel" : ""), "");
       b.innerHTML = iconSvg(ic.k); b.title = ic.t; b.setAttribute("aria-label", ic.t);
-      b.onclick = function () { close(); setIcon(s, ic.k); };
+      b.onclick = function () { close(); fini(ic.k); };
       return b;
     }
     wrap.onclick = function (e) { if (e.target === wrap) close(); };
-    pan.appendChild(el("div", "ititle", "Icône de « " + s.name + " »"));
+    pan.appendChild(el("div", "ititle", titre));
     for (i = 0; i < ICONS.length; i++) grid.appendChild(mk(ICONS[i]));
     pan.appendChild(grid);
-    none.onclick = function () { close(); setIcon(s, null); };
+    none.onclick = function () { close(); fini(null); };
     pan.appendChild(none);
     wrap.appendChild(pan);
     document.body.appendChild(wrap);
   }
+  APP.choisirIcone = choisirIcone;
+  function openPicker(s) { choisirIcone("Icône de « " + s.name + " »", s.icon, function (k) { setIcon(s, k); }); }
 
   // Interface étape 1 : bouton « Appliquer » (coche .b-ico) et son état de chargement (aria-busy, anneau .b-anneau, « Chargement… » ; base.css .b-main)
   var ICON_OK = '<span class="b-ico" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>';
-  function libelleAppliquer(b, charge) {
+  function libelleAction(b, charge, texte) {
     if (charge) { b.setAttribute("aria-busy", "true"); b.innerHTML = '<span class="b-anneau" aria-hidden="true"></span><span>Chargement…</span>'; }
-    else { b.removeAttribute("aria-busy"); b.innerHTML = ICON_OK + "<span>Appliquer</span>"; }
+    else { b.removeAttribute("aria-busy"); b.innerHTML = ICON_OK + "<span>" + texte + "</span>"; }
   }
+  function libelleAppliquer(b, charge) { libelleAction(b, charge, "Appliquer"); }
 
   // scénario en cours d'envoi depuis son bouton : une liste reconstruite pendant l'envoi (lecture des scénarios) garde l'état de chargement
   var enCours = null;

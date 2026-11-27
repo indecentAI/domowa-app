@@ -66,7 +66,7 @@
   function renderMenu() {
     var m = $("menu");
     if (!m) return;
-    m.innerHTML = "";
+    m.replaceChildren();
     var md = navModel(), view = APP.view || "home", lists = (view === "lights"), here = "Accueil", i;
     function item(text, count, active, fn) {
       var b = el("button", "mitem" + (active ? " sel" : ""), "");
@@ -105,7 +105,7 @@
     var n = 0, i;
     for (i = 0; i < APP.devices.length; i++) if (APP.devices[i].isOn === true) n++;
     if (!n) { APP.banner("Tout est déjà OFF.", "ok"); return; }
-    if (!confirm("Passer en OFF tous les appareils ON (" + n + ") ? La prise est incluse.")) return;
+    if (!confirm("Passer en OFF tous les appareils ON (" + n + ") ? Lumières et prises comprises.")) return;
     APP.setBusy(true);
     APP.api("POST", "/api/actions/all-off", { confirm: true }, function (err, r) {
       APP.setBusy(false);

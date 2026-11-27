@@ -1,11 +1,9 @@
-// @zone lumieres | Panneau de reglage (colonne droite, prefixe q-) : ON/OFF, luminosite, Blanc/Couleur, cadran SVG, couleurs rapides et perso (appui long 0,7 s = supprimer) ; crochet de rendu APP.onRender (ordre 90 : apres tous les autres).
+// @zone lumieres | Panneau de reglage (colonne droite, prefixe q-) : selection, envoi aux lampes, affichage de l'etat, sections selon les capacites ; crochet de rendu APP.onRender (ordre 90 : apres tous les autres).
 // V1.5 : les reglages eux-memes viennent du composant partage APP.reglages (reglages.js, aussi utilise par l'editeur d'animation) ; ici : selection, envoi aux lampes, affichage de l'etat.
 // V2.1 : sections construites selon les capacites de la selection (union : luminosite si une lampe varie, blanc si une gere la temperature, couleur si une gere la couleur ; prises seules :
 // ON/OFF ; aucune selection : panneau complet, inactif) ; reconstruit quand cette liste change (APP.panneauCaps(ids) la calcule), par le crochet de rendu 44 : avant la ligne
 // de l'appareil (pieces-choix.js, 45, posee dans la carte du cadran) et l'etat (90) ; jamais pendant un geste ou un envoi differe.
 (function () {
-  if (APP.panelLoaded) return;
-  APP.panelLoaded = true;
   var R = null, P = null, N = null, st = { n: 0, on: 0 };
 
   function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
@@ -67,7 +65,7 @@
     st.n = n; st.on = lOn;
     N.root.className = "q-root" + (n ? "" : " q-off");
     N.title.textContent = n ? (n + " appareil" + (n > 1 ? "s" : "") + " sélectionné" + (n > 1 ? "s" : "")) : "Aucun appareil sélectionné";
-    N.hint.textContent = n ? (hasL ? "" : "Prise : ON / OFF uniquement.") : "Touche des bulles pour les sélectionner.";
+    N.hint.textContent = n ? (hasL ? "" : "Prise : ON / OFF uniquement.") : "Touchez des bulles pour les sélectionner.";
     if (N.bOn) {
       N.bOn.className = "q-seg" + (n && onCnt === n ? " sel on" : "");
       N.bOff.className = "q-seg" + (n && onCnt === 0 ? " sel off" : "");

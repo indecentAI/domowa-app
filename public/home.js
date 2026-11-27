@@ -29,8 +29,7 @@
     x.prec.disabled = !g; x.suiv.disabled = !d;
   }
   function majDefils() { var i; for (i = 0; i < lignes.length; i++) majDefil(lignes[i]); }
-  if (window.ResizeObserver) new ResizeObserver(function () { majDefils(); }).observe($("homeMain"));
-  else window.addEventListener("resize", majDefils);
+  new ResizeObserver(function () { majDefils(); }).observe($("homeMain"));
   function fleche(sens, line) {
     var b = el("button", "hfl", "");
     b.innerHTML = sens < 0 ? CHEV_G : CHEV_D;
@@ -52,8 +51,7 @@
   }
   function row(title, cards, emptyMsg, cle) {
     var s = el("div", "hrow"), line = el("div", "hline"), lab = el("div", "hlabel", title), fl = el("span", "hfleches", ""), x, i;
-    s.setAttribute("data-rubrique", title); // V1.6 : sur le téléphone, la rubrique Catégories est dans l'onglet Appareils (accueil.css)
-    if (cle) s.setAttribute("data-cle", cle); // V1.9 revision 3 : cle de la rubrique (pieces, actions, categories : accueil-org.js)
+    if (cle) s.setAttribute("data-cle", cle); // V1.9 revision 3 : cle de la rubrique (pieces, actions, categories : accueil-org.js ; telephone : Catégories dans l'onglet Appareils, accueil.css)
     x = { titre: title, row: s, line: line, prec: fleche(-1, line), suiv: fleche(1, line) };
     fl.appendChild(x.prec); fl.appendChild(x.suiv); lab.appendChild(fl);
     s.appendChild(lab);
@@ -218,7 +216,7 @@
   function loadFavs() {
     APP.api("GET", "/api/scenarios", null, function (err, d) {
       if (err || !d || !d.scenarios) return;
-      APP.scenes = d.scenarios; last = "";
+      APP.scenes = d.scenarios; // signature de l'accueil (scnSig) : reconstruit seulement si les scénarios ont changé
       APP.renderHome();
     });
   }
@@ -258,7 +256,7 @@
     for (i = 0; i < fabActions.length; i++) act.push({ cle: fabActions[i].cle, nom: "", w: fabActions[i].fab() });
     for (i = 1; i < act.length; i++) act[i].nom = (act[i].w.querySelector(".hname") || {}).textContent || act[i].cle;
     act = ranger("actions", act);
-    box.innerHTML = "";
+    box.replaceChildren();
     if (org && org.actif()) box.appendChild(org.barre());
     // V1.9 revision 3 : rubriques dans l'ordre choisi ; rubrique masquee absente hors du mode Organiser (dans le mode : grisee, « Masquée »)
     var rangs = { pieces: ["Pièces", rooms, "Aucune pièce."], actions: ["Actions", act, ""], categories: ["Catégories", cats, "Aucun appareil."] };

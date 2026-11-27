@@ -1,16 +1,13 @@
 // @zone appareils | Routes appareils : etat (V1.8 : mode local | distant du serveur, distant = demande arrivee par l'ecoute reseau ; V1.9 : version), liste des appareils ON/OFF (format ancien ; les cameras ont leurs routes) + pannes partielles, pieces ; commande d'un appareil : power, brightness (anciennes) et cmd {set} (generique, controlee contre caps). Reponse {device} relue apres 700 ms.
-import fs from 'node:fs';
-import path from 'node:path';
 import { HttpError } from '../core/http.mjs';
-import { sleep, DIR } from '../core/outils.mjs';
+import { sleep, versionInstallee } from '../core/outils.mjs';
 import { lister, trouver, appliquer, relire, pieces, pannes } from '../core/appareils.mjs';
 import { ancien, pourClient, reglage, manque, estOnOff } from '../core/modele.mjs';
 import { liberer } from './animations-moteur.mjs';
 import { etat } from '../core/serveur.mjs';
 
-// V1.9 : version installee (VERSION, lue au demarrage), donnee par /api/status (APK : compatibilite). Sans VERSION : null.
-let VERSION = null;
-try { VERSION = fs.readFileSync(path.join(DIR, 'VERSION'), 'utf8').trim().slice(0, 20) || null; } catch { /* sans VERSION */ }
+// V1.9 : version installee (VERSION, lue au demarrage), donnee par /api/status (APK anterieures a v1.8-2 ; les suivantes la lisent dans GET /api/clients). Sans VERSION : null.
+const VERSION = versionInstallee();
 
 const maintenant = () => new Date().toISOString();
 

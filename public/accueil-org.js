@@ -92,7 +92,7 @@
     attente = {}; enCours = true;
     APP.api("POST", "/api/accueil", corps, (err, d) => {
       enCours = false;
-      if (err) { APP.banner("Réglage de l'accueil non enregistré : " + err, "err"); lire(true); return; }
+      if (err) { APP.banner("Réglage de l'accueil non enregistré : " + err, "err"); lire(true, true); return; }
       if (d && d.accueil && !Object.keys(attente).length && !tEnvoi) adopter(d);
     });
   }
@@ -107,12 +107,13 @@
     if (fen) remplir();
     return JSON.stringify([ordre, rubs, masques, lisible]) !== avant;
   }
-  // Lecture du serveur (un autre appareil a pu changer l'accueil) : jamais pendant un enregistrement ni une carte tenue ; accueil reconstruit s'il change
-  function lire(force) {
+  // Lecture du serveur (un autre appareil a pu changer l'accueil) : jamais pendant un enregistrement ni une carte tenue (sauf force) ; accueil reconstruit
+  // s'il change (V2.2 revision 2 : plus de reconstruction forcee au chargement, cause de l'echec intermittent ui-accueil), ou toujours apres un envoi refuse (refaire)
+  function lire(force, refaire) {
     if (!force && (enCours || tEnvoi || tenue || Object.keys(attente).length)) return;
     APP.api("GET", "/api/accueil", null, (err, d) => {
       if (err || !d || !d.accueil || enCours || tEnvoi || tenue) return;
-      if (adopter(d) || force) APP.homeRafraichir();
+      if (adopter(d) || refaire) APP.homeRafraichir();
     });
   }
   // Classes de #viewHome : horg (mode Organiser), hcam-masq (colonne des caméras masquée : cameras.css)

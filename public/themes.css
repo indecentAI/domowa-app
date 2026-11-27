@@ -1,0 +1,223 @@
+/* @zone socle */
+/* themes.css (V2.2 étape 6, thème clair) : toutes les variables de l'interface. Chargée juste après base.css (index.html, appairage.html).
+   1. :root = thème Sombre (par défaut, valeurs exactes d'avant les thèmes). 2. Bloc dérivé : pour tout autre thème, chaque variable recalculée depuis les ancres et les familles
+   du thème (color-mix) ; un thème qui ne définit que ses ancres est déjà complet. 3. Un bloc par thème (:root[data-theme="<id>"]) : variables seulement, jamais un sélecteur de composant.
+   Le thème est posé par version.js (attribut data-theme de <html>, registre APP_THEMES). Recette « ajouter un thème » : .claude/rules/ui-style.md. */
+:root{--bg:#0a0d13;--card:#10141b;--card2:#171c26;--line:rgba(140,165,210,.16);--muted:#8a97ad;--text:#e9eef7;--accent:#4da3ff;
+ --carte-fond:linear-gradient(180deg,#212c42,#182033);--carte-haut:#212c42;--carte-fond-2:#161e2f;--carte-bord:transparent;--carte-ombre:0 6px 14px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05);--fenetre-plein:linear-gradient(180deg,#141922,#0f131a);
+ --relief-ombre:0 4px 10px rgba(0,0,0,.4);--relief-ombre-petit:0 2px 6px rgba(0,0,0,.4);--flottant-ombre:0 10px 24px rgba(0,0,0,.5);
+ --sel-lueur:0 0 10px rgba(170,210,255,.3);--halo-blanc:0 0 8px rgba(255,255,255,.25);--halo-vert:0 0 6px rgba(82,217,138,.3);--halo-ambre:0 0 8px rgba(255,220,150,.3);--actif-contour:rgba(255,255,255,.85);
+ --sec-couleur:#a3b1c7;--sec-graisse:500;--sec-taille:12px;--sec-espace:.1em;--sec-trait:var(--line);
+ --schema:dark;color-scheme:var(--schema);
+ --neutre-0:#000;--neutre-100:#fff;--surface-encre:#fff;--trait-encre:#fff;--encre:#fff;--reflet:#fff;--ombre:#000;--voile:#030509;--ligne:#8ca5d2;--sel:#cfe6ff;
+ --danger:#e5484d;--succes:#52d98a;--alerte:#ffbe46;--chaud:#ff9f5a;--local:#c7b8ff;
+ --cadran-piste:#2b303b;--cadran-centre:#11151c;--cadran-bord:#262c37;--cadran-pouce:#f3f4f7;--cadran-pouce-bord:#fff;--lampe-off:#6b7280;--pastille-off:#cfd3d8;--anim-off:#20252f;--pouce:#fff;
+ --accent-7:#06101f;--texte-66-b:#9aa6bb;--ombre-a55:rgba(0,0,0,.55);--reflet-a5:rgba(255,255,255,.05);
+ /* Nuances (thème clair, étape 1) : valeurs exactes du sombre, générées ; nom = rôle-nuance (voir commentaire plus bas) */
+ --accent-12:#0b1a30;--accent-20:#17304d;--accent-24:#203a5c;--accent-32:#2a4a7a;--accent-32-b:#1d4f86;--accent-45:#285abe;
+ --accent-45-a28:rgba(40,90,190,.28);--accent-48:#2d64c8;--accent-48-a32:rgba(45,100,200,.32);--accent-55:#3a7be0;--accent-60:#428cf0;--accent-60-a21:rgba(66,140,240,.21);
+ --accent-60-a28:rgba(66,140,240,.28);--accent-63:#4096ff;--accent-63-a18:rgba(64,150,255,.18);--accent-68:#5aa9ff;--accent-68-b:#5cc8ff;--accent-68-c:#5aa8ff;
+ --accent-68-d:#5aa2ff;--accent-72:#6eaaff;--accent-72-a60:rgba(110,170,255,.6);--accent-74:#78b4ff;--accent-74-a8:rgba(120,180,255,.08);--accent-74-a13:rgba(120,180,255,.13);
+ --accent-74-b:#78beff;--accent-74-b-a65:rgba(120,190,255,.65);--accent-74-c:#8fb3e8;--accent-74-d:#7cc0ff;--accent-75:#82aaff;--accent-75-a10:rgba(130,170,255,.1);
+ --accent-77:#8cc4ff;--accent-79:#a9c3ea;--accent-81:#9cc8ff;--accent-81-b:#9ccaff;--accent-81-c:#9fd0ff;--accent-89:#cfe0f5;
+ --accent-91:#dbe6f7;--accent-91-b:#dbe7f7;--accent-91-c:#d9e6f5;--accent-91-d:#cfe3ff;--accent-a14:rgba(77,163,255,.14);--accent-a18:rgba(77,163,255,.18);
+ --accent-a20:rgba(77,163,255,.2);--accent-a26:rgba(77,163,255,.26);--accent-a30:rgba(77,163,255,.3);--accent-a34:rgba(77,163,255,.34);--accent-a35:rgba(77,163,255,.35);--accent-a45:rgba(77,163,255,.45);
+ --accent-a60:rgba(77,163,255,.6);--accent-a70:rgba(77,163,255,.7);--accent-a80:rgba(77,163,255,.8);--accent-a85:rgba(77,163,255,.85);--alerte-6:#1a1305;--alerte-10:#2a1f08;
+ --alerte-13:#33270d;--alerte-15:#3a2e12;--alerte-18:#4a3913;--alerte-64:#ffbe46;--alerte-64-a35:rgba(255,190,70,.35);--alerte-64-a40:rgba(255,190,70,.4);
+ --alerte-64-a50:rgba(255,190,70,.5);--alerte-64-a60:rgba(255,190,70,.6);--alerte-64-a85:rgba(255,190,70,.85);--alerte-65:#f0b35a;--alerte-65-a45:rgba(240,179,90,.45);--alerte-69:#e8c777;
+ --alerte-70:#ffd166;--alerte-71:#ffd36b;--alerte-71-a16:rgba(255,211,107,.16);--alerte-71-a55:rgba(255,211,107,.55);--alerte-74:#ffd27a;--alerte-77:#ffd98a;
+ --alerte-77-b:#ffdc8c;--alerte-77-b-a15:rgba(255,220,140,.15);--alerte-77-c:#ffcf8a;--alerte-86:#ffe9b8;--chaud-59:#f0a03c;--chaud-59-a50:rgba(240,160,60,.5);
+ --chaud-68:#ff9f5a;--chaud-68-a50:rgba(255,159,90,.5);--chaud-68-a95:rgba(255,159,90,.95);--chaud-68-b:#ffb15c;--chaud-71:#ffb86b;--chaud-74:#ffc27a;
+ --chaud-83:#ffd7a8;--danger-14:#33161a;--danger-16:#3a1a1c;--danger-21:#4a1f24;--danger-22:#5a1518;--danger-23:#5a1c22;
+ --danger-27:#6b1f27;--danger-29:#6b2a30;--danger-31:#7a2630;--danger-59:#e5484d;--danger-59-a14:rgba(229,72,77,.14);--danger-59-a16:rgba(229,72,77,.16);
+ --danger-59-a20:rgba(229,72,77,.2);--danger-59-a30:rgba(229,72,77,.3);--danger-59-a45:rgba(229,72,77,.45);--danger-59-a60:rgba(229,72,77,.6);--danger-59-a80:rgba(229,72,77,.8);--danger-59-b:#ff4830;
+ --danger-59-b-a18:rgba(255,72,48,.18);--danger-60:#e0525f;--danger-60-a50:rgba(224,82,95,.5);--danger-65:#ff6a4c;--danger-68:#ff5a5f;--danger-68-a14:rgba(255,90,95,.14);
+ --danger-68-a20:rgba(255,90,95,.2);--danger-68-a35:rgba(255,90,95,.35);--danger-68-a45:rgba(255,90,95,.45);--danger-68-a50:rgba(255,90,95,.5);--danger-71:#ff6b70;--danger-77:#ff8a8e;
+ --danger-80:#ff9a9d;--danger-85:#ffb3b5;--danger-88:#ffcfc4;--danger-91:#ffd0d1;--danger-94:#ffe1e2;--reflet-a0:rgba(255,255,255,0);
+ --encre-a2:rgba(255,255,255,.02);--encre-a4:rgba(255,255,255,.04);--encre-a5:rgba(255,255,255,.05);--encre-a6:rgba(255,255,255,.06);--encre-a7:rgba(255,255,255,.07);--encre-a8:rgba(255,255,255,.08);
+ --encre-a9:rgba(255,255,255,.09);--encre-a10:rgba(255,255,255,.1);--encre-a12:rgba(255,255,255,.12);--encre-a14:rgba(255,255,255,.14);--encre-a18:rgba(255,255,255,.18);--encre-a20:rgba(255,255,255,.2);
+ --encre-a25:rgba(255,255,255,.25);--encre-a28:rgba(255,255,255,.28);--encre-a35:rgba(255,255,255,.35);--reflet-a70:rgba(255,255,255,.7);--ligne-a12:rgba(140,165,210,.12);--ligne-a14:rgba(140,165,210,.14);
+ --ligne-a16:rgba(140,165,210,.16);--ligne-a18:rgba(140,165,210,.18);--ligne-a20:rgba(140,165,210,.2);--ligne-a22:rgba(140,165,210,.22);--ligne-a24:rgba(140,165,210,.24);--ligne-a25:rgba(140,165,210,.25);
+ --ligne-a30:rgba(140,165,210,.3);--ligne-a32:rgba(140,165,210,.32);--ligne-a40:rgba(140,165,210,.4);--ligne-a45:rgba(140,165,210,.45);--ligne-a50:rgba(140,165,210,.5);--local-26:#3a3156;
+ --local-86:#c7b8ff;--ombre-a0:rgba(0,0,0,0);--ombre-a28:rgba(0,0,0,.28);--ombre-a35:rgba(0,0,0,.35);--ombre-a40:rgba(0,0,0,.4);--ombre-a50:rgba(0,0,0,.5);
+ --reflet-a6:rgba(255,255,255,.06);--reflet-a7:rgba(255,255,255,.07);--reflet-a8:rgba(255,255,255,.08);--reflet-a9:rgba(255,255,255,.09);--sel-a7:rgba(207,230,255,.07);--sel-a9:rgba(207,230,255,.09);
+ --sel-a10:rgba(207,230,255,.1);--sel-a22:rgba(207,230,255,.22);--sel-a35:rgba(207,230,255,.35);--sel-a45:rgba(207,230,255,.45);--sel-a55:rgba(207,230,255,.55);--succes-9:#06260f;
+ --succes-10:#10241b;--succes-11:#12241a;--succes-13:#143023;--succes-14:#12331d;--succes-25:#245a43;--succes-33:#2f7a5a;
+ --succes-33-a35:rgba(47,122,90,.35);--succes-49:#34c759;--succes-49-a18:rgba(52,199,89,.18);--succes-49-b:#3fb97a;--succes-49-b-a50:rgba(63,185,122,.5);--succes-49-b-a90:rgba(63,185,122,.9);
+ --succes-59:#52d98a;--succes-59-a35:rgba(82,217,138,.35);--succes-59-a50:rgba(82,217,138,.5);--succes-59-a55:rgba(82,217,138,.55);--succes-69:#6ff0a4;--succes-69-b:#7be495;
+ --succes-76:#9be8b0;--succes-78:#9ff0c0;--surface-3:#05080c;--surface-3-a60:rgba(5,8,12,.6);--surface-6:#0b0f15;--surface-6-b:#0a0e14;
+ --surface-6-b-a55:rgba(10,14,20,.55);--surface-7:#0d1117;--surface-7-b:#0c1017;--surface-7-c:#0e1218;--surface-8:#0f131a;--surface-8-b:#0f141c;
+ --surface-9:#12161e;--surface-9-b:#10151d;--surface-10:#141922;--surface-10-b:#121720;--surface-10-c:#121722;--surface-10-d:#131923;
+ --surface-11:#151a24;--surface-11-b:#151b25;--surface-11-c:#141b26;--surface-12:#141c2b;--surface-13:#171e2c;--surface-14:#1a2130;
+ --surface-15:#1e242e;--surface-15-b:#1c2330;--surface-15-c:#1d2430;--surface-16:#1f2633;--surface-16-b:#1f2836;--surface-16-c:#18263a;
+ --surface-16-d:#1d2536;--surface-17:#232a35;--surface-18:#222b3b;--surface-18-b:#242b39;--surface-18-c:#1f2a3d;--surface-20:#2b313b;
+ --surface-20-b:#2b303b;--surface-26:#3a414d;--surface-27:#3a4252;--surface-34:#4a5468;--surface-60:#8b97ab;--surface-71:#9fb3cc;
+ --surface-91:#dfe6f1;--surface-94:#e9eef7;--surface-95:#e6f2ff;--texte-5:#0a0d13;--texte-7:#0d1117;--texte-17:#232a35;
+ --texte-33:#4b5361;--texte-34:#4d5563;--texte-39:#566175;--texte-47:#6b7687;--texte-54:#7d8798;--texte-60:#8b97ab;
+ --texte-60-b:#8a96ab;--texte-66:#9aa6ba;--texte-70:#9fb0c8;--texte-71:#aab4c4;--texte-72:#aab4c5;--texte-76:#b7c0cf;
+ --texte-84:#c9d3e6;--texte-84-b:#c9d4e6;--texte-84-c:#c9d3e3;--texte-84-d:#cdd5e3;--texte-85:#cfd8e6;--texte-91:#dce6f5;
+ --texte-91-a50:rgba(220,230,245,.5);--texte-92:#dfe9f7;--texte-93:#e6ecf5;--texte-96:#eef5ff;--texte-96-b:#e9f3ff;--texte-96-c:#f3f4f7;
+ --texte-96-d:#f1f4fa;--trait-8:#0e131b;--trait-8-b:#0f131a;--trait-9:#0e1420;--trait-17:#232a36;--trait-18:#262c37;
+ --trait-21:#2c3442;--trait-21-b:#2a3344;--trait-22:#2c3647;--trait-27:#3a4252;--trait-28:#3a4456;--trait-33:#4b5361;
+ --trait-46:#6b7280;--voile-a60:rgba(3,5,9,.6);--voile-a62:rgba(3,5,9,.62);--voile-a70:rgba(3,5,9,.7)}
+/* Surface des cartes (interface étape 2) : --carte-fond (surface bleu nuit plus claire que le fond, sans contour : --carte-bord transparent sur 1 px, dimensions gardées), --carte-ombre (ombre sombre seule et reflet du haut),
+   --carte-fond-2 (carte dans une carte : plate, sans ombre), --carte-haut (haut de la surface : poignée de la feuille du smartphone), --fenetre-plein (fenêtre plein écran du smartphone : fond d'avant, ce n'est pas une carte). --muted : texte atténué, 4,5:1 au moins sur la surface.
+   Typographie (interface étape 3) : titres de section en majuscules (--sec-couleur, plus claire que --muted et plus sombre que --text ; --sec-graisse, --sec-taille, --sec-espace), trait de 1 px après les titres de l'accueil (--sec-trait).
+   Effets lumineux et ombres (interface étape 4) : --relief-ombre (bouton en relief, une seule ombre portée, plus son reflet inset), --relief-ombre-petit (bouton rond de moins de 40 px), --flottant-ombre (menu, bandeau),
+   --sel-lueur (lueur courte qui accompagne l'anneau de sélection #cfe6ff), --halo-blanc, --halo-vert, --halo-ambre (état actif : halo court, l'état reste porté par la bordure ou le fond), --actif-contour (contour blanc d'un cercle actif). */
+/* Bloc dérivé (tout thème autre que Sombre) : rôles et nuances recalculés depuis les ancres (--neutre-0 : fond extrême, --neutre-100 : encre extrême, --surface-encre et --trait-encre :
+   encre des surfaces et des traits, plus douce si besoin) et les familles (--accent, --danger, --succes, --alerte, --chaud, --local). Nuance N d'une famille : mêlée au fond (N plus sombre
+   que la famille dans le sombre) ou à l'encre (plus claire), dans la même proportion ; -aNN : transparence NN %. Un bloc de thème peut redéfinir n'importe laquelle de ces variables. */
+:root:not([data-theme="sombre"]){
+ --bg:color-mix(in srgb,var(--surface-encre) 4%,var(--neutre-0));--card:color-mix(in srgb,var(--surface-encre) 7%,var(--neutre-0));--card2:color-mix(in srgb,var(--surface-encre) 10%,var(--neutre-0));
+ --line:color-mix(in srgb,var(--ligne) 16%,transparent);--muted:color-mix(in srgb,var(--neutre-100) 58%,var(--neutre-0));--text:color-mix(in srgb,var(--neutre-100) 92%,var(--neutre-0));--sec-couleur:color-mix(in srgb,var(--neutre-100) 68%,var(--neutre-0));
+ --carte-fond:linear-gradient(180deg,color-mix(in srgb,var(--surface-encre) 13%,var(--neutre-0)),color-mix(in srgb,var(--surface-encre) 10%,var(--neutre-0)));--carte-haut:color-mix(in srgb,var(--surface-encre) 13%,var(--neutre-0));
+ --carte-fond-2:color-mix(in srgb,var(--surface-encre) 9%,var(--neutre-0));--carte-bord:transparent;--carte-ombre:0 6px 14px color-mix(in srgb,var(--ombre) 42%,transparent),inset 0 1px 0 color-mix(in srgb,var(--reflet) 5%,transparent);
+ --fenetre-plein:linear-gradient(180deg,color-mix(in srgb,var(--surface-encre) 8%,var(--neutre-0)),color-mix(in srgb,var(--surface-encre) 6%,var(--neutre-0)));
+ --relief-ombre:0 4px 10px color-mix(in srgb,var(--ombre) 40%,transparent);--relief-ombre-petit:0 2px 6px color-mix(in srgb,var(--ombre) 40%,transparent);--flottant-ombre:0 10px 24px color-mix(in srgb,var(--ombre) 50%,transparent);
+ --sel-lueur:0 0 10px color-mix(in srgb,var(--sel) 30%,transparent);--halo-blanc:0 0 8px color-mix(in srgb,var(--neutre-100) 25%,transparent);--halo-vert:0 0 6px color-mix(in srgb,var(--succes) 30%,transparent);
+ --halo-ambre:0 0 8px color-mix(in srgb,var(--alerte) 30%,transparent);--actif-contour:color-mix(in srgb,var(--neutre-100) 85%,transparent);
+ --cadran-piste:color-mix(in srgb,var(--surface-encre) 18%,var(--neutre-0));--cadran-centre:color-mix(in srgb,var(--surface-encre) 7%,var(--neutre-0));--cadran-bord:color-mix(in srgb,var(--trait-encre) 18%,var(--neutre-0));
+ --cadran-pouce:color-mix(in srgb,var(--neutre-100) 96%,var(--neutre-0));--cadran-pouce-bord:var(--neutre-100);--lampe-off:color-mix(in srgb,var(--neutre-100) 45%,var(--neutre-0));
+ --pastille-off:color-mix(in srgb,var(--neutre-100) 82%,var(--neutre-0));--anim-off:color-mix(in srgb,var(--surface-encre) 14%,var(--neutre-0));
+ --accent-12:color-mix(in srgb,var(--accent) 17%,var(--neutre-0));--accent-20:color-mix(in srgb,var(--accent) 30%,var(--neutre-0));--accent-24:color-mix(in srgb,var(--accent) 37%,var(--neutre-0));
+ --accent-32:color-mix(in srgb,var(--accent) 48%,var(--neutre-0));--accent-32-b:color-mix(in srgb,var(--accent) 49%,var(--neutre-0));--accent-45:color-mix(in srgb,var(--accent) 65%,var(--neutre-0));
+ --accent-45-a28:color-mix(in srgb,var(--accent-45) 28%,transparent);--accent-48:color-mix(in srgb,var(--accent) 70%,var(--neutre-0));--accent-48-a32:color-mix(in srgb,var(--accent-48) 32%,transparent);
+ --accent-55:color-mix(in srgb,var(--accent) 82%,var(--neutre-0));--accent-60:color-mix(in srgb,var(--accent) 90%,var(--neutre-0));--accent-60-a21:color-mix(in srgb,var(--accent-60) 21%,transparent);
+ --accent-60-a28:color-mix(in srgb,var(--accent-60) 28%,transparent);--accent-63:color-mix(in srgb,var(--accent) 95%,var(--neutre-0));--accent-63-a18:color-mix(in srgb,var(--accent-63) 18%,transparent);
+ --accent-68:color-mix(in srgb,var(--accent) 93%,var(--neutre-100));--accent-68-b:color-mix(in srgb,var(--accent) 81%,var(--neutre-100));--accent-68-c:color-mix(in srgb,var(--accent) 93%,var(--neutre-100));
+ --accent-68-d:color-mix(in srgb,var(--accent) 96%,var(--neutre-100));--accent-72:color-mix(in srgb,var(--accent) 85%,var(--neutre-100));--accent-72-a60:color-mix(in srgb,var(--accent-72) 60%,transparent);
+ --accent-74:color-mix(in srgb,var(--accent) 78%,var(--neutre-100));--accent-74-a8:color-mix(in srgb,var(--accent-74) 8%,transparent);--accent-74-a13:color-mix(in srgb,var(--accent-74) 13%,transparent);
+ --accent-74-b:color-mix(in srgb,var(--accent) 74%,var(--neutre-100));--accent-74-b-a65:color-mix(in srgb,var(--accent-74-b) 65%,transparent);--accent-74-c:color-mix(in srgb,var(--accent) 78%,var(--neutre-100));
+ --accent-74-d:color-mix(in srgb,var(--accent) 72%,var(--neutre-100));--accent-75:color-mix(in srgb,var(--accent) 78%,var(--neutre-100));--accent-75-a10:color-mix(in srgb,var(--accent-75) 10%,transparent);
+ --accent-77:color-mix(in srgb,var(--accent) 64%,var(--neutre-100));--accent-79:color-mix(in srgb,var(--accent) 62%,var(--neutre-100));--accent-81:color-mix(in srgb,var(--accent) 57%,var(--neutre-100));
+ --accent-81-b:color-mix(in srgb,var(--accent) 56%,var(--neutre-100));--accent-81-c:color-mix(in srgb,var(--accent) 53%,var(--neutre-100));--accent-89:color-mix(in srgb,var(--accent) 33%,var(--neutre-100));
+ --accent-91:color-mix(in srgb,var(--accent) 26%,var(--neutre-100));--accent-91-b:color-mix(in srgb,var(--accent) 25%,var(--neutre-100));--accent-91-c:color-mix(in srgb,var(--accent) 27%,var(--neutre-100));
+ --accent-91-d:color-mix(in srgb,var(--accent) 28%,var(--neutre-100));--accent-a14:color-mix(in srgb,var(--accent) 14%,transparent);--accent-a18:color-mix(in srgb,var(--accent) 18%,transparent);
+ --accent-a20:color-mix(in srgb,var(--accent) 20%,transparent);--accent-a26:color-mix(in srgb,var(--accent) 26%,transparent);--accent-a30:color-mix(in srgb,var(--accent) 30%,transparent);
+ --accent-a34:color-mix(in srgb,var(--accent) 34%,transparent);--accent-a35:color-mix(in srgb,var(--accent) 35%,transparent);--accent-a45:color-mix(in srgb,var(--accent) 45%,transparent);
+ --accent-a60:color-mix(in srgb,var(--accent) 60%,transparent);--accent-a70:color-mix(in srgb,var(--accent) 70%,transparent);--accent-a80:color-mix(in srgb,var(--accent) 80%,transparent);
+ --accent-a85:color-mix(in srgb,var(--accent) 85%,transparent);--alerte-6:color-mix(in srgb,var(--alerte) 10%,var(--neutre-0));--alerte-10:color-mix(in srgb,var(--alerte) 16%,var(--neutre-0));
+ --alerte-13:color-mix(in srgb,var(--alerte) 20%,var(--neutre-0));--alerte-15:color-mix(in srgb,var(--alerte) 24%,var(--neutre-0));--alerte-18:color-mix(in srgb,var(--alerte) 29%,var(--neutre-0));
+ --alerte-64:var(--alerte);--alerte-64-a35:color-mix(in srgb,var(--alerte-64) 35%,transparent);--alerte-64-a40:color-mix(in srgb,var(--alerte-64) 40%,transparent);
+ --alerte-64-a50:color-mix(in srgb,var(--alerte-64) 50%,transparent);--alerte-64-a60:color-mix(in srgb,var(--alerte-64) 60%,transparent);--alerte-64-a85:color-mix(in srgb,var(--alerte-64) 85%,transparent);
+ --alerte-65:color-mix(in srgb,var(--alerte) 99%,var(--neutre-0));--alerte-65-a45:color-mix(in srgb,var(--alerte-65) 45%,transparent);--alerte-69:color-mix(in srgb,var(--alerte) 86%,var(--neutre-100));
+ --alerte-70:color-mix(in srgb,var(--alerte) 80%,var(--neutre-100));--alerte-71:color-mix(in srgb,var(--alerte) 77%,var(--neutre-100));--alerte-71-a16:color-mix(in srgb,var(--alerte-71) 16%,transparent);
+ --alerte-71-a55:color-mix(in srgb,var(--alerte-71) 55%,transparent);--alerte-74:color-mix(in srgb,var(--alerte) 71%,var(--neutre-100));--alerte-77:color-mix(in srgb,var(--alerte) 62%,var(--neutre-100));
+ --alerte-77-b:color-mix(in srgb,var(--alerte) 60%,var(--neutre-100));--alerte-77-b-a15:color-mix(in srgb,var(--alerte-77-b) 15%,transparent);--alerte-77-c:color-mix(in srgb,var(--alerte) 66%,var(--neutre-100));
+ --alerte-86:color-mix(in srgb,var(--alerte) 37%,var(--neutre-100));--chaud-59:color-mix(in srgb,var(--chaud) 91%,var(--neutre-0));--chaud-59-a50:color-mix(in srgb,var(--chaud-59) 50%,transparent);
+ --chaud-68:var(--chaud);--chaud-68-a50:color-mix(in srgb,var(--chaud-68) 50%,transparent);--chaud-68-a95:color-mix(in srgb,var(--chaud-68) 95%,transparent);
+ --chaud-68-b:color-mix(in srgb,var(--chaud) 92%,var(--neutre-100));--chaud-71:color-mix(in srgb,var(--chaud) 84%,var(--neutre-100));--chaud-74:color-mix(in srgb,var(--chaud) 74%,var(--neutre-100));
+ --chaud-83:color-mix(in srgb,var(--chaud) 49%,var(--neutre-100));--danger-14:color-mix(in srgb,var(--danger) 26%,var(--neutre-0));--danger-16:color-mix(in srgb,var(--danger) 30%,var(--neutre-0));
+ --danger-21:color-mix(in srgb,var(--danger) 37%,var(--neutre-0));--danger-22:color-mix(in srgb,var(--danger) 36%,var(--neutre-0));--danger-23:color-mix(in srgb,var(--danger) 40%,var(--neutre-0));
+ --danger-27:color-mix(in srgb,var(--danger) 47%,var(--neutre-0));--danger-29:color-mix(in srgb,var(--danger) 52%,var(--neutre-0));--danger-31:color-mix(in srgb,var(--danger) 55%,var(--neutre-0));
+ --danger-59:var(--danger);--danger-59-a14:color-mix(in srgb,var(--danger-59) 14%,transparent);--danger-59-a16:color-mix(in srgb,var(--danger-59) 16%,transparent);
+ --danger-59-a20:color-mix(in srgb,var(--danger-59) 20%,transparent);--danger-59-a30:color-mix(in srgb,var(--danger-59) 30%,transparent);--danger-59-a45:color-mix(in srgb,var(--danger-59) 45%,transparent);
+ --danger-59-a60:color-mix(in srgb,var(--danger-59) 60%,transparent);--danger-59-a80:color-mix(in srgb,var(--danger-59) 80%,transparent);--danger-59-b:color-mix(in srgb,var(--danger) 99%,var(--neutre-0));
+ --danger-59-b-a18:color-mix(in srgb,var(--danger-59-b) 18%,transparent);--danger-60:color-mix(in srgb,var(--danger) 94%,var(--neutre-100));--danger-60-a50:color-mix(in srgb,var(--danger-60) 50%,transparent);
+ --danger-65:color-mix(in srgb,var(--danger) 85%,var(--neutre-100));--danger-68:color-mix(in srgb,var(--danger) 84%,var(--neutre-100));--danger-68-a14:color-mix(in srgb,var(--danger-68) 14%,transparent);
+ --danger-68-a20:color-mix(in srgb,var(--danger-68) 20%,transparent);--danger-68-a35:color-mix(in srgb,var(--danger-68) 35%,transparent);--danger-68-a45:color-mix(in srgb,var(--danger-68) 45%,transparent);
+ --danger-68-a50:color-mix(in srgb,var(--danger-68) 50%,transparent);--danger-71:color-mix(in srgb,var(--danger) 75%,var(--neutre-100));--danger-77:color-mix(in srgb,var(--danger) 59%,var(--neutre-100));
+ --danger-80:color-mix(in srgb,var(--danger) 51%,var(--neutre-100));--danger-85:color-mix(in srgb,var(--danger) 39%,var(--neutre-100));--danger-88:color-mix(in srgb,var(--danger) 28%,var(--neutre-100));
+ --danger-91:color-mix(in srgb,var(--danger) 24%,var(--neutre-100));--danger-94:color-mix(in srgb,var(--danger) 15%,var(--neutre-100));--reflet-a0:color-mix(in srgb,var(--reflet) 0%,transparent);
+ --encre-a2:color-mix(in srgb,var(--encre) 2%,transparent);--encre-a4:color-mix(in srgb,var(--encre) 4%,transparent);--encre-a5:color-mix(in srgb,var(--encre) 5%,transparent);
+ --encre-a6:color-mix(in srgb,var(--encre) 6%,transparent);--encre-a7:color-mix(in srgb,var(--encre) 7%,transparent);--encre-a8:color-mix(in srgb,var(--encre) 8%,transparent);
+ --encre-a9:color-mix(in srgb,var(--encre) 9%,transparent);--encre-a10:color-mix(in srgb,var(--encre) 10%,transparent);--encre-a12:color-mix(in srgb,var(--encre) 12%,transparent);
+ --encre-a14:color-mix(in srgb,var(--encre) 14%,transparent);--encre-a18:color-mix(in srgb,var(--encre) 18%,transparent);--encre-a20:color-mix(in srgb,var(--encre) 20%,transparent);
+ --encre-a25:color-mix(in srgb,var(--encre) 25%,transparent);--encre-a28:color-mix(in srgb,var(--encre) 28%,transparent);--encre-a35:color-mix(in srgb,var(--encre) 35%,transparent);
+ --reflet-a70:color-mix(in srgb,var(--reflet) 70%,transparent);--ligne-a12:color-mix(in srgb,var(--ligne) 12%,transparent);--ligne-a14:color-mix(in srgb,var(--ligne) 14%,transparent);
+ --ligne-a16:color-mix(in srgb,var(--ligne) 16%,transparent);--ligne-a18:color-mix(in srgb,var(--ligne) 18%,transparent);--ligne-a20:color-mix(in srgb,var(--ligne) 20%,transparent);
+ --ligne-a22:color-mix(in srgb,var(--ligne) 22%,transparent);--ligne-a24:color-mix(in srgb,var(--ligne) 24%,transparent);--ligne-a25:color-mix(in srgb,var(--ligne) 25%,transparent);
+ --ligne-a30:color-mix(in srgb,var(--ligne) 30%,transparent);--ligne-a32:color-mix(in srgb,var(--ligne) 32%,transparent);--ligne-a40:color-mix(in srgb,var(--ligne) 40%,transparent);
+ --ligne-a45:color-mix(in srgb,var(--ligne) 45%,transparent);--ligne-a50:color-mix(in srgb,var(--ligne) 50%,transparent);--local-26:color-mix(in srgb,var(--local) 30%,var(--neutre-0));
+ --local-86:var(--local);--ombre-a0:color-mix(in srgb,var(--ombre) 0%,transparent);--ombre-a28:color-mix(in srgb,var(--ombre) 28%,transparent);
+ --ombre-a35:color-mix(in srgb,var(--ombre) 35%,transparent);--ombre-a40:color-mix(in srgb,var(--ombre) 40%,transparent);--ombre-a50:color-mix(in srgb,var(--ombre) 50%,transparent);
+ --reflet-a6:color-mix(in srgb,var(--reflet) 6%,transparent);--reflet-a7:color-mix(in srgb,var(--reflet) 7%,transparent);--reflet-a8:color-mix(in srgb,var(--reflet) 8%,transparent);
+ --reflet-a9:color-mix(in srgb,var(--reflet) 9%,transparent);--sel-a7:color-mix(in srgb,var(--sel) 7%,transparent);--sel-a9:color-mix(in srgb,var(--sel) 9%,transparent);
+ --sel-a10:color-mix(in srgb,var(--sel) 10%,transparent);--sel-a22:color-mix(in srgb,var(--sel) 22%,transparent);--sel-a35:color-mix(in srgb,var(--sel) 35%,transparent);
+ --sel-a45:color-mix(in srgb,var(--sel) 45%,transparent);--sel-a55:color-mix(in srgb,var(--sel) 55%,transparent);--succes-9:color-mix(in srgb,var(--succes) 14%,var(--neutre-0));
+ --succes-10:color-mix(in srgb,var(--succes) 18%,var(--neutre-0));--succes-11:color-mix(in srgb,var(--succes) 18%,var(--neutre-0));--succes-13:color-mix(in srgb,var(--succes) 24%,var(--neutre-0));
+ --succes-14:color-mix(in srgb,var(--succes) 22%,var(--neutre-0));--succes-25:color-mix(in srgb,var(--succes) 44%,var(--neutre-0));--succes-33:color-mix(in srgb,var(--succes) 59%,var(--neutre-0));
+ --succes-33-a35:color-mix(in srgb,var(--succes-33) 35%,transparent);--succes-49:color-mix(in srgb,var(--succes) 78%,var(--neutre-0));--succes-49-a18:color-mix(in srgb,var(--succes-49) 18%,transparent);
+ --succes-49-b:color-mix(in srgb,var(--succes) 85%,var(--neutre-0));--succes-49-b-a50:color-mix(in srgb,var(--succes-49-b) 50%,transparent);--succes-49-b-a90:color-mix(in srgb,var(--succes-49-b) 90%,transparent);
+ --succes-59:var(--succes);--succes-59-a35:color-mix(in srgb,var(--succes-59) 35%,transparent);--succes-59-a50:color-mix(in srgb,var(--succes-59) 50%,transparent);
+ --succes-59-a55:color-mix(in srgb,var(--succes-59) 55%,transparent);--succes-69:color-mix(in srgb,var(--succes) 76%,var(--neutre-100));--succes-69-b:color-mix(in srgb,var(--succes) 81%,var(--neutre-100));
+ --succes-76:color-mix(in srgb,var(--succes) 62%,var(--neutre-100));--succes-78:color-mix(in srgb,var(--succes) 53%,var(--neutre-100));--surface-3:color-mix(in srgb,var(--surface-encre) 3%,var(--neutre-0));
+ --surface-3-a60:color-mix(in srgb,var(--surface-3) 60%,transparent);--surface-6:color-mix(in srgb,var(--surface-encre) 6%,var(--neutre-0));--surface-6-b:color-mix(in srgb,var(--surface-encre) 6%,var(--neutre-0));
+ --surface-6-b-a55:color-mix(in srgb,var(--surface-6-b) 55%,transparent);--surface-7:color-mix(in srgb,var(--surface-encre) 7%,var(--neutre-0));--surface-7-b:color-mix(in srgb,var(--surface-encre) 7%,var(--neutre-0));
+ --surface-7-c:color-mix(in srgb,var(--surface-encre) 7%,var(--neutre-0));--surface-8:color-mix(in srgb,var(--surface-encre) 8%,var(--neutre-0));--surface-8-b:color-mix(in srgb,var(--surface-encre) 8%,var(--neutre-0));
+ --surface-9:color-mix(in srgb,var(--surface-encre) 9%,var(--neutre-0));--surface-9-b:color-mix(in srgb,var(--surface-encre) 9%,var(--neutre-0));--surface-10:color-mix(in srgb,var(--surface-encre) 10%,var(--neutre-0));
+ --surface-10-b:color-mix(in srgb,var(--surface-encre) 10%,var(--neutre-0));--surface-10-c:color-mix(in srgb,var(--surface-encre) 10%,var(--neutre-0));--surface-10-d:color-mix(in srgb,var(--surface-encre) 10%,var(--neutre-0));
+ --surface-11:color-mix(in srgb,var(--surface-encre) 11%,var(--neutre-0));--surface-11-b:color-mix(in srgb,var(--surface-encre) 11%,var(--neutre-0));--surface-11-c:color-mix(in srgb,var(--surface-encre) 11%,var(--neutre-0));
+ --surface-12:color-mix(in srgb,var(--surface-encre) 12%,var(--neutre-0));--surface-13:color-mix(in srgb,var(--surface-encre) 13%,var(--neutre-0));--surface-14:color-mix(in srgb,var(--surface-encre) 14%,var(--neutre-0));
+ --surface-15:color-mix(in srgb,var(--surface-encre) 15%,var(--neutre-0));--surface-15-b:color-mix(in srgb,var(--surface-encre) 15%,var(--neutre-0));--surface-15-c:color-mix(in srgb,var(--surface-encre) 15%,var(--neutre-0));
+ --surface-16:color-mix(in srgb,var(--surface-encre) 16%,var(--neutre-0));--surface-16-b:color-mix(in srgb,var(--surface-encre) 16%,var(--neutre-0));--surface-16-c:color-mix(in srgb,var(--surface-encre) 16%,var(--neutre-0));
+ --surface-16-d:color-mix(in srgb,var(--surface-encre) 16%,var(--neutre-0));--surface-17:color-mix(in srgb,var(--surface-encre) 17%,var(--neutre-0));--surface-18:color-mix(in srgb,var(--surface-encre) 18%,var(--neutre-0));
+ --surface-18-b:color-mix(in srgb,var(--surface-encre) 18%,var(--neutre-0));--surface-18-c:color-mix(in srgb,var(--surface-encre) 18%,var(--neutre-0));--surface-20:color-mix(in srgb,var(--surface-encre) 20%,var(--neutre-0));
+ --surface-20-b:color-mix(in srgb,var(--surface-encre) 20%,var(--neutre-0));--surface-26:color-mix(in srgb,var(--surface-encre) 26%,var(--neutre-0));--surface-27:color-mix(in srgb,var(--surface-encre) 27%,var(--neutre-0));
+ --surface-34:color-mix(in srgb,var(--surface-encre) 34%,var(--neutre-0));--surface-60:color-mix(in srgb,var(--surface-encre) 60%,var(--neutre-0));--surface-71:color-mix(in srgb,var(--surface-encre) 71%,var(--neutre-0));
+ --surface-91:color-mix(in srgb,var(--surface-encre) 91%,var(--neutre-0));--surface-94:color-mix(in srgb,var(--surface-encre) 94%,var(--neutre-0));--surface-95:color-mix(in srgb,var(--surface-encre) 95%,var(--neutre-0));
+ --texte-5:color-mix(in srgb,var(--neutre-100) 5%,var(--neutre-0));--texte-7:color-mix(in srgb,var(--neutre-100) 7%,var(--neutre-0));--texte-17:color-mix(in srgb,var(--neutre-100) 17%,var(--neutre-0));
+ --texte-33:color-mix(in srgb,var(--neutre-100) 33%,var(--neutre-0));--texte-34:color-mix(in srgb,var(--neutre-100) 34%,var(--neutre-0));--texte-39:color-mix(in srgb,var(--neutre-100) 39%,var(--neutre-0));
+ --texte-47:color-mix(in srgb,var(--neutre-100) 47%,var(--neutre-0));--texte-54:color-mix(in srgb,var(--neutre-100) 54%,var(--neutre-0));--texte-60:color-mix(in srgb,var(--neutre-100) 60%,var(--neutre-0));
+ --texte-60-b:color-mix(in srgb,var(--neutre-100) 60%,var(--neutre-0));--texte-66:color-mix(in srgb,var(--neutre-100) 66%,var(--neutre-0));--texte-70:color-mix(in srgb,var(--neutre-100) 70%,var(--neutre-0));
+ --texte-71:color-mix(in srgb,var(--neutre-100) 71%,var(--neutre-0));--texte-72:color-mix(in srgb,var(--neutre-100) 72%,var(--neutre-0));--texte-76:color-mix(in srgb,var(--neutre-100) 76%,var(--neutre-0));
+ --texte-84:color-mix(in srgb,var(--neutre-100) 84%,var(--neutre-0));--texte-84-b:color-mix(in srgb,var(--neutre-100) 84%,var(--neutre-0));--texte-84-c:color-mix(in srgb,var(--neutre-100) 84%,var(--neutre-0));
+ --texte-84-d:color-mix(in srgb,var(--neutre-100) 84%,var(--neutre-0));--texte-85:color-mix(in srgb,var(--neutre-100) 85%,var(--neutre-0));--texte-91:color-mix(in srgb,var(--neutre-100) 91%,var(--neutre-0));
+ --texte-91-a50:color-mix(in srgb,var(--texte-91) 50%,transparent);--texte-92:color-mix(in srgb,var(--neutre-100) 92%,var(--neutre-0));--texte-93:color-mix(in srgb,var(--neutre-100) 93%,var(--neutre-0));
+ --texte-96:color-mix(in srgb,var(--neutre-100) 96%,var(--neutre-0));--texte-96-b:color-mix(in srgb,var(--neutre-100) 96%,var(--neutre-0));--texte-96-c:color-mix(in srgb,var(--neutre-100) 96%,var(--neutre-0));
+ --texte-96-d:color-mix(in srgb,var(--neutre-100) 96%,var(--neutre-0));--trait-8:color-mix(in srgb,var(--trait-encre) 8%,var(--neutre-0));--trait-8-b:color-mix(in srgb,var(--trait-encre) 8%,var(--neutre-0));
+ --trait-9:color-mix(in srgb,var(--trait-encre) 9%,var(--neutre-0));--trait-17:color-mix(in srgb,var(--trait-encre) 17%,var(--neutre-0));--trait-18:color-mix(in srgb,var(--trait-encre) 18%,var(--neutre-0));
+ --trait-21:color-mix(in srgb,var(--trait-encre) 21%,var(--neutre-0));--trait-21-b:color-mix(in srgb,var(--trait-encre) 21%,var(--neutre-0));--trait-22:color-mix(in srgb,var(--trait-encre) 22%,var(--neutre-0));
+ --trait-27:color-mix(in srgb,var(--trait-encre) 27%,var(--neutre-0));--trait-28:color-mix(in srgb,var(--trait-encre) 28%,var(--neutre-0));--trait-33:color-mix(in srgb,var(--trait-encre) 33%,var(--neutre-0));
+ --trait-46:color-mix(in srgb,var(--trait-encre) 46%,var(--neutre-0));--voile-a60:color-mix(in srgb,var(--voile) 60%,transparent);--voile-a62:color-mix(in srgb,var(--voile) 62%,transparent);
+ --voile-a70:color-mix(in srgb,var(--voile) 70%,transparent);
+ --accent-7:color-mix(in srgb,var(--accent) 11%,var(--neutre-0));--texte-66-b:color-mix(in srgb,var(--neutre-100) 66%,var(--neutre-0));--ombre-a55:color-mix(in srgb,var(--ombre) 55%,transparent);--reflet-a5:color-mix(in srgb,var(--reflet) 5%,transparent)}
+
+/* Thème Clair (bleuté, cohérent avec l'accent ; V2.2 étape 9 : adouci, fonds et cartes gris bleuté plutôt que blancs) : ancres, familles plus sombres (contraste sur fond clair), rôles réglés à la main (cartes claires sur fond bleuté, ombres bleu nuit légères,
+   halos et contours actifs foncés : le blanc ne se voit plus). --muted : 5,6:1 sur la carte blanche, 5,1:1 sur le fond. */
+:root[data-theme="clair"]{--schema:light;
+ --neutre-0:#eaeef5;--neutre-100:#0f1828;--surface-encre:#6d7c96;--trait-encre:#4a5a78;--encre:#0f1828;--reflet:#fff;--ombre:#000;--voile:#1b2740;--ligne:#3d5277;--sel:#1b64c4;
+ --accent:#1f6fd1;--danger:#c62f36;--succes:#0b6a3b;--alerte:#8f5806;--chaud:#a2470c;--local:#6a4bc9;
+ --bg:#e4e9f1;--card:#f4f6fa;--card2:#eceff5;--line:rgba(40,62,102,.16);--muted:#566174;--text:#151d2c;--sec-couleur:#45526a;
+ --carte-fond:linear-gradient(180deg,#f5f7fb,#eef1f6);--carte-haut:#f5f7fb;--carte-fond-2:#e9edf3;--carte-bord:transparent;--carte-ombre:0 3px 10px rgba(0,0,0,.1),inset 0 1px 0 rgba(255,255,255,.8);
+ --fenetre-plein:linear-gradient(180deg,#eef1f6,#e4e9f1);--relief-ombre:0 2px 6px rgba(0,0,0,.12);--relief-ombre-petit:0 1px 4px rgba(0,0,0,.12);--flottant-ombre:0 10px 24px rgba(0,0,0,.16);
+ --sel-lueur:0 0 10px rgba(27,100,196,.25);--halo-blanc:0 0 8px rgba(27,100,196,.22);--halo-vert:0 0 6px rgba(18,128,74,.3);--halo-ambre:0 0 8px rgba(168,105,12,.3);--actif-contour:rgba(21,29,44,.85);
+ --cadran-piste:#d6dde8;--cadran-centre:#f4f6fa;--cadran-bord:#c9d1dd;--cadran-pouce:#fff;--cadran-pouce-bord:#8792a6;--lampe-off:#a3acba;--pastille-off:#c2c9d4;--anim-off:#d9dfe8;--pouce:#fff;--texte-60:#566174;--texte-60-b:#566174;--texte-66:#535e71;--texte-66-b:#535e71;--ombre-a55:rgba(0,0,0,.16);
+ --ombre-a28:rgba(0,0,0,.1);--ombre-a35:rgba(0,0,0,.12);--ombre-a40:rgba(0,0,0,.13);--ombre-a50:rgba(0,0,0,.16);
+ --voile-a70:rgba(27,39,64,.42);--voile-a62:rgba(27,39,64,.38);--voile-a60:rgba(27,39,64,.36)}
+
+/* Thèmes de saison (V2.2 étape 9) : palettes assorties, fonds teintés (jamais blancs). Printemps et Été : clairs (schema light), mêmes ombres neutres légères que Clair ;
+   Automne : sombre et chaud (schema dark), ombres dérivées comme le Sombre. Textes secondaires réglés à 4,5:1 au moins sur cartes et fonds (banc : typographie par thème). */
+/* Printemps : vert sauge et rose framboise */
+:root[data-theme="printemps"]{--schema:light;
+ --neutre-0:#e8f0e4;--neutre-100:#14241a;--surface-encre:#66806c;--trait-encre:#4b6652;--encre:#14241a;--voile:#1d3324;--ligne:#3e5c47;--sel:#a8335c;
+ --accent:#b03a64;--danger:#b02e2b;--succes:#1e6a2f;--alerte:#7f5500;--chaud:#a94f17;--local:#6a4bb8;
+ --bg:#dde8d8;--card:#eef4ea;--card2:#e5eee0;--line:rgba(40,80,52,.18);--muted:#4c5e51;--text:#16261b;--sec-couleur:#3d5043;
+ --carte-fond:linear-gradient(180deg,#f0f6ec,#e8f0e3);--carte-haut:#f0f6ec;--carte-fond-2:#e2ebdd;--fenetre-plein:linear-gradient(180deg,#e8f0e3,#dde8d8);
+ --ombre:#000;--carte-bord:transparent;--carte-ombre:0 3px 10px rgba(0,0,0,.1),inset 0 1px 0 rgba(255,255,255,.6);--relief-ombre:0 2px 6px rgba(0,0,0,.12);--relief-ombre-petit:0 1px 4px rgba(0,0,0,.12);--flottant-ombre:0 10px 24px rgba(0,0,0,.16);
+ --ombre-a28:rgba(0,0,0,.1);--ombre-a35:rgba(0,0,0,.12);--ombre-a40:rgba(0,0,0,.13);--ombre-a50:rgba(0,0,0,.16);--ombre-a55:rgba(0,0,0,.16);--reflet:#fff;--pouce:#fff;--cadran-pouce:#fff;
+ --sel-lueur:0 0 10px rgba(168,51,92,.25);--halo-blanc:0 0 8px rgba(168,51,92,.22);--halo-vert:0 0 6px rgba(42,122,60,.3);--halo-ambre:0 0 8px rgba(138,92,0,.3);--actif-contour:rgba(22,38,27,.85);
+ --cadran-piste:#cddbc8;--cadran-centre:#eef4ea;--cadran-bord:#bfcfba;--cadran-pouce-bord:#7a8f7d;--lampe-off:#9caf9e;--pastille-off:#bccbbb;--anim-off:#cfdcc9;
+ --texte-60:#4c5e51;--texte-60-b:#4c5e51;--texte-66:#49594d;--texte-66-b:#49594d;--voile-a70:rgba(29,51,36,.42);--voile-a62:rgba(29,51,36,.38);--voile-a60:rgba(29,51,36,.36)}
+/* Été : sable chaud et bleu lagon */
+:root[data-theme="ete"]{--schema:light;
+ --neutre-0:#f3ead9;--neutre-100:#2a1f12;--surface-encre:#8a7660;--trait-encre:#6b5a44;--encre:#2a1f12;--voile:#3a2c1a;--ligne:#6b5a44;--sel:#0a6f76;
+ --accent:#0b7880;--danger:#ad3022;--succes:#1d6823;--alerte:#7a4c00;--chaud:#9b4210;--local:#7449ad;
+ --bg:#ece0cb;--card:#f8f1e4;--card2:#f1e7d6;--line:rgba(90,70,40,.18);--muted:#655440;--text:#2a1f12;--sec-couleur:#574631;
+ --carte-fond:linear-gradient(180deg,#faf3e7,#f3eadb);--carte-haut:#faf3e7;--carte-fond-2:#efe4d1;--fenetre-plein:linear-gradient(180deg,#f3eadb,#ece0cb);
+ --ombre:#000;--carte-bord:transparent;--carte-ombre:0 3px 10px rgba(0,0,0,.1),inset 0 1px 0 rgba(255,255,255,.6);--relief-ombre:0 2px 6px rgba(0,0,0,.12);--relief-ombre-petit:0 1px 4px rgba(0,0,0,.12);--flottant-ombre:0 10px 24px rgba(0,0,0,.16);
+ --ombre-a28:rgba(0,0,0,.1);--ombre-a35:rgba(0,0,0,.12);--ombre-a40:rgba(0,0,0,.13);--ombre-a50:rgba(0,0,0,.16);--ombre-a55:rgba(0,0,0,.16);--reflet:#fff;--pouce:#fff;--cadran-pouce:#fff;
+ --sel-lueur:0 0 10px rgba(10,111,118,.25);--halo-blanc:0 0 8px rgba(10,111,118,.22);--halo-vert:0 0 6px rgba(43,122,48,.3);--halo-ambre:0 0 8px rgba(143,90,0,.3);--actif-contour:rgba(42,31,18,.85);
+ --cadran-piste:#e2d4bc;--cadran-centre:#f8f1e4;--cadran-bord:#d4c4a9;--cadran-pouce-bord:#93806a;--lampe-off:#b3a38c;--pastille-off:#cfc1aa;--anim-off:#e0d2bb;
+ --texte-60:#655440;--texte-60-b:#655440;--texte-66:#615140;--texte-66-b:#615140;--voile-a70:rgba(58,44,26,.42);--voile-a62:rgba(58,44,26,.38);--voile-a60:rgba(58,44,26,.36)}
+/* Automne : brun chaud, citrouille et ambre (sombre) */
+:root[data-theme="automne"]{--schema:dark;--texte-60:#b39f8a;--texte-60-b:#b39f8a;--texte-66:#c0ad99;--texte-66-b:#c0ad99;
+ --neutre-0:#140d09;--neutre-100:#fff4e8;--surface-encre:#ffe3c4;--trait-encre:#ffd9b0;--encre:#fff4e8;--reflet:#fff;--ombre:#000;--voile:#050302;--ligne:#d9b48c;--sel:#ffd29a;
+ --accent:#e8913f;--danger:#ff6b5b;--succes:#8fcf6a;--alerte:#ffc24d;--chaud:#ff8a5c;--local:#d0a8ff;
+ --bg:#160f0b;--card:#201610;--card2:#281c14;--line:rgba(217,180,140,.16);--muted:#b39f8a;--text:#f6ebde;--sec-couleur:#cdb9a2;
+ --carte-fond:linear-gradient(180deg,#36261b,#2b1e15);--carte-haut:#36261b;--carte-fond-2:#2e2017;--carte-bord:transparent;--fenetre-plein:linear-gradient(180deg,#22170f,#1a120c);
+ --cadran-piste:#3c2b1f;--cadran-centre:#1d140e;--cadran-bord:#3f2e22;--cadran-pouce:#fbf1e4;--cadran-pouce-bord:#fff;--lampe-off:#8a7666;--pastille-off:#d8c8b6;--anim-off:#2d2018;--pouce:#fff}
+/* Copie du Sombre (V2.2 étape 10) : base d'un thème créé à partir du Sombre, qui reste verrouillé ; bloc dérivé (les nuances suivent la palette, --neutre-0 = fond), rôles du Sombre repris. */
+:root[data-theme="sombre-copie"]{--schema:dark;--neutre-0:#0a0d13;--bg:#0a0d13;--card:#10141b;--card2:#171c26;--muted:#8a97ad;--text:#e9eef7;--sec-couleur:#a3b1c7;--texte-60:#8b97ab;--texte-60-b:#8a96ab;--texte-66:#9aa6ba;--texte-66-b:#9aa6bb;
+ --carte-fond:linear-gradient(180deg,#212c42,#182033);--carte-haut:#212c42;--carte-fond-2:#161e2f;--fenetre-plein:linear-gradient(180deg,#141922,#0f131a)}

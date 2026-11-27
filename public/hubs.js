@@ -2,11 +2,16 @@
 (function () {
   const el = APP.el;
   let root = null, body = null, vue = "main", etat = null, session = null, form = null, trouves = null, cherche = false, erreur = "", info = "", occupe = false;
-  let arme = null, armeT = null, relecture = null, suivi = null, tic = null, valeurs = {}, equip = [], distantEq = false;
+  let arme = null, armeT = null, relecture = null, suivi = null, tic = null, valeurs = {}, equip = [], distantEq = false, ecoute = false;
   // form : {type, hub?, auto?, pour?} (auto, V2.0 : connexion transparente, type trouvé par la recherche ou par /api/hubs/identifier ; pour : adresse dont le type est connu) ; valeurs : champs non secrets saisis (le temps de la fenêtre) ; un champ secret n'est jamais gardé.
 
-  // Commande du widget du hub (rechercher, installer, identifier) : équipement relu, fenêtre relue
-  if (APP.cartes) APP.cartes.surEquipement(() => { if (root && vue === "main") charger(); });
+  // Commande du widget du hub (rechercher, installer, identifier) : équipement relu, fenêtre relue. Auditeur posé à la première ouverture
+  // (V2.2 révision 2 : APP.cartes, créé par equipements-cartes.js chargé après ce fichier, n'existait pas encore au chargement : l'auditeur n'était jamais posé).
+  function ecouter() {
+    if (ecoute || !APP.cartes) return;
+    ecoute = true;
+    APP.cartes.surEquipement(() => { if (root && vue === "main") charger(); });
+  }
   function charger() {
     APP.api("GET", "/api/hubs", null, (err, d) => {
       if (!err && d) etat = d; else if (err) erreur = err;
@@ -119,7 +124,7 @@
         }
         box.appendChild(b);
         // Hub connecté : logiciel, soleil et heure, localisation, code d'appairage, options (widget commun de equipements-cartes.js ; équipement de cet adaptateur)
-        const eq = h.etat === "connecte" && APP.cartes ? equip.filter((e) => String(e.id).split(":")[0] === t.type)[0] : null;
+        const eq = h.etat === "connecte" && APP.cartes ? equip.find((e) => String(e.id).split(":")[0] === t.type) : null;
         if (eq) { const w = el("div", "eq-cartes hb-equip"); APP.cartes.hub(eq, w, () => { if (root && vue === "main") rendre(); }, distantEq); if (w.childNodes.length) box.appendChild(w); }
       });
     });
@@ -227,7 +232,7 @@
   const AIDE = [
     { titre: "Hubs", lignes: [
       "Cette fenêtre s'ouvre en touchant l'état, en haut de l'écran (« Connecté » ou « Hors ligne »).",
-      APP.lieu("Elle montre chaque hub connu de cet appareil et son état, et permet de le connecter, de le reconnecter, d'en changer ou de le déconnecter."),
+      "Elle montre chaque hub connu de cet appareil et son état, et permet de le connecter, de le reconnecter, d'en changer ou de le déconnecter.",
       "La connexion d'un hub suit les étapes affichées (par exemple, appuyer sur un bouton du hub pendant un compte à rebours). Annuler est possible à tout moment.",
       "Un seul hub à la fois : tant qu'un hub est connecté (ou en erreur), aucun autre ne peut être connecté (seul le hub utilisé est montré). Déconnectez-le d'abord.",
       "« Connecter un hub » trouve seul le type du hub : la recherche choisit d'office le hub trouvé (le prioritaire s'il y en a plusieurs) ; une adresse tapée est reconnue à la connexion.",
@@ -249,8 +254,7 @@
   function rendre() {
     if (!root) return;
     if (vue !== "session") clearInterval(tic);
-    body.innerHTML = "";
-    body.appendChild(vue === "aide" ? rendreAide() : vue === "form" ? rendreForm() : vue === "session" ? rendreSession() : rendreMain());
+    body.replaceChildren(vue === "aide" ? rendreAide() : vue === "form" ? rendreForm() : vue === "session" ? rendreSession() : rendreMain());
     if (info && vue === "main") body.appendChild(el("div", "hb-ok", info));
     if (erreur && vue !== "aide") body.appendChild(el("div", "hb-err", erreur));
   }
@@ -265,6 +269,7 @@
   // Ouverture : relit les hubs et reprend une session en cours (fenêtre refermée pendant un appairage) ; relue toutes les 15 s (vue principale).
   function ouvrir() {
     if (root) return;
+    ecouter();
     root = el("div", "hb-scrim");
     root.id = "hubsFenetre";
     root.onclick = (e) => { if (e.target === root && vue !== "session") fermer(); };

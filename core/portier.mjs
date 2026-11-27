@@ -1,9 +1,9 @@
-// @zone socle distant | Controle d'entree de chaque requete (V1.8 ; extrait de server.mjs en qualite 2026-11-12, dependances injectees pour les essais) : Host de l'ecoute, ecoute reseau sans jeton valide (page d'appairage seule : une page demandee -> 302 vers appairage.html, le reste 401), /api/* -> routeur, fichiers statiques (chemin borne au dossier public), erreur -> statut et message (jamais e.message d'une erreur non HttpError), journal sans cookie (identifiant du client seulement) ; diagnostic de l'ecoute reseau (premiere connexion, echecs TLS : code seul, une ligne par code et par minute au plus).
+// @zone socle distant | Controle d'entree de chaque requete (V1.8 ; extrait de server.mjs en qualite 2026-11-12, dependances injectees pour les essais) : Host de l'ecoute, ecoute reseau sans jeton valide (page d'appairage seule, avec themes.css et version.js (V2.2 etape 8) : une page demandee -> 302 vers appairage.html, le reste 401), /api/* -> routeur, fichiers statiques (chemin borne au dossier public), erreur -> statut et message (jamais e.message d'une erreur non HttpError), journal sans cookie (identifiant du client seulement) ; diagnostic de l'ecoute reseau (premiere connexion, echecs TLS : code seul, une ligne par code et par minute au plus).
 import fs from 'node:fs';
 import path from 'node:path';
 import { HttpError, send, describe } from './http.mjs';
 
-export const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
 
 // Fichiers statiques du dossier donne (GET et HEAD) : chemin decode puis normalise, refuse s'il sort du dossier.
 export function statique(dossier) {
@@ -20,8 +20,8 @@ export function statique(dossier) {
   };
 }
 
-// V1.8, ecoute reseau : sans jeton valide, seuls la page d'appairage, ses deux fichiers et POST /api/appairage repondent.
-export const LIBRES = new Set(['/appairage.html', '/appairage.js', '/appairage.css']);
+// V1.8, ecoute reseau : sans jeton valide, seuls la page d'appairage, ses deux fichiers, themes.css et version.js (V2.2 etape 8 : variables et theme, aucune donnee) et POST /api/appairage repondent.
+const LIBRES = new Set(['/appairage.html', '/appairage.js', '/appairage.css', '/themes.css', '/version.js']); // V2.2 étape 8 : variables et thème de l'appareil (aucune donnée)
 export const libre = (req, p) => ((req.method === 'GET' || req.method === 'HEAD') && LIBRES.has(p)) || (req.method === 'POST' && p === '/api/appairage');
 
 // d = {hoteValide(req), authentifier(enTeteCookie) -> {id, nom} | null, api(req, res, chemin), statique(req, res, url), journal(...)} ; erreurs traduites par describe (core/http.mjs).

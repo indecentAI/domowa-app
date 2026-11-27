@@ -8,7 +8,7 @@
   }
 
   function renderRooms() {
-    var box = $("rooms"); box.innerHTML = "";
+    var box = $("rooms"); box.replaceChildren();
     // Pieces du modele de navigation (menu.js) : celles des appareils ON/OFF et, depuis la V1.4, celles sans lumiere ni prise (pieces-liste.js)
     var md = APP.nav ? APP.nav.model().rooms : [], rooms = [], hasNone = false, i, valid = { all: 1 };
     for (i = 0; i < md.length; i++) { valid[md[i].key] = 1; if (md[i].key === "none") hasNone = true; else rooms.push({ id: md[i].key, name: md[i].label }); }
@@ -26,7 +26,7 @@
    function tile(d) {
     var isLight = d.kind === "light";
     var on = d.isOn === true;
-    var col = !on ? "#6b7280" : (isLight ? APP.colorOf(true, d.colorMode, d.hue, d.sat, d.temp) : APP.colorOf(true, "temperature", null, null, 2700));
+    var col = !on ? "var(--lampe-off)" : (isLight ? APP.colorOf(true, d.colorMode, d.hue, d.sat, d.temp) : APP.colorOf(true, "temperature", null, null, 2700));
     var lvl = (isLight && d.level !== null) ? d.level : 100;
     var w = el("div", "bub" + (on ? " on" : "") + (APP.sel[d.id] ? " sel" : "") + (d.reachable ? "" : " unreach"));
     w.appendChild(el("div", "bname", d.name));
@@ -109,7 +109,7 @@
   }
 
   function renderTiles() {
-    var box = $("tiles"); box.innerHTML = "";
+    var box = $("tiles"); box.replaceChildren();
     var v = visible(), i, w, bb, pos, p, flow = (APP.room === "all"), org = APP.organize && !flow;
     box.className = "tiles " + (flow ? "flow" : "abs") + (org ? " org" : "");
     $("orgBtn").style.display = flow ? "none" : "";
@@ -210,7 +210,7 @@
 
   $("orgBtn").onclick = function () {
     APP.organize = !APP.organize;
-    if (APP.organize) APP.banner("Mode Organiser : fais glisser les bulles où tu veux, puis appuie sur Terminer.", "ok");
+    if (APP.organize) APP.banner("Mode Organiser : faites glisser les bulles où vous voulez, puis appuyez sur Terminer.", "ok");
     else APP.banner("", "");
     APP.render();
   };

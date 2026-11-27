@@ -4,23 +4,24 @@ import { HttpError } from '../core/http.mjs';
 import { nouvelId } from '../core/outils.mjs';
 import { lister } from '../core/appareils.mjs';
 import { valider, verifier, LIMITES, CORPS_ANIMATION } from './animations-plan.mjs';
-import { lancer, arreter, etat, animable, enMarche } from './animations-moteur.mjs';
+import { lancer, arreter, etat, animable, enMarche, appareilsEnMarche } from './animations-moteur.mjs';
 import { lireAnimations, ecrireAnimations } from './animations-donnees.mjs';
 import { SCENE_ICONS } from './scenarios.mjs';
 
 const maintenant = () => new Date().toISOString();
-// Lampes animables (editeur) et noms des lampes (messages) ; hub injoignable : lampes null, noms = identifiants
-async function inventaire() {
+// Lampes animables (editeur) et noms des lampes (messages) ; hub injoignable : lampes null, noms = identifiants. Animation en cours et simple lecture
+// (GET) : appareils deja lus par le moteur (5 s au plus), sans relire le hub ; une animation recue (POST) est toujours controlee sur une lecture fraiche.
+async function inventaire(frais = true) {
   try {
-    const l = await lister();
+    const l = (!frais && appareilsEnMarche()) || await lister();
     return {
       nom: (id) => (l.find((d) => d.id === id) || {}).name || id,
       lampes: l.filter(animable).map((d) => ({ id: d.id, nom: d.name, piece: d.room ? d.room.name : null, couleur: !!d.caps.color, blanc: !!d.caps.ctemp, luminosite: !!d.caps.level, joignable: d.reachable !== false })),
     };
   } catch (e) { return { nom: (id) => id, lampes: null }; }
 }
-async function complet(liste) {
-  const inv = await inventaire();
+async function complet(liste, frais = false) {
+  const inv = await inventaire(frais);
   return { animations: liste || lireAnimations().liste, ...etat(), limites: LIMITES, lampes: inv.lampes, time: maintenant() };
 }
 // Animation recue : format (400), puis controle (409 : chevauchement, ecart, plafond), noms des lampes dans les messages

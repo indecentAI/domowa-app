@@ -1,4 +1,4 @@
-// @zone equipements | Bandeau d'alarme (V2.1 étape alarmes ; cartes du 21/11, section 3) : tant qu'une alarme dure (fuite, fumée, CO, gaz d'un équipement), bandeau rouge en haut
+// @zone equipements-vue | Bandeau d'alarme (V2.1 étape alarmes ; cartes du 21/11, section 3) : tant qu'une alarme dure (fuite, fumée, CO, gaz d'un équipement), bandeau rouge en haut
 // de toutes les vues, sous l'en-tête (« Fuite détectée : Fuite lave-linge, Cellier, depuis 07:32 » ; plusieurs : « + N autres »). Un appui ouvre la configuration de l'équipement
 // (vue Équipements, APP.equipements.montrer) ; la croix (zone de 44 px) le ferme pour cette alarme ; il revient à l'alarme suivante (autre équipement, ou même alarme revenue après sa fin).
 // Lecture : GET /api/equipements/alarmes après chaque actualisation (APP.surActualisation, ordre 50 ; cache court des équipements côté serveur). Aucune commande, rien de gardé sur disque.

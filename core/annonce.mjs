@@ -5,7 +5,7 @@ export const SERVICE = '_domowa._tcp.local';
 export const INSTANCE = 'Domowa.' + SERVICE;
 export const HOTE = 'domowa.local';
 export const SERVICES = '_services._dns-sd._udp.local';
-export const TTL = 120;
+const TTL = 120;
 // Noms auxquels on repond : le type de service, la liste des types, et nos propres enregistrements (un client Android resout l'instance et l'hote
 // par des questions SRV, TXT et A separees). Toute autre question : aucune reponse.
 export const NOMS = [SERVICE, SERVICES, INSTANCE, HOTE];

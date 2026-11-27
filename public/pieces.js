@@ -58,15 +58,16 @@
 
   // ---------- état du formulaire ----------
   function verdict() {
+    const taille = "1 à " + cible.max + " caractères.";
     const n = propre(nom), nb = Object.keys(coches).length + Object.keys(cochesL).length;
-    if (!n) return { ok: false, nom: "", aide: "1 à " + cible.max + " caractères." };
+    if (!n) return { ok: false, nom: "", aide: taille };
     if ([...n].length > cible.max) return { ok: false, nom: n, err: "Nom trop long : " + cible.max + " caractères au plus." };
     const meme = cible.pieces.concat(locales()).find((p) => cle(p.nom) === cle(n));
     if (meme) return { ok: false, nom: n, err: "Une pièce « " + meme.nom + " » existe déjà." };
     if (cle(n) === cle("Autres")) return { ok: false, nom: n, err: "« Autres » est réservé à la pièce par défaut." };
     if (!icone) return { ok: false, nom: n, aide: "Choisissez une icône." };
-    if (!nb) return { ok: false, nom: n, aide: "1 à " + cible.max + " caractères.", pied: "Cochez au moins un appareil." };
-    return { ok: true, nom: n, aide: "1 à " + cible.max + " caractères." };
+    if (!nb) return { ok: false, nom: n, aide: taille, pied: "Cochez au moins un appareil." };
+    return { ok: true, nom: n, aide: taille };
   }
   function choisis() { return cible.appareils.filter((a) => coches[a.id]); }
   function choisisL() { return independants().filter((a) => cochesL[a.id]); }
@@ -95,7 +96,7 @@
     inp.id = "npNom"; inp.value = nom; inp.maxLength = cible.max; inp.disabled = envoi; inp.autocomplete = "off";
     inp.oninput = () => { nom = inp.value; desarmer(); erreur = ""; majPied(); majNom(); };
     g.appendChild(inp);
-    const aide = el("div", "np-aide" + (v.err ? " err" : ""), v.err || v.aide || "1 à " + cible.max + " caractères.");
+    const aide = el("div", "np-aide" + (v.err ? " err" : ""), v.err || v.aide);
     aide.id = "npAideNom";
     g.appendChild(aide);
     // Icône
@@ -159,9 +160,9 @@
     if (!a || !cible) return;
     const v = verdict();
     a.className = "np-aide" + (v.err ? " err" : "");
-    a.textContent = v.err || v.aide || "1 à " + cible.max + " caractères.";
+    a.textContent = v.err || v.aide;
   }
-  function majPied() { const p = document.getElementById("npPied"); if (p) { p.innerHTML = ""; remplirPied(p, verdict()); } }
+  function majPied() { const p = document.getElementById("npPied"); if (p) { p.replaceChildren(); remplirPied(p, verdict()); } }
   function remplirPied(pied, v) {
     const n = choisis().length, m = choisisL().length, q = quittent(), loc = locale();
     const s = (k) => (k > 1 ? "s" : "");
@@ -222,7 +223,7 @@
     box.appendChild(el("div", "hb-ok", t));
     if (d.echecs.length) {
       box.appendChild(el("div", "hb-err", "Non déplacé" + s(d.echecs.length) + " : " + d.echecs.map((a) => a.nom + " (" + String(a.motif).replace(/\.$/, "") + ")").join(", ") +
-        ". Rien n'a été annulé ni renvoyé ; vous pouvez le" + (d.echecs.length > 1 ? "s" : "") + " déplacer depuis l'application du hub (" + c.nom + ")."));
+        ". Rien n'a été annulé ni renvoyé ; vous pouvez le" + (d.echecs.length > 1 ? "s" : "") + " déplacer depuis l'application du hub (" + c.nom + "), ou avec la pastille de sa pièce (appareil sélectionné)."));
     }
     box.appendChild(bouton("b-main hb-large", "Fermer", fermer));
     return box;
@@ -230,7 +231,7 @@
 
   const AIDE = [
     { titre: "Créer une pièce", lignes: [
-      "1. Touchez « + » au bout de la ligne des pièces de l'accueil (ou « + » en bas de la section Pièces du menu).",
+      "1. Touchez « + » au bout de la ligne des pièces de l'accueil (ou « + » en bas de la section Pièces du menu ; sur le smartphone : onglet Plus › Nouvelle pièce).",
       "2. Tapez le nom (1 à 30 caractères ; un nom déjà pris, même avec d'autres majuscules ou accents, est refusé, comme « Autres », réservé à la pièce par défaut) et touchez une icône.",
       APP.lieu("3. Cochez au moins un appareil : ceux qui n'ont pas de pièce sont en haut. Un appareil déjà rangé quitte sa pièce actuelle (« quittera … »). Les appareils indépendants (lave-linge, appareils SmartThings, caméras) sont en bas : ils sont rangés sur cet appareil, sans effet sur le hub."),
       "4. Touchez « Créer », relisez le résumé, puis « Confirmer la création ». La pièce apparaît sur l'accueil.",
@@ -243,10 +244,11 @@
       "« Résultat inconnu » : le hub n'a pas répondu à temps. Rouvrez la fenêtre : si la pièce existe déjà, son nom est refusé ; sinon, vous pouvez réessayer.",
     ] },
   ];
-  function rendreAide() {
+  // Aide « ? » commune aux fenêtres de pièces : « ← Retour » (retour()), puis une section hb-sec / hb-bloc par entrée
+  function aide(sections, retour) {
     const box = el("div", "");
-    box.appendChild(bouton("b-small hb-retour", "← Retour", () => { vue = resultat ? "resultat" : "form"; rendre(); }));
-    AIDE.forEach((s) => {
+    box.appendChild(bouton("b-small hb-retour", "← Retour", retour));
+    sections.forEach((s) => {
       box.appendChild(el("div", "hb-sec", s.titre));
       const b = el("div", "hb-bloc");
       s.lignes.forEach((l) => b.appendChild(el("p", "hb-p", l)));
@@ -254,10 +256,26 @@
     });
     return box;
   }
+  const rendreAide = () => aide(AIDE, () => { vue = resultat ? "resultat" : "form"; rendre(); });
+  // Cadre commun des fenêtres de pièces (Nouvelle pièce, Pièces, Ranger) : voile hb-scrim (toucher du fond : o.fermer), panneau hb-panel o.panneau,
+  // tête (titre, « ? » si o.aide, « × » de classe o.fermerCls), corps hb-body (+ o.corps) -> {root, body}
+  function cadre(o) {
+    const root = el("div", "hb-scrim");
+    root.id = o.id;
+    root.onclick = (e) => { if (e.target === root) o.fermer(); };
+    const panel = el("div", "hb-panel " + o.panneau), head = el("div", "hb-head"), ics = el("div", "hb-ics");
+    head.appendChild(el("div", "hb-titre", o.titre));
+    const ic = (t, titre, fn, cls) => { const b = el("button", "hb-ic" + (cls ? " " + cls : ""), t); b.title = titre; b.setAttribute("aria-label", titre); b.onclick = fn; ics.appendChild(b); };
+    if (o.aide) ic("?", "Aide", o.aide);
+    ic("×", "Fermer", o.fermer, o.fermerCls);
+    head.appendChild(ics);
+    const body = el("div", "hb-body" + (o.corps ? " " + o.corps : ""));
+    panel.appendChild(head); panel.appendChild(body); root.appendChild(panel); document.body.appendChild(root);
+    return { root, body };
+  }
   function rendre() {
     if (!root) return;
-    body.innerHTML = "";
-    body.appendChild(vue === "aide" ? rendreAide() : vue === "resultat" ? rendreResultat() : rendreForm());
+    body.replaceChildren(vue === "aide" ? rendreAide() : vue === "resultat" ? rendreResultat() : rendreForm());
     if (erreur && vue === "form") body.appendChild(el("div", "hb-err", erreur));
     const f = root.querySelector(".np-fermer");
     if (f) f.disabled = envoi;
@@ -270,17 +288,8 @@
   }
   function ouvrir() {
     if (root) return;
-    root = el("div", "hb-scrim");
-    root.id = "piecesFenetre";
-    root.onclick = (e) => { if (e.target === root) fermer(); };
-    const panel = el("div", "hb-panel np-panel"), head = el("div", "hb-head"), ics = el("div", "hb-ics");
-    head.appendChild(el("div", "hb-titre", "Nouvelle pièce"));
-    const ic = (t, titre, fn, cls) => { const b = el("button", "hb-ic" + (cls ? " " + cls : ""), t); b.title = titre; b.setAttribute("aria-label", titre); b.onclick = fn; ics.appendChild(b); };
-    ic("?", "Aide", () => { if (envoi) return; vue = vue === "aide" ? (resultat ? "resultat" : "form") : "aide"; rendre(); });
-    ic("×", "Fermer", fermer, "np-fermer");
-    head.appendChild(ics);
-    body = el("div", "hb-body");
-    panel.appendChild(head); panel.appendChild(body); root.appendChild(panel); document.body.appendChild(root);
+    ({ root, body } = cadre({ id: "piecesFenetre", panneau: "np-panel", titre: "Nouvelle pièce", fermer, fermerCls: "np-fermer",
+      aide: () => { if (envoi) return; vue = vue === "aide" ? (resultat ? "resultat" : "form") : "aide"; rendre(); } }));
     vue = "form"; charger();
   }
   // Accueil : carte « + » au bout de la ligne des pièces (home.js) ; volet de navigation : crayon (fenêtre « Pièces ») et « + » en bas de la section Pièces (menu.js)
@@ -304,6 +313,6 @@
     r.appendChild(ed); r.appendChild(nv);
     return r;
   });
-  APP.pieces = { ouvrir: ouvrir, svg: svg, nomIcone: (k) => NOMS[k] || k, dessinees: (l) => (l || []).filter((k) => ICONES[k]), cle: cle, propre: propre };
+  APP.pieces = { ouvrir: ouvrir, cadre: cadre, aide: aide, svg: svg, nomIcone: (k) => NOMS[k] || k, dessinees: (l) => (l || []).filter((k) => ICONES[k]), cle: cle, propre: propre };
 })();
 // FIN

@@ -1,5 +1,5 @@
 // @zone homeassistant equipements | Home Assistant, fonctions pures (sans reseau ni fichier) : identifiant d'appareil <-> entite (domaines integres), description en capacites de toute entite (decrire, V2.1),
-// lumieres et prises vers le modele commun (versModele : caps/state calcules par projeter de core/modele.mjs), equipements (versEquipements : regroupement par appareil du registre), commandes (actionDe). Essais : banc/unitaires/homeassistant.test.mjs, capacites.test.mjs.
+// lumieres et prises vers le modele commun (versModele : caps/state calcules par projeter de core/modele.mjs), equipements (versEquipements : regroupement par appareil du registre), commandes de la vue Lumieres (actionLumiere ; ecriture generique : actionDe de ecriture.mjs). Essais : banc/unitaires/homeassistant.test.mjs, capacites.test.mjs.
 // Etat d'une entite (API REST) : {entity_id, state, attributes, last_updated...}. Lecture et ecriture d'apres supported_features (drapeaux du code de HA, *EntityFeature, lus le 19/11/2026),
 // supported_color_modes, listes d'options (hvac_modes, preset_modes, fan_modes, source_list, options...) et min, max, pas declares ; une action que HA enregistre sans drapeau requis
 // (services.py du domaine : light et switch turn_on/off, humidifier, remote, lock lock/unlock, alarm disarm, set_hvac_mode, number, select, text, date, time, datetime, button, scene) : ecrivable.
@@ -7,7 +7,7 @@
 // Rien n'est jete : tout attribut sans capacite va dans inconnues [{cle, valeur}] (copie, 8 Ko au plus) ; image d'entite (jeton dans l'adresse) : {masque: true} ; position et identifiants reseau
 // d'un traceur : capacite ou inconnue privee (contrat « Données sensibles »). Identifiant : « ha-<domaine>-<objet> » (ID_RE : ni point ni plus de 80 caracteres).
 import { projeter } from '../../core/modele.mjs';
-import { sansSecret, groupe } from '../../core/capacites.mjs';
+import { sansSecret, groupe, nb, tx, bo, copieInconnue as copie, texteCoordonnees } from '../../core/capacites.mjs';
 
 // Domaines integres (conception v2.1 §9 ; V2.2 ha-ecriture : entrees de Home Assistant input_boolean, input_number, input_select, input_text, input_button et script, jusque-la
 // en lecture seule comme domaines inconnus, memes identifiants) ; exclus : calendar, todo, notify, tts, stt, conversation, assist_satellite, wake_word, ai_task, image_processing, geo_location, weather,
@@ -20,12 +20,12 @@ const ENTITE = new RegExp('^(' + DOM + ')\\.([a-z0-9_]{1,70})$');
 const ID = new RegExp('^ha-(' + DOM + ')-([a-z0-9_]{1,70})$');
 const COULEUR = ['hs', 'xy', 'rgb', 'rgbw', 'rgbww'];
 export const MAX_APPAREILS = 500;
-export const MAX_ENTITES = 3000;
+const MAX_ENTITES = 3000;
 
 export function idDe(entite) { const m = ENTITE.exec(String(entite)); const id = m ? 'ha-' + m[1] + '-' + m[2] : null; return id && id.length <= 80 ? id : null; }
 // Repli des domaines inconnus (decision du 19/11, etape equipements-vue) : entite d'un domaine hors DOMAINES et hors EXCLUS -> equipement en lecture seule (etat en capacite mesure,
 // attributs dans inconnues) ; meme forme d'identifiant (ha-<domaine>-<objet>), jamais converti en entite par entiteDe : jamais commandable, jamais dans lister ni /api/devices.
-export const EXCLUS = Object.freeze(['calendar', 'todo', 'notify', 'tts', 'stt', 'conversation', 'assist_satellite', 'wake_word', 'ai_task', 'image_processing', 'geo_location', 'weather',
+const EXCLUS = Object.freeze(['calendar', 'todo', 'notify', 'tts', 'stt', 'conversation', 'assist_satellite', 'wake_word', 'ai_task', 'image_processing', 'geo_location', 'weather',
   'infrared', 'radio_frequency', 'zone', 'camera', 'image']);
 const ENTITE_TOUT = /^([a-z0-9_]{1,40})\.([a-z0-9_]{1,70})$/;
 export function idLecture(entite) {
@@ -37,11 +37,8 @@ export function idLecture(entite) {
 export function entiteDe(id) { const m = String(id).length <= 80 ? ID.exec(String(id)) : null; return m ? m[1] + '.' + m[2] : null; }
 
 const objet = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
-const nb = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
-const tx = (v) => (typeof v === 'string' && v ? v : null);
-const bo = (v) => (typeof v === 'boolean' ? v : null);
 const liste = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x) : []);
-const a_ = (a, k) => Object.prototype.hasOwnProperty.call(a, k);
+const a_ = (a, k) => Object.hasOwn(a, k);
 const domaineDe = (e) => String(e).split('.')[0];
 const nomDe = (st) => { const a = objet(st.attributes); return typeof a.friendly_name === 'string' && a.friendly_name.trim() ? a.friendly_name.trim().slice(0, 60) : String(st.entity_id); };
 
@@ -67,15 +64,10 @@ const options = (l) => liste(l).map((code) => ({ code, libelle: LIBELLES[code] |
 const parDrapeaux = (f, l) => l.filter(([b]) => !b || (f & b) === b).map(([, code, libelle]) => ({ code, libelle }));
 const bit = (f, n) => (f & n) === n;
 
-const MAX_INCONNUE = 8192;
-const copie = (v) => {
-  if (v === undefined) return null;
-  const j = JSON.stringify(v);
-  return j === undefined || j.length > MAX_INCONNUE ? { tronque: true } : JSON.parse(j);
-};
 // Declarations consommees mais gardees aussi en copie (rien n'est jete) ; adresses d'image (jeton d'acces dans l'URL) masquees ; donnees de position et identifiants reseau : prives
 const GARDES = ['supported_features', 'supported_color_modes', 'device_class'];
 const MASQUES = ['entity_picture', 'entity_picture_local', 'access_token'];
+const COORDONNEES = ['latitude', 'longitude', 'gps_accuracy']; // toujours privees
 const PRIVEES = ['latitude', 'longitude', 'gps_accuracy', 'altitude', 'course', 'speed', 'vertical_accuracy', 'ip', 'mac', 'host_name', 'user_id', 'in_zones'];
 const TRACEURS = ['device_tracker', 'person'];
 // Capacites dont le sens tient au nom de l'entite (number, select, mesure quelconque...) : libelle = nom de l'entite
@@ -96,8 +88,7 @@ const nombre = (s) => { if (typeof s !== 'string' || !s.trim()) return null; con
 // Clavier du code (V2.2 ha-ouvrants) : alarme : code_format number -> chiffres ; serrure : expression de chiffres seuls (^\d{4}$, ^\d+$, ^[0-9]{4,6}$) -> chiffres ; sinon texte
 const clavierCode = (cf, alarme) => (cf === null ? null : (alarme ? cf === 'number' : /^\^?(\\d|\[0-9\])(\{\d+(,\d*)?\}|[+*])?\$?$/.test(cf)) ? 'chiffres' : 'texte');
 const connu = (s) => (typeof s === 'string' && s && s !== 'unknown' && s !== 'unavailable' ? s : null);
-const coordonnees = (a) => (Number.isFinite(a.latitude) && Number.isFinite(a.longitude)
-  ? a.latitude.toFixed(5) + ', ' + a.longitude.toFixed(5) + (Number.isFinite(a.gps_accuracy) ? ' (± ' + Math.round(a.gps_accuracy) + ' m)' : '') : null);
+const coordonnees = (a) => texteCoordonnees(a.latitude, a.longitude, a.gps_accuracy);
 
 // Description par domaine. x : {a (attributs), s (etat), f (supported_features), on, aj(cap, valeur, champs), pris(cles...), ctx, nom}
 const D = {
@@ -195,7 +186,7 @@ const D = {
     x.aj('ouverture', connu(s), { ecriture: o.length > 0, options: o, ...sensible });
     x.aj('activite', s === 'opening' || s === 'closing' ? s : null);
     // Position d'un ouvrant (V2.1, cartes) : 0 % = remonte (ouvert), 100 % = entierement descendu ; Home Assistant documente l'inverse (current_position 100 = ouvert) :
-    // valeur convertie ici (sens: 'inverse' : l'ecriture de l'etape 5 convertit de meme)
+    // valeur convertie ici (sens: 'inverse' : ecriture.mjs convertit de meme, position = 100 - valeur)
     if (bit(f, 4) || a_(a, 'current_position')) x.aj('position', nb(a.current_position) === null ? null : 100 - nb(a.current_position), { ecriture: bit(f, 4), ...PCT, ...sensible, sens: 'inverse' });
     // V2.2 ha-ouvrants : lamelles ouvrir / fermer / arreter (open_cover_tilt...) non decrites : sans etat propre, et une seconde capacite ouverture du meme element serait
     // prise pour celle du volet (premiere trouvee, ordre des libelles) ; l'inclinaison en % est commandee
@@ -358,7 +349,7 @@ function inconnu(x) {
 // Domaine exclu ou identifiant invalide : rien.
 export function decrire(st, ctx = {}) {
   const e = String(st && st.entity_id), dom = domaineDe(e), element = idDe(e) || idLecture(e);
-  if (!element || (!D[dom] && !idLecture(e))) return { capacites: [], inconnues: [], modeCouleur: null };
+  if (!element) return { capacites: [], inconnues: [], modeCouleur: null };
   const a = objet(st.attributes), s = st.state;
   const f = Number.isInteger(a.supported_features) ? a.supported_features : 0;
   const disponible = s !== 'unavailable', nom = nomDe(st);
@@ -373,7 +364,7 @@ export function decrire(st, ctx = {}) {
   const inconnues = Object.keys(a).filter((k) => !vus.has(k) || GARDES.includes(k)).sort().map((k) => {
     if (MASQUES.includes(k)) return { cle: k, valeur: { masque: true } };
     const i = { cle: k, valeur: copie(a[k]) };
-    return prive && PRIVEES.includes(k) || ['latitude', 'longitude', 'gps_accuracy'].includes(k) ? { ...i, prive: true } : i;
+    return (prive ? PRIVEES : COORDONNEES).includes(k) ? { ...i, prive: true } : i;
   });
   return { capacites, inconnues, modeCouleur: r.modeCouleur || null };
 }
@@ -391,8 +382,8 @@ export function versModele(st) {
 // Documentation (home-assistant.io, actions light.turn_on, light.turn_off, switch.turn_on ; API REST : corps = donnees de l'action, entity_id compris) : brightness_pct 0-100,
 // hs_color [teinte 0-360, saturation 0-100] entiers, color_temp_kelvin entier ; une seule couleur par action. Une seule action par commande : ON, luminosite et couleur ensemble
 // (Home Assistant ignore ce qu'une lampe ne sait pas faire). Prise (switch) : ON/OFF seulement. Jamais de ON implicite : luminosite ou couleur sans on: true sur une lampe OFF -> rien
-// (Home Assistant la passerait ON). Couleur ou blanc demandes a une lampe qui ne les a pas : erreur (la route le refuse deja). Entite hors light et switch : rien (ecriture generique : etape 5).
-export function actionDe(n, st) {
+// (Home Assistant la passerait ON). Couleur ou blanc demandes a une lampe qui ne les a pas : erreur (la route le refuse deja). Entite hors light et switch : rien (ecriture generique : actionDe de ecriture.mjs).
+export function actionLumiere(n, st) {
   const e = entiteDe(n && n.id);
   if (!e || !st || !/^(light|switch)\./.test(e)) return null;
   if (e.startsWith('switch.')) return st.on === undefined ? null : { chemin: '/api/services/switch/' + (st.on ? 'turn_on' : 'turn_off'), corps: { entity_id: e } };

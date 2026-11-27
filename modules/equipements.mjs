@@ -6,7 +6,7 @@
 // Icones (V2.1 etape icones) : GET /api/equipements/icones -> {equipements, elements, pack, lisible}, POST /api/equipements/icone {id, icone|null} (donnees/icones.json).
 // Alarmes (V2.1 etape alarmes) : GET /api/equipements/alarmes -> {alarmes: [{id, nom, piece, cap, depuis}]}. Presence (V2.2 ha-localisation) : GET /api/equipements/presence ->
 // {presence: [{id, nom, zone, maison}]} (personnes, zone seulement).
-// Ecriture generique (V2.1 etape ecriture-generique) : POST /api/equipements/:id/capacite {element, cap, valeur?, confirm?} -> {ok, equipement} (core/appareils.mjs ecrireCapacite).
+// Ecriture generique (V2.1 etape ecriture-generique) : POST /api/equipements/:id/capacite {element, cap, valeur?, confirm?, options?} -> {ok, equipement} (core/appareils.mjs ecrireCapacite).
 // Contrats « Capacités » et « Données sensibles » de .claude/rules/equipements.md. Lampes et prises de la vue Lumières : leurs routes (inchangées).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -15,10 +15,10 @@ import { DONNEES, ecrireJson } from '../core/outils.mjs';
 import { equipements, codeAppairage, ecrireCapacite } from '../core/appareils.mjs';
 import { lireRegistre } from './pieces-registre.mjs';
 
-export const FICHIER = 'equipements.json';
+const FICHIER = 'equipements.json';
 export const MAX_CONNUS = 2000;
-export const OUBLI_MS = 30 * 24 * 3600 * 1000; // absent du hub depuis 30 jours : oublie
-export const CLE_RE = /^[a-z0-9_-]{1,40}:[A-Za-z0-9_.:-]{1,160}$/;
+const OUBLI_MS = 30 * 24 * 3600 * 1000; // absent du hub depuis 30 jours : oublie
+const CLE_RE = /^[a-z0-9_-]{1,40}:[A-Za-z0-9_.:-]{1,160}$/;
 const date = (v) => (typeof v === 'string' && !isNaN(Date.parse(v)) ? v : null);
 const nom = (v) => (typeof v === 'string' ? v.slice(0, 60) : '');
 
@@ -70,9 +70,9 @@ export function suivre(connus0, liste, repondu, maintenant, init) {
 
 // Preréglages de position des stores (communs a tous, comme les couleurs personnalisees) : entiers 0-100, uniques, tries, MAX_POSITIONS au plus ; absent = DEFAUT_POSITIONS
 // (rien n'est ecrit avant un changement) ; illisible (JSON invalide, positions qui n'est pas une liste) : lisible false, jamais reecrit, ecritures refusees ; valeurs invalides ignorees.
-export const FICHIER_POSITIONS = 'stores-positions.json';
+const FICHIER_POSITIONS = 'stores-positions.json';
 export const MAX_POSITIONS = 8;
-export const DEFAUT_POSITIONS = Object.freeze([0, 10, 50, 80, 100]);
+const DEFAUT_POSITIONS = Object.freeze([0, 10, 50, 80, 100]);
 const position = (v) => Number.isInteger(v) && v >= 0 && v <= 100;
 const ranger = (l) => [...new Set(l.filter(position))].sort((a, b) => a - b).slice(0, MAX_POSITIONS);
 export function analyserPositions(texte) {
@@ -92,11 +92,13 @@ export function retirerPosition(l, x) {
   if (!position(x)) throw new HttpError(400, 'Position invalide (0 à 100 %).');
   return ranger(l.filter((v) => v !== x));
 }
-function lirePositions() {
+// Lecture d'un fichier de donnees/ : texte (null s'il est absent) passe a l'analyseur ; autre erreur : vide() (illisible, jamais reecrit).
+function lireDonnee(fichier, analyseur, vide) {
   let t = null;
-  try { t = fs.readFileSync(path.join(DONNEES, FICHIER_POSITIONS), 'utf8'); } catch (e) { if (e.code !== 'ENOENT') return { positions: [...DEFAUT_POSITIONS], lisible: false, absent: false }; }
-  return analyserPositions(t);
+  try { t = fs.readFileSync(path.join(DONNEES, fichier), 'utf8'); } catch (e) { if (e.code !== 'ENOENT') return { ...vide(), lisible: false, absent: false }; }
+  return analyseur(t);
 }
+const lirePositions = () => lireDonnee(FICHIER_POSITIONS, analyserPositions, () => ({ positions: [...DEFAUT_POSITIONS] }));
 const ILLISIBLE_POS = 'Préréglages des stores illisibles sur le serveur (stores-positions.json) : rien n\'a été enregistré.';
 function changerPositions(fn) {
   const f = lirePositions();
@@ -109,7 +111,7 @@ function changerPositions(fn) {
 // Icones choisies (V2.1 etape icones ; cartes §4) : donnees/icones.json {v: 1, equipements: {id d'equipement: nom}} (fichier a part : une version precedente qui reecrit
 // equipements.json ne les efface pas ; absent = icones par defaut ; illisible : jamais reecrit, ecritures refusees ; ignore par une version precedente ; 2000 au plus ; dans sauvegarde.sh).
 // Nouvelle icone d'equipement : ICONES_EQUIPEMENTS ici ET PACK de public/icones.js (meme liste, meme ordre).
-export const FICHIER_ICONES = 'icones.json';
+const FICHIER_ICONES = 'icones.json';
 export const ICONES_EQUIPEMENTS = Object.freeze([
   'porte', 'fenetre', 'garage', 'portail', 'volet', 'store', 'baie', 'boite_lettres',
   'ampoule', 'plafonnier', 'lampadaire', 'lampe_bureau', 'applique', 'guirlande', 'spot', 'ruban',
@@ -133,16 +135,14 @@ export function poserIcone(icones, id, nomIcone) {
   if (nomIcone === null) delete n[id]; else { if (!n[id] && Object.keys(n).length >= MAX_CONNUS) throw new HttpError(409, 'Trop d\'icônes enregistrées.'); n[id] = nomIcone; }
   return n;
 }
-function lireIcones() {
-  let t = null;
-  try { t = fs.readFileSync(path.join(DONNEES, FICHIER_ICONES), 'utf8'); } catch (e) { if (e.code !== 'ENOENT') return { icones: {}, lisible: false, absent: false }; }
-  return analyserIcones(t);
-}
+const lireIcones = () => lireDonnee(FICHIER_ICONES, analyserIcones, () => ({ icones: {} }));
 
-function lire() {
-  let t = null;
-  try { t = fs.readFileSync(path.join(DONNEES, FICHIER), 'utf8'); } catch (e) { if (e.code !== 'ENOENT') return { connus: {}, lisible: false, absent: false }; }
-  return analyser(t);
+const lire = () => lireDonnee(FICHIER, analyser, () => ({ connus: {} }));
+// Piece affichee de chaque equipement (pieceDe : rangement local, pieces locales, pieces du hub vues dans la liste).
+function avecPieces(liste) {
+  const reg = lireRegistre(), piecesHub = new Map();
+  for (const e of liste) if (e.piece && e.piece.id) piecesHub.set(e.piece.id, String(e.piece.name || e.piece.id));
+  return liste.map((e) => ({ ...e, piece: pieceDe(e, reg.rangement, reg.locales, piecesHub) }));
 }
 const ecrire = (connus) => ecrireJson(FICHIER, { v: 1, connus }, 1);
 const ILLISIBLE = 'Suivi des équipements illisible sur le serveur (equipements.json) : rien n\'a été enregistré.';
@@ -162,7 +162,7 @@ export function pieceDe(e, rangement, locales, piecesHub) {
 const pour = (s) => typeof s === 'string' && s.length <= 200;
 // Alarmes en cours (V2.1 etape alarmes ; cartes §3) : capacites d'alerte (fuite, fumee, monoxyde, gaz) vraies d'un equipement present -> [{id, nom, piece, cap, depuis}]
 // (depuis : heure retenue par le serveur, ou null) ; plus recente d'abord, sans heure ensuite (ordre du nom) ; 20 au plus. Pur (banc/unitaires/equipements.test.mjs).
-export const ALERTES = ['fuite', 'fumee', 'monoxyde', 'gaz'];
+const ALERTES = ['fuite', 'fumee', 'monoxyde', 'gaz'];
 export function alarmes(liste) {
   const r = [];
   for (const e of liste || []) {
@@ -191,10 +191,8 @@ export const routes = [
     const s = suivre(f.connus, r.equipements, r.repondu, Date.now(), f.absent);
     let lisible = f.lisible;
     if (f.lisible && s.change && (!f.absent || r.repondu.length)) { try { ecrire(s.connus); } catch (e) { lisible = false; } }
-    const reg = lireRegistre(), piecesHub = new Map();
-    for (const e of r.equipements) if (e.piece && e.piece.id) piecesHub.set(e.piece.id, String(e.piece.name || e.piece.id));
     const ic = lireIcones().icones;
-    const liste = r.equipements.map((e) => ({ ...e, piece: pieceDe(e, reg.rangement, reg.locales, piecesHub), nouveau: f.lisible && s.nouveaux.has(e.id), ...(ic[e.id] ? { icone: ic[e.id] } : {}) }));
+    const liste = avecPieces(r.equipements).map((e) => ({ ...e, nouveau: f.lisible && s.nouveaux.has(e.id), ...(ic[e.id] ? { icone: ic[e.id] } : {}) }));
     for (const a of s.absents) {
       liste.push({ id: a.id, adapter: a.id.split(':')[0], nom: a.nom || '(sans nom)', absent: true, absent_depuis: a.absent_depuis, joignable: false, piece: { id: null, name: 'Autres' },
         elements: [], capacites: [], codes: [], inconnues: 0, nouveau: false });
@@ -203,9 +201,8 @@ export const routes = [
   }],
   // Alarmes en cours (bandeau de toutes les vues, public/alarmes.js) : liste courte, depuis le cache court des equipements
   ['GET', '/api/equipements/alarmes', async () => {
-    const r = await equipements(false), reg = lireRegistre(), piecesHub = new Map();
-    for (const e of r.equipements) if (e.piece && e.piece.id) piecesHub.set(e.piece.id, String(e.piece.name || e.piece.id));
-    return { alarmes: alarmes(r.equipements.map((e) => ({ ...e, piece: pieceDe(e, reg.rangement, reg.locales, piecesHub) }))), time: new Date().toISOString() };
+    const r = await equipements(false);
+    return { alarmes: alarmes(avecPieces(r.equipements)), time: new Date().toISOString() };
   }],
   // Presence (V2.2 ha-localisation) : carte « Présence » de l'accueil, depuis le cache court des equipements ; zone seulement, jamais de coordonnees
   ['GET', '/api/equipements/presence', async () => {

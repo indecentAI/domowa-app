@@ -238,7 +238,7 @@
     function renderCustom() {
       var box = N.custom, i;
       if (!box) return;
-      box.innerHTML = ""; N.cs = [];
+      box.replaceChildren(); N.cs = [];
       box.className = "q-qc q-custom" + (delMode ? " del" : "");
       for (i = 0; i < 7; i++) box.appendChild(i < CUSTOM.length ? makeCustom(CUSTOM[i]) : makeEmpty());
       box.appendChild(makeAdd());
@@ -295,12 +295,12 @@
     flt = svgEl("filter", { id: fid, x: "-50%", y: "-50%", width: "200%", height: "200%" });
     flt.appendChild(svgEl("feGaussianBlur", { stdDeviation: "5" }));
     defs.appendChild(flt); N.svg.appendChild(defs);
-    N.svg.appendChild(svgEl("circle", { cx: 100, cy: 100, r: RAD, fill: "none", stroke: "#2b303b", "stroke-width": 16, "stroke-linecap": "round", "stroke-dasharray": ARC + " " + CIRC, transform: "rotate(135 100 100)" }));
-    N.svg.appendChild(svgEl("circle", { cx: 100, cy: 100, r: 64, fill: "#11151c", stroke: "#262c37", "stroke-width": 1 }));
+    N.svg.appendChild(svgEl("circle", { cx: 100, cy: 100, r: RAD, fill: "none", style: "stroke:var(--cadran-piste)", "stroke-width": 16, "stroke-linecap": "round", "stroke-dasharray": ARC + " " + CIRC, transform: "rotate(135 100 100)" }));
+    N.svg.appendChild(svgEl("circle", { cx: 100, cy: 100, r: 64, style: "fill:var(--cadran-centre);stroke:var(--cadran-bord)", "stroke-width": 1 }));
     N.glow = svgEl("circle", { cx: 100, cy: 100, r: RAD, fill: "none", "stroke-width": 22, "stroke-linecap": "round", "stroke-dasharray": "0 " + CIRC, transform: "rotate(135 100 100)", "class": "q-glow", filter: "url(#" + fid + ")" });
     N.fill = svgEl("circle", { cx: 100, cy: 100, r: RAD, fill: "none", "stroke-width": 16, "stroke-linecap": "round", "stroke-dasharray": "0 " + CIRC, transform: "rotate(135 100 100)", "class": "q-fill" });
-    N.thumbG = svgEl("circle", { cx: 100, cy: 100, r: 12, fill: "#000", "fill-opacity": 0.55, filter: "url(#" + fid + ")" });
-    N.thumb = svgEl("circle", { cx: 100, cy: 100, r: 11, fill: "#f3f4f7", stroke: "#ffffff", "stroke-opacity": 0.5, "stroke-width": 2 });
+    N.thumbG = svgEl("circle", { cx: 100, cy: 100, r: 12, style: "fill:var(--ombre)", "fill-opacity": 0.55, filter: "url(#" + fid + ")" });
+    N.thumb = svgEl("circle", { cx: 100, cy: 100, r: 11, style: "fill:var(--cadran-pouce);stroke:var(--cadran-pouce-bord)", "stroke-opacity": 0.5, "stroke-width": 2 });
     N.svg.appendChild(N.glow); N.svg.appendChild(N.fill); N.svg.appendChild(N.thumbG); N.svg.appendChild(N.thumb);
     N.dial.appendChild(N.svg);
     ctr = el("div", "q-center", "");
@@ -310,13 +310,7 @@
     row.appendChild(minus); row.appendChild(N.dial); row.appendChild(plus);
     N.dialBox.appendChild(row);
     N.mixed = el("div", "q-mixed", ""); N.dialBox.appendChild(N.mixed);
-    if (opts.inchange) {
-      N.garde = el("button", "q-mode q-garde", "");
-      N.garde.innerHTML = ICON_SAME + "<span>Luminosité inchangée</span>";
-      N.garde.onclick = function () { P.garde = !P.garde; paint(); schedule(P.garde ? function () { opts.inchangee(P); } : applyLevel, 50); };
-      N.dialBox.appendChild(N.garde);
-    }
-    c1.appendChild(N.dialBox);
+    c1.appendChild(N.dialBox); // inchange va avec curseur (animations.js) : jamais de bouton « Inchangée » sous le cadran
 
     N.svg.onpointerdown = function (e) {
       if (!actif()) return;

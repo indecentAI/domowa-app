@@ -2,7 +2,7 @@
 // editeur en liste d'etapes (comme le volet Animation de PowerPoint) avec frise en apercu et controle de cadence en direct (POST /api/animations/verifier), Essayer ;
 // assistants (cycle de couleurs, respiration, aube, crepuscule, vague, bougie, feu de cheminee, sous l'eau, aurore boreale, pastels, arc-en-ciel defilant, coucher de soleil, veilleuse, fete : decalage minimal ajoute s'il le faut) ; choix ordonne des lampes ; aide « ? » ; V1.6, telephone (APP.tel) : « + Nouvelle animation » dans un pied, editeur en volets Etapes / Etape / Animation en portrait.
 // Favorites (etoile, POST /api/animations/:id/favori) : icones dans la carte « Animations » de la ligne Actions de l'accueil (APP.homeActions, APP.homeFavoris de home.js),
-// toucher = lancer ou arreter ; entree du menu (APP.nav.action) ; APP.animations {majEtat}. Lecture GET /api/animations a chaque actualisation (crochet APP.surActualisation, ordre 20), toutes les 4 s si une animation tourne ou si l'onglet est ouvert.
+// toucher = lancer ou arreter ; entree du menu (APP.nav.action). Lecture GET /api/animations a chaque actualisation (crochet APP.surActualisation, ordre 20), toutes les 4 s si une animation tourne ou si l'onglet est ouvert.
 // Aucune regle de prevision (etats changeants) : l'affichage suit la reponse de chaque POST. Crochet de vue APP.surVue (ordre 10).
 (function () {
   const $ = APP.$, el = APP.el, VUE = "animations";
@@ -17,22 +17,25 @@
     const h = Math.floor(s / 3600), m = Math.round((s - h * 3600) / 60); return h + " h" + (m ? " " + m + " min" : "");
   }
   const plur = (n, mot) => n + " " + mot + (n > 1 ? "s" : "");
+  // Limites rendues par GET /api/animations (LIMITES de animations-plan.mjs) ; repli : valeurs actuelles du serveur
+  const lim = (k, defaut) => (etat.limites && typeof etat.limites[k] === "number" ? etat.limites[k] : defaut);
+  const dixieme = (v) => Math.round(v * 10) / 10;
   // Instants des etapes (meme calcul que horaire() de modules/animations-plan.mjs) : [{debut, fin}] et cycle
   function horaire(a) {
     const et = []; let prec = null;
     a.etapes.forEach((e) => {
       const base = !prec ? 0 : (e.depart === "avec" ? prec.debut : prec.fin);
-      const debut = base + (e.delai || 0), fin = debut + (e.lampes.length - 1) * (e.decalage || 0) + e.duree;
+      const debut = dixieme(base + (e.delai || 0)), fin = dixieme(debut + (e.lampes.length - 1) * (e.decalage || 0) + e.duree);
       prec = { debut, fin }; et.push(prec);
     });
     return { etapes: et, cycle: Math.max(1, ...et.map((x) => x.fin)) };
   }
   const nomLampe = (id) => { const l = (etat.lampes || []).find((x) => x.id === id); return l ? l.nom : "(lampe absente)"; };
   function couleurCible(e) {
-    if (e.off) return "#20252f";
+    if (e.off) return "var(--anim-off)";
     if (e.cible && e.cible.type === "couleur") return APP.colorOf(true, "color", e.cible.teinte, e.cible.saturation / 100);
     if (e.cible && e.cible.type === "blanc") return APP.colorOf(true, "temperature", null, null, e.cible.kelvin);
-    return "rgba(233,238,247," + (0.25 + 0.6 * (e.luminosite || 50) / 100) + ")";
+    return "color-mix(in srgb,var(--text) " + Math.round(25 + 60 * (e.luminosite || 50) / 100) + "%,transparent)"; // thème : --text à l'opacité de la luminosité
   }
   const COURBES = [["lineaire", "Linéaire"], ["acceleree", "Accélérée"], ["ralentie", "Ralentie"], ["douce", "Douce"]];
   function resumeEtape(e, i) {
@@ -61,7 +64,6 @@
     if (carte) majCarte();
     if (ouverte) rendre(); // l'editeur ne se reconstruit pas (saisie gardee) : seuls ses boutons suivent
     if (APP.renderHome) APP.renderHome();
-    if (APP.view === "scenes" && APP.renderScenes) APP.renderScenes();
   }
   function charger(cb) {
     APP.api("GET", "/api/animations", null, (err, d) => { if (!err && d) majEtat(d); if (cb) cb(err); });
@@ -118,7 +120,7 @@
     ] },
     { titre: "Limites (pour le hub et pour les yeux)", lignes: [
       "4 commandes par seconde au plus en tout, et 0,5 s au moins entre deux changements d'une même lampe (pas de clignotement). Le bandeau du haut de l'éditeur indique le pic et dit ce qui dépasse.",
-      "Le hub n'applique qu'une valeur par commande : changer la luminosité et la couleur (ou le blanc) d'une lampe en même temps fait deux commandes, envoyées l'une juste après l'autre (les deux fondus avancent ensemble). Passer une lampe ON en ajoute une. Avec plusieurs lampes, un petit décalage ou « Luminosité inchangée » laisse plus de place.",
+      "Le hub n'applique qu'une valeur par commande : changer la luminosité et la couleur (ou le blanc) d'une lampe en même temps fait deux commandes, envoyées l'une juste après l'autre (les deux fondus avancent ensemble). Passer une lampe ON en ajoute une. Avec plusieurs lampes, un petit décalage ou le bouton « Inchangée » de la luminosité laisse plus de place.",
       "Au-delà de 4 lampes, un changement simultané dépasse le plafond : ajoutez un petit décalage (les modèles le font d'eux-mêmes).",
       "3 animations au plus en même temps ; une lampe n'est animée que par une seule.",
     ] },
@@ -148,8 +150,8 @@
   function choisirLampes(titre, actuelles, fini) {
     const f = fenetre(titre), sel = actuelles.slice(), lampes = etat.lampes || [];
     function rendreChoix() {
-      f.body.innerHTML = "";
-      f.body.appendChild(el("p", "hb-note", "Touchez les lampes dans l'ordre voulu : le numéro est l'ordre du décalage (vague). " + (etat.limites ? etat.limites.lampes : 20) + " lampes au plus."));
+      f.body.replaceChildren();
+      f.body.appendChild(el("p", "hb-note", "Touchez les lampes dans l'ordre voulu : le numéro est l'ordre du décalage (vague). " + lim("lampes", 20) + " lampes au plus."));
       if (!lampes.length) f.body.appendChild(el("div", "hb-err", "Aucune lampe animable (hub injoignable ?)."));
       const pieces = [];
       lampes.forEach((l) => { const p = l.piece || "Autres"; if (pieces.indexOf(p) < 0) pieces.push(p); });
@@ -163,7 +165,7 @@
           t.appendChild(el("span", "an-lnom", l.nom));
           t.appendChild(el("span", "an-lcap", (l.couleur ? "couleur" : l.blanc ? "blanc réglable" : "luminosité") + (l.joignable ? "" : " · injoignable")));
           b.appendChild(t);
-          b.onclick = () => { if (k >= 0) sel.splice(k, 1); else if (sel.length < 20) sel.push(l.id); rendreChoix(); };
+          b.onclick = () => { if (k >= 0) sel.splice(k, 1); else if (sel.length < lim("lampes", 20)) sel.push(l.id); rendreChoix(); };
           g.appendChild(b);
         });
         f.body.appendChild(g);
@@ -179,22 +181,8 @@
     rendreChoix();
   }
 
-  // --- Icone (memes icones que les scenarios : APP.sceneIcons de scenes.js)
-  function choisirIcone(actuelle, fini) {
-    const wrap = el("div", "ipick"), pan = el("div", "ipanel"), grid = el("div", "igrid");
-    const fermer = () => { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
-    wrap.onclick = (e) => { if (e.target === wrap) fermer(); };
-    pan.appendChild(el("div", "ititle", "Icône de l'animation"));
-    (APP.sceneIcons || []).forEach((ic) => {
-      const b = el("button", "iopt" + (actuelle === ic.k ? " sel" : ""), "");
-      b.innerHTML = APP.sceneIcon(ic.k); b.title = ic.t; b.setAttribute("aria-label", ic.t);
-      b.onclick = () => { fermer(); fini(ic.k); };
-      grid.appendChild(b);
-    });
-    pan.appendChild(grid);
-    pan.appendChild(bouton("inone", "Aucune icône", () => { fermer(); fini(null); }));
-    wrap.appendChild(pan); document.body.appendChild(wrap);
-  }
+  // --- Icone (memes icones et meme fenetre que les scenarios : APP.choisirIcone de scenes.js)
+  const choisirIcone = (actuelle, fini) => APP.choisirIcone("Icône de l'animation", actuelle, fini);
 
   // --- Assistants (modeles) : etapes generees pour les lampes choisies ; decalage minimal ajoute si le plafond l'exige
   const et = (o) => Object.assign({ depart: "apres", delai: 0, decalage: 0, courbe: "lineaire", luminosite: null, cible: null }, o);
@@ -271,7 +259,7 @@
   function rendre() {
     const v = $("viewAnim");
     if (mode === "editeur") { majBoutonsEditeur(); return; }
-    v.innerHTML = "";
+    v.replaceChildren();
     const barre = el("div", "an-barre");
     const nouvelle = bouton("b-main an-nouv", "+ Nouvelle animation", () => ouvrirEditeur(null, null, false));
     if (!APP.tel) barre.appendChild(nouvelle); // V1.6 : sur le téléphone, dans le pied collé en bas (ajouté en fin de vue)
@@ -305,9 +293,9 @@
     if (fin && (fin.raison === "panne" || fin.raison === "vide") && Date.now() - new Date(fin.fin).getTime() < 60000) v.appendChild(el("div", "hb-err an-fin", "« " + fin.nom + " » arrêtée : " + fin.motif));
     if (APP.tel) { const pied = el("div", "an-pied"); pied.appendChild(nouvelle); v.appendChild(pied); }
   }
-  const ICON_EDIT = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  const ICON_EDIT = APP.pictos.modifier;
   const ICON_COPIE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>';
-  const ICON_STAR = '<svg width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><polygon points="12 2.5 15.1 8.7 22 9.7 17 14.5 18.2 21.4 12 18.1 5.8 21.4 7 14.5 2 9.7 8.9 8.7"/></svg>';
+  const ICON_STAR = APP.pictos.favori;
   const ICON_TRASH = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>';
   function icBouton(svg, titre, fn, cls) { const b = el("button", "sicon " + (cls || ""), ""); b.innerHTML = svg; b.title = titre; b.setAttribute("aria-label", titre); b.onclick = fn; return b; }
   function carteAnim(a) {
@@ -340,9 +328,9 @@
   }
 
   // --- Editeur
-  const nouvelleEtape = (prec) => prec ? JSON.parse(JSON.stringify(Object.assign({}, prec, { depart: "apres", delai: 0 }))) : et({ lampes: [], duree: 2, luminosite: 100, cible: coul(240, 100) });
+  const nouvelleEtape = (prec) => prec ? structuredClone(Object.assign({}, prec, { depart: "apres", delai: 0 })) : et({ lampes: [], duree: 2, luminosite: 100, cible: coul(240, 100) });
   function ouvrirEditeur(a, id, neuf) {
-    brouillon = a ? JSON.parse(JSON.stringify(a)) : { nom: "Nouvelle animation", boucle: true, reset: true, etapes: [nouvelleEtape(null)] };
+    brouillon = a ? structuredClone(a) : { nom: "Nouvelle animation", boucle: true, reset: true, etapes: [nouvelleEtape(null)] };
     delete brouillon.id;
     editId = id; choix = 0; volet = "etapes"; modifie = !!neuf || !a; verif = null; mode = "editeur";
     if (APP.view !== VUE) APP.nav.vue(VUE); else construireEditeur();
@@ -360,7 +348,7 @@
   function construireEditeur() {
     const v = $("viewAnim"), garde = ed ? { f: ed.form.scrollTop, l: ed.liste.scrollTop } : null;
     if (ed && ed.reglages) APP.reglagesRetirer(ed.reglages);
-    v.innerHTML = "";
+    v.replaceChildren();
     const box = el("div", "an-ed"), tete = el("div", "an-tete");
     tete.appendChild(bouton("b-small an-retour", "‹ Animations", quitterEditeur));
     const slot = el("button", "sslot" + (brouillon.icone ? "" : " empty"), ""); slot.innerHTML = (brouillon.icone && APP.sceneIcon(brouillon.icone)) || "+";
@@ -431,10 +419,10 @@
       APP.api("POST", "/api/animations/verifier", { animation: brouillon }, (err, v) => {
         if (rev !== verifRev || !ed) return;
         verif = err ? { ok: false, erreurs: [err] } : v;
-        const lim = etat.limites ? etat.limites.plafond : 4;
+        const plafond = lim("plafond", 4);
         ed.charge.className = "an-charge " + (verif.ok ? "ok" : "ko");
         ed.charge.textContent = verif.ok
-          ? "Pic : " + verif.pic + " commande" + (verif.pic > 1 ? "s" : "") + " par seconde (" + lim + " au plus) · " + verif.commandes + " commandes par cycle · cycle " + duree(verif.cycle)
+          ? "Pic : " + verif.pic + " commande" + (verif.pic > 1 ? "s" : "") + " par seconde (" + plafond + " au plus) · " + verif.commandes + " commandes par cycle · cycle " + duree(verif.cycle)
           : (verif.erreurs || []).join(" ");
         majBoutonsEditeur();
       });
@@ -454,7 +442,7 @@
   function dessinerFrise() {
     const f = ed.frise, h = horaire(brouillon), ordre = [];
     brouillon.etapes.forEach((e) => e.lampes.forEach((l) => { if (ordre.indexOf(l) < 0) ordre.push(l); }));
-    f.innerHTML = "";
+    f.replaceChildren();
     const n = Math.max(1, ordre.length), H = 64, rh = H / n, W = 1000, NS = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(NS, "svg");
     svg.setAttribute("viewBox", "0 0 " + W + " " + H); svg.setAttribute("preserveAspectRatio", "none"); svg.setAttribute("class", "an-svg");
@@ -463,7 +451,7 @@
         const s = h.etapes[i].debut + k * (e.decalage || 0), r = document.createElementNS(NS, "rect");
         r.setAttribute("x", (s / h.cycle * W).toFixed(1)); r.setAttribute("y", (ordre.indexOf(l) * rh + rh * 0.12).toFixed(2));
         r.setAttribute("width", Math.max(2, e.duree / h.cycle * W).toFixed(1)); r.setAttribute("height", (rh * 0.76).toFixed(2));
-        r.setAttribute("rx", Math.min(3, rh / 3)); r.setAttribute("fill", couleurCible(e));
+        r.setAttribute("rx", Math.min(3, rh / 3)); r.style.fill = couleurCible(e);
         r.setAttribute("class", "an-bloc" + (i === choix ? " sel" : ""));
         r.addEventListener("click", () => { choix = i; listeEtapes(); formEtape(); dessinerFrise(); if (APP.tel) montrerVolet("etape"); });
         svg.appendChild(r);
@@ -478,7 +466,7 @@
   }
   function listeEtapes() {
     const L = ed.liste;
-    L.innerHTML = "";
+    L.replaceChildren();
     brouillon.etapes.forEach((e, i) => {
       const it = el("div", "an-et" + (i === choix ? " sel" : "")), r = resumeEtape(e, i);
       const sw = el("span", "an-sw"); sw.style.background = couleurCible(e); it.appendChild(sw);
@@ -491,13 +479,13 @@
       const mk = (txt, titre, fn, off) => { const b = el("button", "an-mini", txt); b.title = titre; b.setAttribute("aria-label", titre); b.disabled = !!off; b.onclick = (ev) => { ev.stopPropagation(); fn(); }; outils.appendChild(b); };
       mk("↑", "Monter", () => { const x = brouillon.etapes.splice(i, 1)[0]; brouillon.etapes.splice(i - 1, 0, x); choix = i - 1; change(); }, i === 0);
       mk("↓", "Descendre", () => { const x = brouillon.etapes.splice(i, 1)[0]; brouillon.etapes.splice(i + 1, 0, x); choix = i + 1; change(); }, i === brouillon.etapes.length - 1);
-      mk("⧉", "Dupliquer l'étape", () => { brouillon.etapes.splice(i + 1, 0, nouvelleEtape(e)); choix = i + 1; change(); }, brouillon.etapes.length >= 40);
+      mk("⧉", "Dupliquer l'étape", () => { brouillon.etapes.splice(i + 1, 0, nouvelleEtape(e)); choix = i + 1; change(); }, brouillon.etapes.length >= lim("etapes", 40));
       mk("×", "Supprimer l'étape", () => { brouillon.etapes.splice(i, 1); choix = Math.max(0, Math.min(choix, brouillon.etapes.length - 1)); change(); }, brouillon.etapes.length <= 1);
       it.appendChild(outils);
       L.appendChild(it);
     });
     const plus = bouton("b-light an-ajout", "+ Ajouter une étape", () => { brouillon.etapes.push(nouvelleEtape(brouillon.etapes[brouillon.etapes.length - 1])); choix = brouillon.etapes.length - 1; if (APP.tel) volet = "etape"; change(); });
-    plus.disabled = brouillon.etapes.length >= 40;
+    plus.disabled = brouillon.etapes.length >= lim("etapes", 40);
     L.appendChild(plus);
   }
   // Pas des valeurs de temps : 0,1 s sous 2 s, 0,5 s sous 10 s, 1 s sous 60 s, 10 s sous 10 min, 1 min au-dela
@@ -528,7 +516,7 @@
   const avantOff = new WeakMap();
   function formEtape() {
     const F = ed.form, e = brouillon.etapes[choix];
-    F.innerHTML = "";
+    F.replaceChildren();
     const set = (k, v) => { e[k] = v; change(); };
     // Lampes
     const lr = el("div", "an-champ");
@@ -570,9 +558,9 @@
     }
     F.appendChild(segments("Départ", [["apres", "Après la précédente"], ["avec", "Avec la précédente"]], e.depart, (x) => set("depart", x), choix === 0));
     const g = el("div", "an-grille");
-    g.appendChild(regle("Délai", e.delai, 0, 3600, (x) => set("delai", x)));
-    g.appendChild(regle("Durée", e.duree, 0.5, 3600, (x) => set("duree", x)));
-    g.appendChild(regle("Décalage entre lampes", e.decalage, 0, 60, (x) => set("decalage", x), e.lampes.length > 1 ? "La lampe n°2 démarre " + duree(e.decalage) + " après la n°1, etc." : null));
+    g.appendChild(regle("Délai", e.delai, 0, lim("delaiMax", 3600), (x) => set("delai", x)));
+    g.appendChild(regle("Durée", e.duree, lim("dureeMin", 0.5), lim("dureeMax", 3600), (x) => set("duree", x)));
+    g.appendChild(regle("Décalage entre lampes", e.decalage, 0, lim("decalageMax", 60), (x) => set("decalage", x), e.lampes.length > 1 ? "La lampe n°2 démarre " + duree(e.decalage) + " après la n°1, etc." : null));
     F.appendChild(g);
     if (!e.off) F.appendChild(segments("Courbe", COURBES, e.courbe, (x) => set("courbe", x)));
     if (!e.off && e.courbe !== "lineaire") F.appendChild(el("div", "an-aidetxt", e.duree < 2 ? "Moins de 2 s : fondu linéaire de la lampe." : "Faite en " + Math.min(4, Math.floor(e.duree / 0.5)) + " petits glissements (une commande chacun, deux si la luminosité et la couleur changent ensemble)."));
@@ -615,7 +603,6 @@
     majCarte();
     return r.w;
   }, "animations"); // V1.9 révision 3 : clé de la carte dans l'ordre de l'accueil
-  APP.animations = { majEtat };
   charger();
 })();
 // FIN

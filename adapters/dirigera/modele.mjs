@@ -2,13 +2,11 @@
 // versModele (lumieres et prises : caps/state calcules par projeter de core/modele.mjs), versEquipements (tous les appareils regroupes par relationId, hub ; liens remoteLinks en lecture), sans acces au hub (essais unitaires).
 // Lecture et ecriture d'apres capabilities.canReceive seulement (jamais d'apres le type) ; le type ne donne que le role de onoff (light -> eclairage, outlet -> prise, autre -> appareil).
 // Une capacite n'existe que si le hub la montre (attribut present ou cle dans canReceive) : l'adaptateur ne fabrique rien. Tout attribut ou cle de canReceive sans capacite : inconnues [{cle, valeur}]
-// (rien n'est jete ; valeur de plus de 8 Ko : null et tronque). Code d'appairage (setupCode, qrCode) : capacite secrete ; coordonnees du hub : capacite privee (contrat « Capacités »).
+// (rien n'est jete ; valeur de plus de 8 Ko : {tronque: true}, copieInconnue de core/capacites.mjs). Code d'appairage (setupCode, qrCode) : capacite secrete ; coordonnees du hub : capacite privee (contrat « Capacités »).
 import { projeter } from '../../core/modele.mjs';
-import { sansSecret } from '../../core/capacites.mjs';
-
-const nb = (v) => (typeof v === 'number' ? v : null);
+import { sansSecret, nb, tx, bo, copieInconnue as copie, texteCoordonnees } from '../../core/capacites.mjs';
 import { HttpError } from '../../core/http.mjs';
-const tx = (v) => (typeof v === 'string' && v ? v : null);
+
 const ROLE = { light: 'eclairage', outlet: 'prise' };
 const opts = (l) => l.map(([code, libelle]) => ({ code, libelle }));
 const DEMARRAGE = opts([['startOn', 'ON'], ['startPrevious', 'État précédent'], ['startToggle', 'Inverser']]);
@@ -21,7 +19,7 @@ const COMMANDE = opts([['light', 'Lumières'], ['speaker', 'Enceinte'], ['blind'
 // Attribut -> capacite. ecr : cles de canReceive qui rendent la capacite ecrivable (toutes requises) ; pris : autres attributs consommes.
 // v(a) : valeur ; o : champs du descripteur. Ordre sans importance (core/capacites.mjs trie).
 const TABLE = [
-  ['isOn', 'onoff', { ecr: ['isOn'], v: (a) => (typeof a.isOn === 'boolean' ? a.isOn : null) }],
+  ['isOn', 'onoff', { ecr: ['isOn'], v: (a) => (bo(a.isOn)) }],
   ['lightLevel', 'luminosite', { ecr: ['lightLevel'], v: (a) => nb(a.lightLevel), o: { min: 1, max: 100, pas: 1, unite: '%' } }],
   ['colorHue|colorSaturation', 'couleur', { ecr: ['colorHue', 'colorSaturation'], v: (a) => ({ hue: nb(a.colorHue), sat: nb(a.colorSaturation) }) }],
   ['colorTemperature|colorTemperatureMin|colorTemperatureMax', 'temperature_couleur', { ecr: ['colorTemperature'], v: (a) => nb(a.colorTemperature), o: (a) => {
@@ -38,9 +36,9 @@ const TABLE = [
   ['motorRuntime', 'mesure', { v: (a) => nb(a.motorRuntime), o: { libelle: 'Durée de fonctionnement', unite: 'min' } }],
   // Filtre : duree de vie (valeur, min) et temps d'usage (utilise, min) dans un seul descripteur (barre d'usure, jours restants)
   ['filterLifetime|filterElapsedTime', 'filtre', { v: (a) => nb(a.filterLifetime), o: (a) => ({ unite: 'min', utilise: nb(a.filterElapsedTime) }) }],
-  ['filterAlarmStatus', 'probleme', { v: (a) => (typeof a.filterAlarmStatus === 'boolean' ? a.filterAlarmStatus : null), o: { libelle: 'Filtre à changer' } }],
-  ['childLock', 'verrou_enfant', { ecr: ['childLock'], v: (a) => (typeof a.childLock === 'boolean' ? a.childLock : null) }],
-  ['statusLight', 'voyant', { ecr: ['statusLight'], v: (a) => (typeof a.statusLight === 'boolean' ? a.statusLight : null) }],
+  ['filterAlarmStatus', 'probleme', { v: (a) => (bo(a.filterAlarmStatus)), o: { libelle: 'Filtre à changer' } }],
+  ['childLock', 'verrou_enfant', { ecr: ['childLock'], v: (a) => (bo(a.childLock)) }],
+  ['statusLight', 'voyant', { ecr: ['statusLight'], v: (a) => (bo(a.statusLight)) }],
   ['currentTemperature', 'temperature', { v: (a) => nb(a.currentTemperature), o: { unite: '°C' } }],
   ['currentRH', 'humidite', { v: (a) => nb(a.currentRH), o: { unite: '%' } }],
   // Min / max mesures (capteur d'air) : champs propres mini / maxi (periode a verifier sur un vrai capteur)
@@ -54,13 +52,13 @@ const TABLE = [
   ['currentAmps', 'courant', { v: (a) => nb(a.currentAmps), o: { unite: 'A' } }],
   ['currentVoltage', 'tension', { v: (a) => nb(a.currentVoltage), o: { unite: 'V' } }],
   ['batteryPercentage', 'batterie', { v: (a) => nb(a.batteryPercentage), o: { unite: '%' } }],
-  ['isDetected', 'presence', { v: (a) => (typeof a.isDetected === 'boolean' ? a.isDetected : null) }],
-  ['isOpen', 'ouvert', { v: (a) => (typeof a.isOpen === 'boolean' ? a.isOpen : null) }],
-  ['windowOpen', 'ouvert', { v: (a) => (typeof a.windowOpen === 'boolean' ? a.windowOpen : null), o: { libelle: 'Fenêtre ouverte' } }],
-  ['waterLeakDetected', 'fuite', { v: (a) => (typeof a.waterLeakDetected === 'boolean' ? a.waterLeakDetected : null) }],
+  ['isDetected', 'presence', { v: (a) => (bo(a.isDetected)) }],
+  ['isOpen', 'ouvert', { v: (a) => (bo(a.isOpen)) }],
+  ['windowOpen', 'ouvert', { v: (a) => (bo(a.windowOpen)), o: { libelle: 'Fenêtre ouverte' } }],
+  ['waterLeakDetected', 'fuite', { v: (a) => (bo(a.waterLeakDetected)) }],
   ['playback', 'lecture', { ecr: ['playback'], v: (a) => tx(a.playback), o: { options: LECTURE } }],
   ['volume', 'volume', { ecr: ['volume'], v: (a) => nb(a.volume), o: { min: 0, max: 100, pas: 1, unite: '%' } }],
-  ['isMuted', 'muet', { ecr: ['isMuted'], v: (a) => (typeof a.isMuted === 'boolean' ? a.isMuted : null) }],
+  ['isMuted', 'muet', { ecr: ['isMuted'], v: (a) => (bo(a.isMuted)) }],
   ['playbackAudio', 'media', { v: (a) => { const i = a.playbackAudio && a.playbackAudio.playItem; return i ? [i.title, i.artist].filter(tx).join(' — ') || null : null; } }],
   ['playbackModes', 'repetition', { v: (a) => tx(a.playbackModes && a.playbackModes.repeat) }],
   // Aleatoire : ecrivable si playbackModes est dans canReceive (objet complet renvoye, shuffle change ; ecriture.mjs). Repetition : valeurs de repeat non documentees par la bibliotheque : lecture seule
@@ -84,24 +82,18 @@ const TABLE = [
   ['nextSunSet', 'soleil_coucher', { v: (a) => tx(a.nextSunSet) }],
   ['nextSunRise', 'soleil_lever', { v: (a) => tx(a.nextSunRise) }],
   ['timezone', 'fuseau', { v: (a) => tx(a.timezone) }],
-  ['coordinates', 'coordonnees', { v: (a) => { const c = a.coordinates; return c && Number.isFinite(c.latitude) && Number.isFinite(c.longitude) ? c.latitude.toFixed(5) + ', ' + c.longitude.toFixed(5) + (Number.isFinite(c.accuracy) ? ' (± ' + Math.round(c.accuracy) + ' m)' : '') : null; }, o: { prive: true } }],
+  ['coordinates', 'coordonnees', { v: (a) => { const c = a.coordinates; return c ? texteCoordonnees(c.latitude, c.longitude, c.accuracy) : null; }, o: { prive: true } }],
 ];
 // Cles consommees sans capacite propre (le nom, le mode de couleur porte par l'appareil)
 const PRIS = ['customName', 'colorMode'];
 // Objets composes dont une partie seulement fait une capacite : copie complete gardee aussi dans inconnues (rien n'est jete)
 const GARDES = ['playbackAudio', 'playbackModes', 'sensorConfig'];
-const MAX_INCONNUE = 8192;
-const copie = (v) => {
-  if (v === undefined) return null;
-  const j = JSON.stringify(v);
-  return j === undefined || j.length > MAX_INCONNUE ? { tronque: true } : JSON.parse(j);
-};
 
 // Capacites, inconnues et mode de couleur d'un appareil du hub (tout type)
 export function decrire(d) {
   const a = d.attributes || {};
-  const cr = Array.isArray(d.capabilities && d.capabilities.canReceive) ? d.capabilities.canReceive : [];
-  const a_ = (k) => Object.prototype.hasOwnProperty.call(a, k);
+  const cr = crDe(d);
+  const a_ = (k) => Object.hasOwn(a, k);
   const disponible = d.isReachable !== false, element = d.id;
   const capacites = [], vus = new Set(PRIS);
   for (const [cles, cap, t] of TABLE) {
@@ -140,7 +132,7 @@ export function versModele(d) {
 // Equipements (conception v2.1 §3) : appareils regroupes par relationId (produit physique) et le hub. Ordre stable (nom puis id).
 // Scenes du hub : hors de la vue Equipements (cartes du 21/11, section 17 ; vue Scenarios : etape scenes-hub).
 // Equipement : {id, hub: 'dirigera', idNatif, nom, type, piece, joignable, vu_le, elements, capacites, inconnues, lies?}
-// lies (V2.1, lecture) : appareils du hub dont remoteLinks nomme un element de l'equipement (lampes d'une telecommande, d'un capteur de mouvement) [{element, nom}]
+// lies (V2.1, lecture) : appareils du hub dont remoteLinks nomme un element de l'equipement (lampes d'une telecommande, d'un capteur de mouvement) [{element, nom, par}]
 // heures (V2.1 etape evenements, facultatif) : heures(idAppareil) -> {isOpen: {depuis}, waterLeakDetected: {depuis}, isDetected: {derniere}} retenues par evenements.mjs ;
 // posees en champs propres : ouvert.depuis, fuite.depuis, presence.derniere (ISO ; null ou absent : inconnues, jamais inventees)
 const HEURES = { ouvert: ['isOpen', 'depuis'], fuite: ['waterLeakDetected', 'depuis'], presence: ['isDetected', 'derniere'] };
@@ -187,7 +179,7 @@ export function versEquipements(appareils, hub, heures) {
 // lightLevel / colorTemperature dans canReceive (deviceSets.setAttributes ; valeur : moyenne arrondie des membres, bornes de temperature communes). Sans groupe commun : aucune.
 // Element de type controller (telecommande) : lier (ajout d'un appareil lie, ecriture.mjs ; options : lumieres et prises du hub non liees a ce mode, triees par nom ; jamais de retrait :
 // aucune fonction de la bibliotheque, application IKEA).
-const cr = (d) => (d && d.capabilities && Array.isArray(d.capabilities.canReceive) ? d.capabilities.canReceive : []);
+const crDe = (d) => (d && d.capabilities && Array.isArray(d.capabilities.canReceive) ? d.capabilities.canReceive : []);
 const nomDe = (d) => (d.attributes && d.attributes.customName) || '(sans nom)';
 function lies(appareils, l) {
   const ids = new Set(l.map((d) => d.id)), tous = (appareils || []).filter((d) => d && typeof d.id === 'string');
@@ -212,8 +204,8 @@ function lies(appareils, l) {
     const on = membres.map((d) => d.attributes && d.attributes.isOn === true);
     caps.push({ cap: 'groupe_onoff', element: e.id, lecture: true, ecriture: true, disponible: dispo, valeur: on.every(Boolean) ? true : on.some(Boolean) ? null : false, groupe: commun, libelle });
     const moy = (k) => { const v = membres.map((d) => d.attributes && d.attributes[k]).filter((x) => typeof x === 'number' && isFinite(x)); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null; };
-    if (membres.every((d) => cr(d).includes('lightLevel'))) caps.push({ cap: 'groupe_luminosite', element: e.id, lecture: true, ecriture: true, disponible: dispo, valeur: moy('lightLevel'), min: 1, max: 100, pas: 1, unite: '%', groupe: commun });
-    if (membres.every((d) => cr(d).includes('colorTemperature'))) {
+    if (membres.every((d) => crDe(d).includes('lightLevel'))) caps.push({ cap: 'groupe_luminosite', element: e.id, lecture: true, ecriture: true, disponible: dispo, valeur: moy('lightLevel'), min: 1, max: 100, pas: 1, unite: '%', groupe: commun });
+    if (membres.every((d) => crDe(d).includes('colorTemperature'))) {
       const bornes = membres.map((d) => { const a = d.attributes || {}; return [Math.min(a.colorTemperatureMin, a.colorTemperatureMax), Math.max(a.colorTemperatureMin, a.colorTemperatureMax)]; });
       const lo = Math.max(...bornes.map((b) => b[0])), hi = Math.min(...bornes.map((b) => b[1]));
       if (isFinite(lo) && isFinite(hi) && lo < hi) { const v = moy('colorTemperature'); caps.push({ cap: 'groupe_temperature', element: e.id, lecture: true, ecriture: true, disponible: dispo, valeur: v === null ? null : Math.max(lo, Math.min(hi, v)), min: lo, max: hi, pas: 1, unite: 'K', groupe: commun }); }
@@ -224,7 +216,7 @@ function lies(appareils, l) {
 // V2.1 etape telecommande-lampes (pur ; ecriture.mjs, lier) : ajout de l'appareil id aux appareils commandes par l'element (mode) d'une telecommande. Seul chemin de la bibliotheque :
 // remoteLinkIds d'un groupe (deviceSets.updateConfiguration ; mesure du 22/11 : liens existants gardes, lien garde apres suppression du groupe). Une lampe n'etant que dans un groupe,
 // la passer dans le groupe temporaire la retire du sien : groupes a remettre = chaque groupe de l'appareil avec sa liste complete de membres (deviceIds remplace la liste).
-// -> {groupes: [{id, deviceIds}]} ; HttpError-like {statut, message} leve par l'appelant : 'telecommande' (element absent ou pas une telecommande), 'appareil' (absent, ni lumiere ni prise), 'deja'.
+// -> {groupes: [{id, deviceIds}]} ; ou {erreur} (l'appelant leve la HttpError) : 'telecommande' (element absent ou pas une telecommande), 'appareil' (absent, ni lumiere ni prise), 'deja'.
 export function planLier(appareils, element, id) {
   const tous = (appareils || []).filter((d) => d && typeof d.id === 'string');
   const t = tous.find((d) => d.id === element), d = tous.find((x) => x.id === id);

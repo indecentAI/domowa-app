@@ -9,10 +9,10 @@
 .hlabel::after{content:"";flex:1 1 0;min-width:24px;height:1px;margin-left:14px;background:var(--sec-trait)}
 .hfleches{display:none;order:1;margin-left:12px;gap:8px}
 .hrow.hdeborde .hfleches{display:flex}
-.hfl{position:relative;width:30px;height:26px;min-height:0;padding:0;border-radius:13px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid #262c37;color:var(--muted)}
+.hfl{position:relative;width:30px;height:26px;min-height:0;padding:0;border-radius:13px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--trait-18);color:var(--muted)}
 .hfl::after{content:"";position:absolute;inset:-9px -7px}
 .hfl:disabled{opacity:.3}
-.hfl:active{border-color:#cfe6ff;color:#fff}
+.hfl:active{border-color:var(--sel);color:var(--neutre-100)}
 .hline{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding:0 16px;padding:2px 16px 16px;scrollbar-width:none}
 .hline::-webkit-scrollbar{display:none}
 .hline.fg{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 56px)}
@@ -21,31 +21,31 @@
 .hempty{color:var(--muted);font-size:16px;padding:8px 4px}
 .hwrap{position:relative;flex:none;margin:0 12px 0 0;scroll-snap-align:start}
 .hcard{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;width:190px;height:92px;min-height:0;padding:12px 16px;margin:0;text-align:left;background:var(--carte-fond);border:1px solid var(--carte-bord);border-radius:22px;box-shadow:var(--carte-ombre);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.hcard:active{border-color:#cfe6ff;box-shadow:0 0 0 1px #cfe6ff,var(--sel-lueur)}
+.hcard:active{border-color:var(--sel);box-shadow:0 0 0 1px var(--sel),var(--sel-lueur)}
 .hname{display:block;max-width:100%;font-size:19px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hcount{font-weight:400;color:var(--muted);margin-top:4px;font-size:13px}
 .hroom{width:250px;height:128px;justify-content:flex-start;padding:14px 56px 66px 16px}
 .hbtns{position:absolute;left:16px;right:16px;bottom:12px;display:flex;gap:10px}
-.hpow{flex:none;width:44px;height:44px;padding:0;min-height:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#0d1117}
+.hpow{flex:none;width:44px;height:44px;padding:0;min-height:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--surface-7)}
 /* V1.6 : état lisible sans la couleur : ON = bouton plein (icône sombre), OFF = contour gris ; plus de rouge pour OFF (lu comme une erreur) */
-.hscn.on{color:#ffffff;border:2px solid var(--actif-contour);box-shadow:var(--halo-blanc)}
-.hlamp.on{color:#2a1f08;background:#ffe9b8;border:2px solid #ffe9b8;box-shadow:var(--halo-ambre)}
-.hplug.on{color:#06260f;background:#52d98a;border:2px solid #52d98a;box-shadow:var(--halo-vert)}
-.hlamp.off,.hplug.off{color:#8b97ab;border:2px solid #3a4252;box-shadow:none}
-.hscn.off{color:#4b5361;border:2px solid #262c37;box-shadow:none}
+.hscn.on{color:var(--neutre-100);border:2px solid var(--actif-contour);box-shadow:var(--halo-blanc)}
+.hlamp.on{color:var(--alerte-10);background:var(--alerte-86);border:2px solid var(--alerte-86);box-shadow:var(--halo-ambre)}
+.hplug.on{color:var(--succes-9);background:var(--succes-59);border:2px solid var(--succes-59);box-shadow:var(--halo-vert)}
+.hlamp.off,.hplug.off{color:var(--texte-60);border:2px solid var(--trait-27);box-shadow:none}
+.hscn.off{color:var(--texte-33);border:2px solid var(--trait-18);box-shadow:none}
 /* V2.2 ha-localisation : carte « Présence » (presence.js) : initiale d'une personne à la maison, contour et lettre verts (sans halo : ce n'est pas une commande) */
-.hscn.off.maison{color:#52d98a;border-color:#52d98a}
+.hscn.off.maison{color:var(--succes-59);border-color:var(--succes-59)}
 /* Carte « Scénarios » (V1.5) : nom et nombre à gauche, un bouton-icône par favori à droite (.hscnb, posé sur la place .hscnplace) ; la carte s'élargit avec le nombre de favoris (--n) */
 .hscen{flex-direction:row;align-items:center;justify-content:flex-start;width:auto;min-width:190px}
 .htexte{display:flex;flex-direction:column;align-items:flex-start;flex:none;width:150px;min-width:0}
 .hscnplace{flex:none;width:calc(var(--n, 0) * 52px - 8px);margin-left:8px}
 .hscnb{position:absolute;right:16px;top:50%;transform:translateY(-50%);display:flex;gap:8px}
 /* V1.4 : crayon de chaque carte de pièce (fenêtre « Pièces », home.js) ; pièce sans lumière ni prise (.hsans : sans boutons) ; carte « + » au bout de la ligne */
-.hedit{position:absolute;top:10px;right:10px;width:34px;height:34px;min-height:0;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#0d1117;border:1px solid #2c3442;color:#9fb0c8}
+.hedit{position:absolute;top:10px;right:10px;width:34px;height:34px;min-height:0;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--surface-7);border:1px solid var(--trait-21);color:var(--texte-70)}
 .hedit::after{content:"";position:absolute;inset:-7px;border-radius:50%}
-.hedit:active{border-color:#cfe6ff;color:#fff;box-shadow:0 0 0 1px #cfe6ff,var(--sel-lueur)}
+.hedit:active{border-color:var(--sel);color:var(--neutre-100);box-shadow:0 0 0 1px var(--sel),var(--sel-lueur)}
 .hwrap.hplusw{display:flex}
-.hcard.hplus{width:64px;height:100%;align-items:center;justify-content:center;padding:0;border-style:dashed;border-color:rgba(140,165,210,.24);color:var(--muted);background:transparent;box-shadow:none}
+.hcard.hplus{width:64px;height:100%;align-items:center;justify-content:center;padding:0;border-style:dashed;border-color:var(--ligne-a24);color:var(--muted);background:transparent;box-shadow:none}
 /* V1.9 révision 3 : mode « Organiser l'accueil » (#viewHome.horg, accueil-org.js) : barre collée en haut ; sur chaque carte (contenu masqué, surface gardée), cadre .horg-ov (nom, ‹, poignée, ›) ;
    la carte ne répond plus (ni ouverture, ni boutons, ni appui long) ; boutons de pièce, crayon et favoris masqués sans changer la taille des cartes ; carte « + » inactive */
 .horg-barre{position:sticky;top:0;z-index:4;display:flex;align-items:center;gap:12px;margin:0 16px 10px;padding:10px 12px 10px 16px;border-radius:18px;background:var(--carte-fond);border:1px solid var(--carte-bord);box-shadow:var(--carte-ombre)}
@@ -54,35 +54,35 @@
 .horg-note{font-size:13px;color:var(--muted);margin-top:2px}
 .horg-act{flex:none;display:flex;align-items:center;gap:10px}
 .horg-defaut{margin:0;padding:0 16px}
-.horg-defaut.horg-arme{border-color:#ffb86b;color:#ffd7a8}
-.horg-aide{width:44px;height:44px;min-height:0;padding:0;border-radius:50%;font-size:18px;background:#0d1117;border:1px solid #2c3442;color:#cfd8e6}
+.horg-defaut.horg-arme{border-color:var(--chaud-71);color:var(--chaud-83)}
+.horg-aide{width:44px;height:44px;min-height:0;padding:0;border-radius:50%;font-size:18px;background:var(--surface-7);border:1px solid var(--trait-21);color:var(--texte-85)}
 .horg-fin{min-height:46px;padding:0 22px;font-size:15px}
 .horg-aidel{margin:0 0 8px;font-size:15px;line-height:1.45}
 .horg-affb{margin:0;padding:0 16px}
-.horg-etat{flex:none;font-size:12px;font-weight:500;line-height:16px;padding:1px 7px;border-radius:8px;border:1px solid #3a4252;color:#cfd8e6;text-transform:none;letter-spacing:0}
+.horg-etat{flex:none;font-size:12px;font-weight:500;line-height:16px;padding:1px 7px;border-radius:8px;border:1px solid var(--trait-27);color:var(--texte-85);text-transform:none;letter-spacing:0}
 .horg-masquee>.hcard,.horg-rmasq .hline>.hwrap>.hcard{opacity:.45}
 .hlabel>.horg-etat{margin-left:10px}
-.horg-vide{margin:8px 16px;padding:18px 20px;border-radius:18px;border:1px dashed rgba(140,165,210,.45);color:var(--muted);font-size:15px;line-height:1.45}
+.horg-vide{margin:8px 16px;padding:18px 20px;border-radius:18px;border:1px dashed var(--ligne-a45);color:var(--muted);font-size:15px;line-height:1.45}
 .horg-fen{min-width:min(520px,80vw)}
 .horg-ligne{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
 .horg-lnom{flex:1;min-width:0;display:flex;flex-direction:column;font-size:16px}
 .horg-lnote{font-size:13px;color:var(--muted)}
-.horg-bascule{flex:none;display:inline-flex;align-items:center;gap:8px;min-width:132px;min-height:44px;margin:0;padding:0 14px;border-radius:22px;background:#0d1117;border:1px solid #3a4252;color:var(--text);font-size:15px}
+.horg-bascule{flex:none;display:inline-flex;align-items:center;gap:8px;min-width:132px;min-height:44px;margin:0;padding:0 14px;border-radius:22px;background:var(--surface-7);border:1px solid var(--trait-27);color:var(--text);font-size:15px}
 .horg-bascule.horg-off{color:var(--muted);border-style:dashed}
 #viewHome.horg .horg-w>.hcard,#viewHome.horg .hplusw{pointer-events:none}
 #viewHome.horg .hplusw{opacity:.35}
 #viewHome.horg .hbtns,#viewHome.horg .hedit,#viewHome.horg .hscnb,#viewHome.horg .horg-w>.hcard>*{visibility:hidden}
-.horg-ov{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;justify-content:space-between;padding:6px 10px 6px 12px;border-radius:22px;border:1px dashed rgba(140,165,210,.45)}
+.horg-ov{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;justify-content:space-between;padding:6px 10px 6px 12px;border-radius:22px;border:1px dashed var(--ligne-a45)}
 .horg-tete{display:flex;align-items:center;gap:6px;min-width:0}
 .horg-nom{min-width:0;font-size:15px;font-weight:500;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .horg-ctl{display:flex;align-items:center;gap:6px}
-.horg-b{width:44px;height:44px;min-height:0;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#0d1117;border:1px solid #2c3442;color:#cfd8e6}
-.horg-b:active{border-color:#cfe6ff;color:#fff;box-shadow:0 0 0 1px #cfe6ff,var(--sel-lueur)}
+.horg-b{width:44px;height:44px;min-height:0;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--surface-7);border:1px solid var(--trait-21);color:var(--texte-85)}
+.horg-b:active{border-color:var(--sel);color:var(--neutre-100);box-shadow:0 0 0 1px var(--sel),var(--sel-lueur)}
 .horg-b:disabled{opacity:.35}
-.horg-poig{flex:none;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#0d1117;border:1px solid #2c3442;color:#9fb0c8;touch-action:none;cursor:grab}
+.horg-poig{flex:none;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--surface-7);border:1px solid var(--trait-21);color:var(--texte-70);touch-action:none;cursor:grab}
 .horg-poig.horg-inactif{opacity:.35;cursor:default}
 .hwrap.horg-tenue{z-index:3}
-.horg-tenue .horg-ov{border:2px solid #cfe6ff;box-shadow:var(--sel-lueur)}
+.horg-tenue .horg-ov{border:2px solid var(--sel);box-shadow:var(--sel-lueur)}
 /* Écran bas (paysage de 680 px de haut ou moins) : cartes compactes, 4 rubriques et caméras sans défilement vertical */
 @media (max-height:680px) and (min-width:821px){
 .hmain{padding-top:8px}
@@ -99,7 +99,7 @@
    horizontales ni de flèches ; Catégories dans l'onglet Appareils ; carte « Scénarios » et « Animations » pleine largeur, favoris en icônes de 48 px sous le nom. */
 .tel #viewHome{flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:env(safe-area-inset-right)}
 .tel .hmain{flex:none;overflow:visible;padding:12px 0 0}
-.tel .hrow[data-rubrique="Catégories"]{display:none}
+.tel .hrow[data-cle="categories"]{display:none}
 .tel .hfleches{display:none}
 .tel .hlabel{margin:0 14px 6px 16px}
 .tel .hline{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;overflow:visible;padding:2px 12px 14px;-webkit-mask-image:none;scroll-snap-type:none}

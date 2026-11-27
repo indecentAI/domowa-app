@@ -14,3 +14,4 @@ console.log('\nTermine (' + job.etat + ') en ' + Math.round((Date.now() - t0) / 
 for (const r of liste(job)) console.log(' ' + ligne(r));
 if (job.erreurs.length) console.log('Avertissements :', job.erreurs.join(' | '));
 process.exit(0);
+// FIN

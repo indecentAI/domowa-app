@@ -1,0 +1,38 @@
+/* @zone themes */
+/* Fenêtre « Thèmes » (V2.2 étape 10, themes-edition.js) : cadre hb- de hubs.css (smartphone : plein écran, règles .tel de hubs.css), préfixe th- ; couleurs : variables de themes.css seulement. */
+.th-panel{width:860px}
+.th-aide{margin:2px 4px 6px;color:var(--muted);font-size:14px;line-height:1.4}
+.th-info{margin:0 0 6px}
+.th-liste{display:flex;flex-direction:column;gap:6px}
+.th-ligne{display:flex;align-items:center;gap:10px}
+.th-choix{flex:1;display:flex;align-items:center;gap:12px;min-height:48px;padding:0 14px;border-radius:14px;background:var(--surface-7);border:1px solid var(--trait-18);color:var(--text);font-size:16px;text-align:left}
+.th-ligne.sel .th-choix{border-color:var(--sel);box-shadow:0 0 0 1px var(--sel)}
+.th-nom{font-weight:500}
+.th-tag{margin-left:auto;color:var(--muted);font-size:13px}
+.th-pals{display:flex;flex:none}
+.th-pal{width:18px;height:18px;margin-right:-5px;border-radius:50%;border:1px solid var(--trait-33)}
+.th-act{flex:none;min-width:96px;min-height:44px}
+.th-nouveau{width:100%;margin-top:14px}
+.th-cols{display:flex;gap:18px}
+.th-col{flex:1;min-width:0}
+.th-saisie{width:100%;min-height:46px;margin-bottom:10px;padding:0 14px;border-radius:12px;background:var(--surface-7);border:1px solid var(--trait-18);color:var(--text);font-size:16px}
+.th-grille{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.th-coul{display:flex;align-items:center;gap:10px;min-height:46px;padding:0 10px;border-radius:12px;background:var(--surface-7);border:1px solid var(--trait-18);color:var(--text);font-size:14px;text-align:left}
+.th-coul.sel{border-color:var(--sel);box-shadow:0 0 0 1px var(--sel)}
+.th-pas{flex:none;width:24px;height:24px;border-radius:50%;border:1px solid var(--trait-33)}
+.th-lib{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.th-sous{margin:0 4px 6px;color:var(--muted);font-size:13px}
+.th-props{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.th-prop{flex:none;width:44px;height:44px;min-height:0;padding:0;border-radius:50%;border:2px solid var(--trait-33)}
+.th-prop.sel{border-color:var(--text);box-shadow:0 0 0 2px var(--sel)}
+.th-autre{display:flex;align-items:center;gap:12px;min-height:44px;margin-bottom:10px;color:var(--text);font-size:15px;cursor:pointer}
+.th-autre input{width:52px;height:40px;padding:0;border:1px solid var(--trait-33);border-radius:10px;background:none}
+.th-contr{margin-bottom:10px;padding:8px 12px;border-radius:12px;background:var(--carte-fond-2)}
+.th-cligne{display:flex;justify-content:space-between;padding:3px 0;font-size:14px;color:var(--text)}
+.th-cligne.ko{color:var(--danger)}
+.th-cligne.av{color:var(--alerte)}
+.th-ratio{font-variant-numeric:tabular-nums}
+.th-cmsg{margin-top:4px;color:var(--danger);font-size:13px;line-height:1.35}
+.th-ok{width:100%}
+.tel .th-cols{flex-direction:column;gap:0}
+/* FIN */

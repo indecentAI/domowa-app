@@ -1,4 +1,4 @@
-// @zone telephone | Version smartphone (V1.6, classe « tel » posée par version.js ; inactif sur tablette) : barre d'onglets #onglets (portrait : en bas ; paysage : rail à gauche avec Tout OFF), écran « Appareils » (#viewAppareils : Tous les appareils et catégories), écran « Plus » (#viewPlus : pièces, caméras, hubs, compte SmartThings, actualiser, plein écran, affichage) ; feuille de réglages (APP.telFeuille : #panel monté du bas en portrait, voile .tf-voile) ; crochet APP.surVue 5 (vues appareils et plus, onglet actif) ; crochet de rendu 25 (liste des catégories, titre).
+// @zone telephone | Version smartphone (V1.6, classe « tel » posée par version.js ; inactif sur tablette) : barre d'onglets #onglets (portrait : en bas ; paysage : rail à gauche avec Tout OFF), écran « Appareils » (#viewAppareils : Tous les appareils et catégories), écran « Plus » (#viewPlus : Pièces, Nouvelle pièce, caméras, hubs, compte SmartThings, Mise à jour, Appareils autorisés, Réglages de l'application (APK), Organiser l'accueil, actualiser, plein écran, affichage) ; feuille de réglages (APP.telFeuille : #panel monté du bas en portrait, voile .tf-voile) ; crochet APP.surVue 5 (vues appareils et plus, onglet actif) ; crochet de rendu 25 (liste des catégories, titre).
 (function () {
   const $ = APP.$, el = APP.el;
   if (!APP.tel) return;
@@ -45,7 +45,7 @@
   };
   function rendreAppareils() {
     const box = $("viewAppareils"), md = APP.nav.model();
-    box.innerHTML = "";
+    box.replaceChildren();
     const l = el("div", "tf-liste");
     l.appendChild(ligne("Tous les appareils", md.total, () => APP.nav.list("all", null)));
     if (md.cats.length || md.ext.length) l.appendChild(el("div", "tf-sec", "Catégories"));
@@ -57,7 +57,7 @@
   // Écran « Plus » : gestion et réglages (même contenu que le menu « ⋯ » de la tablette, plus les fenêtres de gestion)
   function rendrePlus() {
     const box = $("viewPlus");
-    box.innerHTML = "";
+    box.replaceChildren();
     const l = el("div", "tf-liste");
     l.appendChild(el("div", "tf-sec", "Gestion"));
     if (APP.piecesGestion) l.appendChild(ligne("Pièces", null, () => APP.piecesGestion.ouvrir()));
@@ -79,13 +79,15 @@
     APP.affichage.boutons(aff, "tf-affb");
     l.appendChild(aff);
     l.appendChild(el("div", "tf-aide", "Automatique : smartphone si le plus petit côté de l'écran fait moins de 600 px. Le choix est pris en compte aussitôt (page rechargée) et gardé sur cet appareil."));
+    l.appendChild(el("div", "tf-sec", "Thème")); // V2.2 étape 6 ; étape 10 : choix et personnalisation dans la fenêtre « Thèmes »
+    l.appendChild(ligne("Thème", APP.theme.nom(), () => APP.themes.ouvrir(), "tf-theme"));
     box.appendChild(l);
   }
 
   // Feuille de réglages (V1.6, étape 4) : en portrait, le panneau des commandes (#panel, panel.js) monte du bas sur un voile .tf-voile (fermée par le voile,
   // la poignée, un glisser vers le bas, Retour ou Échap : APP.fermerDessus) ; en paysage, il reste en colonne de droite (rien à ouvrir).
   const panel = $("panel"), voile = el("div", "tf-voile hidden"), poignee = el("button", "tf-poignee", "");
-  const paysage = () => window.matchMedia && window.matchMedia("(orientation: landscape)").matches;
+  const paysage = () => window.matchMedia("(orientation: landscape)").matches;
   function fermerFeuille() { panel.classList.remove("tf-ouverte"); voile.classList.add("hidden"); }
   function ouvrirFeuille() { if (paysage()) return; panel.classList.add("tf-ouverte"); voile.classList.remove("hidden"); panel.scrollTop = 0; }
   voile.onclick = (e) => { if (e.target === voile) fermerFeuille(); };
@@ -96,7 +98,7 @@
   panel.addEventListener("touchstart", (e) => { y0 = panel.scrollTop <= 0 ? e.touches[0].clientY : null; }, { passive: true });
   panel.addEventListener("touchend", (e) => { if (y0 !== null && e.changedTouches[0].clientY - y0 > 80) fermerFeuille(); y0 = null; }, { passive: true });
   panel.insertBefore(poignee, panel.firstChild);
-  APP.telFeuille = { ouvrir: ouvrirFeuille, fermer: fermerFeuille, ouverte: () => panel.classList.contains("tf-ouverte") };
+  APP.telFeuille = { ouvrir: ouvrirFeuille };
 
   // Crochet de vue (ordre 5, avant les autres vues) : feuille fermée et sélection quittée d'abord, puis vues Appareils et Plus, onglet actif
   APP.surVue(function (name) {

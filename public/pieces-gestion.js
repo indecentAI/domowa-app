@@ -107,7 +107,7 @@
     const basculeHub = (a) => () => { if (ajout[a.id]) delete ajout[a.id]; else ajout[a.id] = true; desarmer(); erreur = ""; rendre(); };
     const indOn = (a) => (locaux ? !!locaux[a.id] : !!(a.piece && a.piece.id === sel));
     // Dans cette pièce
-    const hd = hubDans(), id0 = independants().filter((a) => a.piece && a.piece.id === sel);
+    const hd = hubDans(), id0 = indDans();
     if (hd.length || id0.length) {
       sec("Dans cette pièce");
       hd.forEach((a) => ligne(liste, a, { on: true, verrou: true, dep: a.joignable ? "" : "injoignable", ko: !a.joignable }));
@@ -196,7 +196,7 @@
     a.className = "np-aide" + (v.err ? " err" : "");
     a.textContent = v.err || (p.locale ? APP.lieu("Pièce locale : sur cet appareil seulement.") : "Visible aussi dans l'application du hub.");
   }
-  function majPied() { const p = document.getElementById("pgPied"); if (p) { p.innerHTML = ""; remplirPied(p); } }
+  function majPied() { const p = document.getElementById("pgPied"); if (p) { p.replaceChildren(); remplirPied(p); } }
   function armer(quoi) { arme = quoi; clearTimeout(armeT); armeT = setTimeout(() => { arme = null; dest = null; if (root && vue === "form") rendre(); }, 8000); }
 
   // Suppression : résumé, pièce de destination (exigée et du hub s'il reste des appareils du hub ; sinon facultative), confirmation
@@ -309,7 +309,7 @@
       "Le dessin de chaque appareil indique son type (lumière, prise, lave-linge, traceur…) ; la fenêtre « Ranger » indique aussi son origine (hub ou SmartThings).",
     ] },
     { titre: "Modifier une pièce", lignes: [
-      "1. Sur l'accueil, touchez le crayon d'une carte de pièce (ou faites un appui long sur la carte) ; ou, dans le menu, le crayon en bas de la section Pièces.",
+      "1. Sur l'accueil, touchez le crayon d'une carte de pièce (ou faites un appui long sur la carte) ; ou, dans le menu, le crayon en bas de la section Pièces ; sur le smartphone : onglet Plus › Pièces.",
       APP.lieu("2. À gauche, la liste de toutes les pièces : touchez-en une. « locale » : pièce gardée sur cet appareil seulement."),
       "3. Changez le nom ou l'icône, cochez les appareils à y ranger, puis touchez « Enregistrer ».",
       "Un appareil du hub déjà dans la pièce porte un cadenas : pour le retirer, rangez-le dans une autre pièce (le hub ne permet pas de retirer un appareil de sa pièce).",
@@ -328,21 +328,10 @@
       "« Résultat inconnu » : rouvrez la fenêtre et vérifiez la pièce avant de recommencer.",
     ] },
   ];
-  function rendreAide() {
-    const box = el("div", "");
-    box.appendChild(bouton("b-small hb-retour", "← Retour", () => { vue = "form"; rendre(); }));
-    AIDE.forEach((x) => {
-      box.appendChild(el("div", "hb-sec", x.titre));
-      const b = el("div", "hb-bloc");
-      x.lignes.forEach((l) => b.appendChild(el("p", "hb-p", l)));
-      box.appendChild(b);
-    });
-    return box;
-  }
+  const rendreAide = () => APP.pieces.aide(AIDE, () => { vue = "form"; rendre(); }); // aide commune (pieces.js)
   function rendre() {
     if (!root) return;
-    body.innerHTML = "";
-    body.appendChild(vue === "aide" ? rendreAide() : rendreForm());
+    body.replaceChildren(vue === "aide" ? rendreAide() : rendreForm());
     if (erreur && vue === "form") body.appendChild(el("div", "hb-err", erreur));
     const f = root.querySelector(".pg-fermer");
     if (f) f.disabled = !!envoi;
@@ -355,17 +344,8 @@
   }
   function ouvrir(id) {
     if (root) { if (id) choisir(id); return; }
-    root = el("div", "hb-scrim");
-    root.id = "piecesGestion";
-    root.onclick = (e) => { if (e.target === root) fermer(); };
-    const panel = el("div", "hb-panel pg-panel"), head = el("div", "hb-head"), ics = el("div", "hb-ics");
-    head.appendChild(el("div", "hb-titre", "Pièces"));
-    const ic = (t, titre, fn, cls) => { const b = el("button", "hb-ic" + (cls ? " " + cls : ""), t); b.title = titre; b.setAttribute("aria-label", titre); b.onclick = fn; ics.appendChild(b); };
-    ic("?", "Aide", () => { if (envoi) return; vue = vue === "aide" ? "form" : "aide"; rendre(); });
-    ic("×", "Fermer", fermer, "pg-fermer");
-    head.appendChild(ics);
-    body = el("div", "hb-body");
-    panel.appendChild(head); panel.appendChild(body); root.appendChild(panel); document.body.appendChild(root);
+    ({ root, body } = APP.pieces.cadre({ id: "piecesGestion", panneau: "pg-panel", titre: "Pièces", fermer, fermerCls: "pg-fermer",
+      aide: () => { if (envoi) return; vue = vue === "aide" ? "form" : "aide"; rendre(); } })); // cadre commun (pieces.js)
     vue = "form"; sel = id || null; info = ""; charger();
   }
   APP.piecesGestion = { ouvrir: ouvrir };

@@ -131,7 +131,7 @@ export const sensible = (c) => !!(c && (c.sensible === true || (PAR_CAP.get(c.ca
 // Liste sans les capacites secretes (tout ce qui sort d'une liste ou part vers un journal passe par la)
 export const sansSecret = (liste) => (liste || []).filter((c) => !(c && (c.secret || secrete(c.cap))));
 export const famille = (cap) => { const r = PAR_CAP.get(cap); return r ? FAMILLES[Math.floor(r.rang / 100)] : null; };
-// Groupe d'affichage de la carte (regle 4) : principal, mesures, informations
+// Groupe d'affichage de la carte (contrat « Capacités ») : principal, mesures, informations
 export function groupe(cap) {
   const r = PAR_CAP.get(cap); if (!r) return null;
   if (r.rang >= 600 || (r.rang >= 350 && r.rang < 400)) return 'informations';
@@ -182,7 +182,7 @@ export function valider(c, valeur) {
   return valeur;
 }
 
-// Tri (regle 1) : rang, puis ordre du referentiel, puis libelle, puis element. Jamais l'ordre du hub. Capacite inconnue : en dernier. Rend une copie.
+// Tri (contrat « Capacités ») : rang, puis ordre du referentiel, puis libelle, puis element. Jamais l'ordre du hub. Capacite inconnue : en dernier. Rend une copie.
 const cle = (c) => { const r = PAR_CAP.get(c.cap); return r ? [r.rang, r.ordre] : [9999, 9999]; };
 const lib = (c) => String(c.libelle || (PAR_CAP.get(c.cap) || {}).libelle || c.cap || '');
 export function trier(liste) {
@@ -192,7 +192,7 @@ export function trier(liste) {
   });
 }
 
-// Absorption (regle 2) : une capacite qui declare associee (cap du meme element) l'affiche dans son widget ; ON/OFF absorbe par un mode du meme element dont une option a le code 'off'.
+// Absorption (contrat « Capacités ») : une capacite qui declare associee (cap du meme element) l'affiche dans son widget ; ON/OFF absorbe par un mode du meme element dont une option a le code 'off'.
 // Rend des copies : l'absorbante porte absorbees [capacite...], l'absorbee n'est plus dans la liste. Aucune entree n'est modifiee.
 export function absorber(liste) {
   const l = (liste || []).map((c) => ({ ...c }));
@@ -206,4 +206,18 @@ export function absorber(liste) {
   return l.filter((c, k) => !prises.has(k));
 }
 export const composer = (liste) => trier(absorber(liste));
+
+// Aides des modeles d'adaptateur (fonctions pures, sans marque) : valeurs lues du hub (nombre fini, texte non vide, booleen ; sinon null),
+// copie d'une valeur inconnue (8 Ko au plus, sinon {tronque: true} ; contrat « Capacités »), coordonnees en texte (capacite privee, regle « Données sensibles »).
+export const nb = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+export const tx = (v) => (typeof v === 'string' && v ? v : null);
+export const bo = (v) => (typeof v === 'boolean' ? v : null);
+export const MAX_INCONNUE = 8192;
+export const copieInconnue = (v) => {
+  if (v === undefined) return null;
+  const j = JSON.stringify(v);
+  return j === undefined || j.length > MAX_INCONNUE ? { tronque: true } : JSON.parse(j);
+};
+export const texteCoordonnees = (lat, lon, precision) => (Number.isFinite(lat) && Number.isFinite(lon)
+  ? lat.toFixed(5) + ', ' + lon.toFixed(5) + (Number.isFinite(precision) ? ' (± ' + Math.round(precision) + ' m)' : '') : null);
 // FIN

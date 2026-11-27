@@ -2,6 +2,7 @@
 import { HttpError } from '../core/http.mjs';
 import { log } from '../core/outils.mjs';
 import { lister, appliquer, piece } from '../core/appareils.mjs';
+import { estOnOff } from '../core/modele.mjs';
 import { confirmer } from '../core/confirmation.mjs';
 import { liberer } from './animations-moteur.mjs';
 
@@ -12,7 +13,7 @@ export const routes = [
     if (body.kind !== undefined && body.kind !== 'light' && body.kind !== 'outlet') throw new HttpError(400, 'Type "light" ou "outlet" requis.');
     const kind = body.kind === 'outlet' ? 'outlet' : 'light';
     // Identifiant de piece valide contre l'inventaire : on ne commande que les appareils de ce type dans cette piece.
-    const before = (await lister()).filter((d) => d.type === kind && d.room && d.room.id === c.m[1]);
+    const before = (await lister()).filter((d) => estOnOff(d) && d.type === kind && d.room && d.room.id === c.m[1]);
     if (!before.length) throw new HttpError(404, 'Pièce inconnue ou sans appareil de ce type.');
     liberer(before.map((d) => d.id)); // V1.5 : lampes de la piece retirees des animations
     let roomOk = true;

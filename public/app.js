@@ -70,7 +70,7 @@ var APP = window.APP = {
   }
   document.addEventListener("fullscreenchange", bannerPlace);
   document.addEventListener("webkitfullscreenchange", bannerPlace);
-  APP.setStatus = function (ok, msg) { var s = $("status"); s.textContent = msg; s.className = "status " + (ok ? "ok" : "bad"); };
+  var setStatus = function (ok, msg) { var s = $("status"); s.textContent = msg; s.className = "status " + (ok ? "ok" : "bad"); };
   APP.setBusy = function (b) { APP.rev = (APP.rev || 0) + 1; APP.busy = b; document.body.className = b ? "busy" : ""; };
 
   function kelvinColor(k) {
@@ -81,7 +81,7 @@ var APP = window.APP = {
     return "rgb(" + r + "," + g + "," + b + ")";
   }
   APP.colorOf = function (on, mode, hue, sat, kelvin) {
-    if (!on) return "#cfd3d8";
+    if (!on) return "var(--pastille-off)"; // thème : couleur d'un appareil OFF (variable de :root)
     if (mode === "color" && hue !== null && hue !== undefined) {
       var s = Math.min(1, sat || 0);
       return "hsl(" + Math.round(hue) + ",100%," + Math.round((1 - s / 2) * 100) + "%)";
@@ -152,12 +152,12 @@ var APP = window.APP = {
     APP.api("GET", "/api/devices", null, function (err, d) {
       if (APP.busy || rev0 !== APP.rev) return;
       if (err || !d || !d.devices) {
-        APP.connErr = true; APP.setStatus(false, "Hors ligne");
+        APP.connErr = true; setStatus(false, "Hors ligne");
         APP.banner(err || "Réponse inattendue du serveur.", "err");
         return;
       }
       APP.devices = d.devices;
-      APP.setStatus(true, "Connecté"); // V2.0 : sans le type de hub (DIRIGERA ou Home Assistant)
+      setStatus(true, "Connecté"); // V2.0 : sans le type de hub (DIRIGERA ou Home Assistant)
       if (APP.connErr) { APP.banner("", ""); APP.connErr = false; APP.pannesMsg = ""; }
       montrerPannes(d.pannes);
       $("stamp").textContent = "Actualisé à " + now();

@@ -6,11 +6,12 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import https from 'node:https';
 import { createDirigeraClient } from 'dirigera';
-import { DONNEES, lireJson, ecrireJson, log } from '../../core/outils.mjs';
+import { DONNEES, lireJson, ecrireJson, ecrireSecret, log, withTimeout } from '../../core/outils.mjs';
 import { privee } from '../../core/reseau.mjs';
 import { arreter } from './evenements.mjs';
 
-export const JETON = path.join(DONNEES, 'dirigera-token.txt');
+export const ID = 'dirigera-1'; // identifiant du seul hub DIRIGERA (hub.mjs, appairage.mjs)
+const JETON = path.join(DONNEES, 'dirigera-token.txt');
 const FICHIER = 'dirigera.json'; // { adresse, appaire_le?, deconnecte_le?, migre_de?, migre_le? } : sans secret (sauvegarde.sh l'archive)
 const RESEAU = ['ECONNREFUSED', 'EHOSTUNREACH', 'ENETUNREACH', 'ENOTFOUND', 'ECONNRESET'];
 
@@ -19,7 +20,7 @@ const RESEAU = ['ECONNREFUSED', 'EHOSTUNREACH', 'ENETUNREACH', 'ENOTFOUND', 'ECO
 // aucune adresse d'un reseau personnel) ; elle vient de la variable d'environnement DOMOWA_HUB_V11 (IPv4 privee ; le banc la pose). Sans elle, une
 // installation restee en V1.1 affiche « Aucun hub configuré. » et se reconnecte par la fenetre Hubs. Le jeton ne bouge pas.
 const ADRESSE_V11 = String(process.env.DOMOWA_HUB_V11 || '').trim();
-export function migrer() {
+function migrer() {
   try {
     if (!privee(ADRESSE_V11) || fs.existsSync(path.join(DONNEES, FICHIER)) || !fs.existsSync(JETON)) return;
     ecrireJson(FICHIER, { adresse: ADRESSE_V11, migre_de: 'config.mjs', migre_le: new Date().toISOString() });
@@ -47,15 +48,21 @@ export function etatLocal() {
 }
 const erreurCode = (code, m) => Object.assign(new Error(m), { code });
 
-let cache = null; // { cle: adresse + empreinte du jeton, p: promesse du client }
-export function client() {
+// Acces au hub (client et sansRenvoi) : {adresse, jeton, cle : adresse + empreinte du jeton} ; sans adresse ou sans jeton : erreur (code), aucune requete.
+function acces() {
   const c = lire();
-  if (!c.adresse) return Promise.reject(erreurCode(c.illisible ? 'HUB_ADRESSE' : 'HUB_NON_CONFIGURE', 'adresse du hub'));
+  if (!c.adresse) throw erreurCode(c.illisible ? 'HUB_ADRESSE' : 'HUB_NON_CONFIGURE', 'adresse du hub');
   let jeton;
-  try { jeton = fs.readFileSync(JETON, 'utf8').trim(); } catch (e) { return Promise.reject(e.code === 'ENOENT' && c.deconnecte_le ? erreurCode('HUB_DECONNECTE', 'hub non connecte') : e); }
-  const cle = c.adresse + ' ' + crypto.createHash('sha256').update(jeton).digest('hex');
-  if (!cache || cache.cle !== cle) {
-    const x = { cle, p: createDirigeraClient({ gatewayIP: c.adresse, accessToken: jeton, rejectUnauthorized: true }) };
+  try { jeton = fs.readFileSync(JETON, 'utf8').trim(); } catch (e) { throw (e.code === 'ENOENT' && c.deconnecte_le ? erreurCode('HUB_DECONNECTE', 'hub non connecte') : e); }
+  return { adresse: c.adresse, jeton, cle: c.adresse + ' ' + crypto.createHash('sha256').update(jeton).digest('hex') };
+}
+
+let cache = null; // { cle, p: promesse du client }
+export function client() {
+  let a;
+  try { a = acces(); } catch (e) { return Promise.reject(e); }
+  if (!cache || cache.cle !== a.cle) {
+    const x = { cle: a.cle, p: createDirigeraClient({ gatewayIP: a.adresse, accessToken: a.jeton, rejectUnauthorized: true }) };
     x.p.catch(() => { if (cache === x) cache = null; });
     cache = x;
   }
@@ -68,20 +75,18 @@ export function client() {
 const LIB = new URL('../../node_modules/dirigera/dist/', import.meta.url);
 let sr = null; // { cle, p: promesse de { rooms } }
 export function sansRenvoi() {
-  const c = lire();
-  if (!c.adresse) return Promise.reject(erreurCode(c.illisible ? 'HUB_ADRESSE' : 'HUB_NON_CONFIGURE', 'adresse du hub'));
-  let jeton;
-  try { jeton = fs.readFileSync(JETON, 'utf8').trim(); } catch (e) { return Promise.reject(e.code === 'ENOENT' && c.deconnecte_le ? erreurCode('HUB_DECONNECTE', 'hub non connecte') : e); }
-  const cle = c.adresse + ' ' + crypto.createHash('sha256').update(jeton).digest('hex');
-  if (!sr || sr.cle !== cle) {
-    const x = { cle, p: Promise.all([import('got'), import(new URL('certificate.js', LIB).href), import(new URL('api/rooms.js', LIB).href), import(new URL('api/devices.js', LIB).href), import(new URL('api/hub.js', LIB).href), import(new URL('api/deviceSets.js', LIB).href)]).then(([g, ca, rooms, devices, hub, deviceSets]) => {
+  let a;
+  try { a = acces(); } catch (e) { return Promise.reject(e); }
+  const { adresse, jeton } = a;
+  if (!sr || sr.cle !== a.cle) {
+    const x = { cle: a.cle, p: Promise.all([import('got'), import(new URL('certificate.js', LIB).href), import(new URL('api/rooms.js', LIB).href), import(new URL('api/devices.js', LIB).href), import(new URL('api/hub.js', LIB).href), import(new URL('api/deviceSets.js', LIB).href)]).then(([g, ca, rooms, devices, hub, deviceSets]) => {
       const inst = g.default.extend({
-        prefixUrl: 'https://' + c.adresse + ':8443/v1',
+        prefixUrl: 'https://' + adresse + ':8443/v1',
         headers: { authorization: 'Bearer ' + jeton },
         agent: { https: new https.Agent({ ca: [ca.default], checkServerIdentity: () => undefined, rejectUnauthorized: true }) },
         retry: { limit: 0 },
       });
-      return { rooms: rooms.default(inst), devices: devices.default(inst), hub: hub.default(inst), deviceSets: deviceSets.default(inst) }; // V2.1 : identifier et mise a jour du hub (PUT), groupes (DELETE : scripts/groupes-essai.mjs) sans renvoi
+      return { rooms: rooms.default(inst), devices: devices.default(inst), hub: hub.default(inst), deviceSets: deviceSets.default(inst) }; // V2.1 : identifier et mise a jour du hub (PUT), groupes (lier : ecriture.mjs ; DELETE : scripts/groupes-essai.mjs) sans renvoi
     }) };
     x.p.catch(() => { if (sr === x) sr = null; });
     sr = x;
@@ -92,11 +97,7 @@ export function sansRenvoi() {
 // adresse du hub notee, deconnecte_le retire. Ancien jeton remplace seulement ici (appairage abouti) ; un echec ou une annulation ne touche a rien.
 export function enregistrer(adresse, jeton) {
   if (!privee(adresse) || typeof jeton !== 'string' || !/^[\x21-\x7e]{8,4096}$/.test(jeton)) throw erreurCode('HUB_JETON', 'jeton ou adresse invalide');
-  fs.mkdirSync(DONNEES, { recursive: true, mode: 0o700 });
-  const tmp = JETON + '.tmp';
-  fs.writeFileSync(tmp, jeton, { mode: 0o600 });
-  fs.chmodSync(tmp, 0o600);
-  fs.renameSync(tmp, JETON);
+  ecrireSecret(JETON, jeton);
   const c = lireJson(FICHIER, {});
   const n = Object.assign({}, c && typeof c === 'object' ? c : {}, { adresse, appaire_le: new Date().toISOString() });
   delete n.deconnecte_le;
@@ -128,4 +129,7 @@ export function erreur(e) {
   if (String(code).startsWith('ERR_TLS') || /CERT|SIGNATURE|ISSUER/.test(String(code)) || /certificate/i.test(String(e && e.message))) return [502, 'Erreur de certificat TLS avec le hub.'];
   return null;
 }
+// Appel borne (withTimeout, 10 s) : auHub sur le client de la bibliotheque, sansRenvoyer sur l'instance sans renvoi (POST jamais rejoue).
+export const auHub = async (fn) => withTimeout(fn(await client()));
+export const sansRenvoyer = async (fn) => withTimeout(fn(await sansRenvoi()));
 // FIN

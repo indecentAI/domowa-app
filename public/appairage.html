@@ -1,10 +1,12 @@
 <!doctype html>
 <!-- @zone distant | Page d'appairage (V1.8, autonome : seule page servie par l'écoute réseau à un appareil sans jeton, avec appairage.css et appairage.js) : code à 8 chiffres et nom de l'appareil, POST /api/appairage, puis ouverture de l'application ; V1.9 : « Étape 3 sur 4 » dans l'APK. -->
-<html lang="fr"><head><meta charset="utf-8">
+<html lang="fr" data-theme="sombre"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1015">
+<script src="version.js"></script>
 <title>Maison IKEA - Autoriser cet appareil</title>
-<link rel="stylesheet" href="appairage.css">
-<meta name="theme-color" content="#0d1015"></head>
+<link rel="stylesheet" href="themes.css">
+<link rel="stylesheet" href="appairage.css"></head>
 <body>
 <main class="ap-carte">
  <p id="apEtape" class="ap-etape" hidden>Étape 3 sur 4</p>

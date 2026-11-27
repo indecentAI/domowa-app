@@ -2,14 +2,15 @@
 // Un adaptateur exporte : lister() -> [appareil] ; appliquer(appareil, set) ; facultatifs : relire(appareil), pieces() -> [{id, name}],
 // piece(roomId, type, set) (commande groupee native), equipements() -> [equipement] (V2.1, contrat « Capacités » de .claude/rules/equipements.md), erreur(e) -> [statut, message] | null, routes (routes propres, chargees par le routeur ; l'ancien handle n'est plus lu, journal),
 // animer(appareil, cible, ms) (V1.5, animations : une ecriture d'une seule valeur, {on} | {level} | {hue, sat 0-1} | {kelvin}, avec fondu de ms fait par l'appareil ; erreur avec appareil: true
-// et motif si le refus ne concerne que cet appareil), hub (contrat des hubs, CLAUDE.md « Hubs » : routes generiques de modules/hubs.mjs), gestionPieces (creation de pieces, CLAUDE.md « Pièces » :
+// et motif si le refus ne concerne que cet appareil), hub (contrat « Hubs » de .claude/rules/hubs.md : routes generiques de modules/hubs.mjs), gestionPieces (creation de pieces, contrat « Pièces » de .claude/rules/pieces.md :
 // {nom, icones: [cles generiques], creer({nom, icone}) -> {id}, deplacer(pieceId, ids)} ; exige pieces() ; routes de modules/pieces-creation.mjs).
-// Manifeste : { id, nom, module, types, zone?, actif?, libelle? (nom affiche dans le bandeau de panne, sinon id) }. Refuse au chargement (journal) :
+// Delais : lister, pieces, equipements, scenesHub et ecrire sont bornes ici (borne, 10 s) ; appliquer, relire, piece et animer non : l'adaptateur borne lui-meme ses commandes.
+// Manifeste : { id, nom, module, types (informatif : jamais lu), zone?, actif?, libelle? (nom affiche dans le bandeau de panne, sinon id) }. Refuse au chargement (journal) :
 // manifeste illisible, identifiant invalide (ID_RE) ou deja pris, module illisible, lister ou appliquer absent ; erreur ignore s'il n'est pas une fonction.
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { DIR, log, borne } from './outils.mjs';
+import { DIR, log, borne, sleep } from './outils.mjs';
 import { ajouterTraducteur, HttpError } from './http.mjs';
 import { estOnOff, ID_RE } from './modele.mjs';
 import { composer, sansSecret, secrete, definition, groupe, ENVELOPPES, valider, sensible } from './capacites.mjs';
@@ -41,17 +42,17 @@ export function charger(base = path.join(DIR, 'adapters')) {
   })();
   return pret;
 }
-export const actifs = () => adaptateurs.map((x) => x.id);
+export const actifs = () => adaptateurs.map((x) => x.id); // pour le banc (essais d'interface et unitaires) : identifiants des adaptateurs charges
 
 export const extensions = () => adaptateurs.map((x) => ({ id: x.id, routes: x.a.routes, handle: x.a.handle })); // handle : signale par le routeur (format abandonne)
-// Hubs (contrat : CLAUDE.md, « Hubs ») : adaptateurs qui exportent hub ; adressesHubs() : adresses declarees (repli reseau de core/reseau.mjs).
+// Hubs (contrat « Hubs » de .claude/rules/hubs.md) : adaptateurs qui exportent hub ; adressesHubs() : adresses declarees (repli reseau de core/reseau.mjs).
 export const hubs = () => adaptateurs.filter((x) => x.a.hub && typeof x.a.hub === 'object').map((x) => ({ id: x.id, m: x.m, hub: x.a.hub }));
 export function adressesHubs() {
   const r = [];
   for (const x of hubs()) { try { r.push(...(x.hub.adresses ? x.hub.adresses() : [])); } catch (e) { /* adaptateur fautif : ignore */ } }
   return r;
 }
-// Un hub a la fois (V2.0, CLAUDE.md « Hubs ») : un adaptateur de hub dit par hub.utilise() (synchrone, sans reseau) s'il porte un jeton (connecte ou en erreur).
+// Un hub a la fois (V2.0, contrat « Hubs » de .claude/rules/hubs.md) : un adaptateur de hub dit par hub.utilise() (synchrone, sans reseau) s'il porte un jeton (connecte ou en erreur).
 // Un hub non utilise est « en retrait » (ni interroge par lister() et pieces(), ni panne, ni gestion des pieces) quand un autre hub est utilise ; si aucun ne l'est,
 // seul le premier qui a une adresse (sinon le premier charge) reste interroge : il porte « Aucun hub configuré. » ou « Hub non connecté. », comme avant.
 // hubBloque(id) : nom du hub utilise par un autre adaptateur (son appairage est alors refuse par modules/hubs.mjs), sinon null. Adaptateur sans utilise : jamais en retrait.
@@ -91,8 +92,14 @@ function listerUn(x) {
   const g = gen;
   const p = borne(() => x.a.lister(), DELAI)
     .then((l) => { const r = normaliser(l, x.id); if (g === gen) { c.liste = r; c.gen = g; c.t = Date.now(); } return r; });
-  c.vol = p; c.volGen = g;
-  p.then(() => { if (c.vol === p) c.vol = null; }, () => { if (c.vol === p) c.vol = null; });
+  c.volGen = g;
+  return enVol(c, p);
+}
+// Lecture en vol : partagee par les appels simultanes, oubliee des qu'elle aboutit ou echoue.
+function enVol(c, p) {
+  c.vol = p;
+  const fin = () => { if (c.vol === p) c.vol = null; };
+  p.then(fin, fin);
   return p;
 }
 function motif(x, e) {
@@ -101,9 +108,10 @@ function motif(x, e) {
   if (r && typeof r[1] === 'string') return r[1];
   return (e && e.code) === 'ETIMEDOUT' ? 'délai dépassé' : 'lecture impossible';
 }
+const panne = (x, e) => ({ adapter: x.id, libelle: String(x.m.libelle || x.id), motif: motif(x, e) });
 function noter(x, e) {
   if (!e) { if (enPanne.delete(x.id)) log('adaptateur', x.id, ': rétabli'); return; }
-  const p = { adapter: x.id, libelle: String(x.m.libelle || x.id), motif: motif(x, e) };
+  const p = panne(x, e);
   const avant = enPanne.get(x.id);
   if (!avant || avant.motif !== p.motif) log('adaptateur', x.id, ': en panne', e.code || e.name || '');
   enPanne.set(x.id, p);
@@ -199,7 +207,10 @@ export async function pieces() {
 // (capacites secretes : jamais leur valeur), inconnues (nombre)}. Les donnees privees (localisation, coordonnees) restent pour l'ecran seulement.
 export const CACHE_EQUIP = 5000;
 const cachesEq = new Map();
-const EQ_ID = /^[a-z0-9_-]{1,40}:[A-Za-z0-9_.:-]{1,160}$/;
+// Identifiant d'un equipement ou d'une scene du hub : « <adaptateur>:<identifiant natif> ».
+const ID_ADAPTE = /^[a-z0-9_-]{1,40}:[A-Za-z0-9_.:-]{1,160}$/;
+// Adaptateur d'equipements (hors retrait) proprietaire d'un identifiant d'equipement, ou undefined.
+const proprietaire = (id) => adaptateurs.find((y) => typeof y.a.equipements === 'function' && !retrait(y) && String(id).startsWith(y.id + ':'));
 function equipUn(x, frais) {
   const c = cachesEq.get(x.id) || {};
   cachesEq.set(x.id, c);
@@ -207,15 +218,13 @@ function equipUn(x, frais) {
   if (c.vol) return c.vol;
   const origine = String((x.a.hub && typeof x.a.hub.nom === 'string' && x.a.hub.nom) || x.m.libelle || x.id).slice(0, 40); // nom affiche (puce de la tuile)
   const p = borne(() => x.a.equipements(), DELAI).then((l) => {
-    const r = (Array.isArray(l) ? l : []).filter((e) => e && typeof e === 'object' && typeof e.id === 'string' && EQ_ID.test(e.id) && e.id.startsWith(x.id + ':')).map((e) => ({ ...e, adapter: x.id, origine: origine }));
+    const r = (Array.isArray(l) ? l : []).filter((e) => e && typeof e === 'object' && typeof e.id === 'string' && ID_ADAPTE.test(e.id) && e.id.startsWith(x.id + ':')).map((e) => ({ ...e, adapter: x.id, origine: origine }));
     c.liste = r; c.t = Date.now(); return r;
   });
-  c.vol = p;
-  p.then(() => { if (c.vol === p) c.vol = null; }, () => { if (c.vol === p) c.vol = null; });
-  return p;
+  return enVol(c, p);
 }
 // Capacite presentee au client : rang, widget, type et groupe du referentiel (enveloppe : type et widget de sa nature), libelle et unite par defaut ; absorbees de meme.
-export function presenter(c) {
+function presenter(c) {
   const d = definition(c.cap) || {}, n = ENVELOPPES.includes(c.cap) ? definition(c.nature) || {} : null;
   const o = { ...c, rang: d.rang, widget: d.widget, type: (n || d).type, groupe: groupe(c.cap), libelle: c.libelle || (n && n.libelle) || d.libelle || c.cap };
   if (o.unite === undefined && ((n || d).unite !== undefined)) o.unite = (n || d).unite;
@@ -224,7 +233,7 @@ export function presenter(c) {
   return o;
 }
 // Equipement rendu (sans secret) : les capacites secretes ne laissent que {element, cap, libelle} dans codes.
-export function composerEquipement(e) {
+function composerEquipement(e) {
   const caps = Array.isArray(e.capacites) ? e.capacites.filter((c) => c && typeof c === 'object' && typeof c.cap === 'string') : [];
   const codes = caps.filter((c) => c.secret || secrete(c.cap)).filter((c) => typeof c.valeur === 'string' && c.valeur)
     .map((c) => ({ element: String(c.element), cap: c.cap, libelle: c.libelle || (definition(c.cap) || {}).libelle || c.cap }));
@@ -240,7 +249,7 @@ export async function equipements(frais) {
   res.forEach((r, i) => {
     const x = choisis[i];
     if (r.status === 'fulfilled') { liste.push(...r.value); repondu.push(x.id); return; }
-    pannesEq.push({ adapter: x.id, libelle: String(x.m.libelle || x.id), motif: motif(x, r.reason) });
+    pannesEq.push(panne(x, r.reason));
   });
   const vus = new Set();
   const equip = liste.filter((e) => !vus.has(e.id) && vus.add(e.id)).map(composerEquipement);
@@ -250,7 +259,7 @@ export async function equipements(frais) {
 // Jamais journalise ni garde ailleurs que dans le cache de l'adaptateur.
 export async function codeAppairage(id, element, cap) {
   await charger();
-  const x = adaptateurs.find((y) => typeof y.a.equipements === 'function' && !retrait(y) && String(id).startsWith(y.id + ':'));
+  const x = proprietaire(id);
   if (!x) return null;
   const e = (await equipUn(x, false)).find((y) => y.id === id);
   const c = e && Array.isArray(e.capacites) ? e.capacites.find((k) => k && (k.secret || secrete(k.cap)) && k.element === element && k.cap === cap) : null;
@@ -258,7 +267,6 @@ export async function codeAppairage(id, element, cap) {
 }
 // Scenes du hub (V2.1 etape scenes-hub ; contrat « Scènes du hub ») : adaptateurs qui exportent scenesHub {lister, lancer(id), annuler(id)}, hors retrait.
 // scenesHub() -> {scenes: [{id: '<adaptateur>:<id>', adapter, nom, annulable (s), lance_le}], pannes} (jamais d'erreur levee) ; actionScene(id, 'lancer' | 'annuler') : 404 inconnue, borne 10 s.
-const SCENE_ID = /^[a-z0-9_-]{1,40}:[A-Za-z0-9_.:-]{1,160}$/;
 export async function scenesHub() {
   await charger();
   const choisis = adaptateurs.filter((x) => x.a.scenesHub && typeof x.a.scenesHub.lister === 'function' && !retrait(x));
@@ -266,10 +274,10 @@ export async function scenesHub() {
   const scenes = [], pannesS = [];
   res.forEach((r, i) => {
     const x = choisis[i];
-    if (r.status === 'rejected') { pannesS.push({ adapter: x.id, libelle: String(x.m.libelle || x.id), motif: motif(x, r.reason) }); return; }
+    if (r.status === 'rejected') { pannesS.push(panne(x, r.reason)); return; }
     for (const s of Array.isArray(r.value) ? r.value : []) {
       const id = s && typeof s.id === 'string' ? x.id + ':' + s.id : '';
-      if (!SCENE_ID.test(id) || typeof s.nom !== 'string') continue;
+      if (!ID_ADAPTE.test(id) || typeof s.nom !== 'string') continue;
       scenes.push({ id, adapter: x.id, nom: s.nom.slice(0, 60), annulable: Number.isFinite(s.annulable) ? Math.max(0, Math.min(600, s.annulable)) : 0, lance_le: typeof s.lance_le === 'string' ? s.lance_le : null });
     }
   });
@@ -278,7 +286,7 @@ export async function scenesHub() {
 }
 export async function actionScene(id, action) {
   await charger();
-  if (typeof id !== 'string' || !SCENE_ID.test(id) || (action !== 'lancer' && action !== 'annuler')) throw new HttpError(400, 'Scène invalide.');
+  if (typeof id !== 'string' || !ID_ADAPTE.test(id) || (action !== 'lancer' && action !== 'annuler')) throw new HttpError(400, 'Scène invalide.');
   const x = adaptateurs.find((y) => y.a.scenesHub && !retrait(y) && id.startsWith(y.id + ':'));
   if (!x || typeof x.a.scenesHub[action] !== 'function') throw new HttpError(404, 'Scène inconnue.');
   const natif = id.slice(x.id.length + 1);
@@ -293,7 +301,7 @@ export async function actionScene(id, action) {
 // imprimables au plus), nombre fini ou booleen ; transmis tels quels a l'adaptateur (ecrire(element, cap, valeur, descripteur, options) : sa liste fermee les verifie) ; jamais gardes,
 // journalises ni renvoyes (le code d'alarme est tape a chaque fois).
 const enCours = new Set();
-export const RELECTURE_MS = 1000;
+const RELECTURE_MS = 1000;
 const OPTION_CLE = /^[a-z_]{1,20}$/, OPTION_TEXTE = /^[\x20-\x7e\u00a0-\uffff]{1,64}$/;
 export function optionsCommande(o) {
   if (o === undefined || o === null) return {};
@@ -311,7 +319,7 @@ export function optionsCommande(o) {
 export async function ecrireCapacite(id, element, cap, valeur, confirm, options) {
   const o = optionsCommande(options);
   await charger();
-  const x = adaptateurs.find((y) => typeof y.a.equipements === 'function' && !retrait(y) && String(id).startsWith(y.id + ':'));
+  const x = proprietaire(id);
   if (!x) throw new HttpError(404, 'Équipement inconnu.');
   if (typeof x.a.ecrire !== 'function') throw new HttpError(501, 'Commandes pas encore disponibles pour ce hub.');
   const e = (await equipUn(x, false)).find((y) => y.id === id);
@@ -324,7 +332,7 @@ export async function ecrireCapacite(id, element, cap, valeur, confirm, options)
   enCours.add(id);
   try {
     await borne(() => x.a.ecrire(element, cap, v, c, o), DELAI);
-    await new Promise((r) => setTimeout(r, RELECTURE_MS));
+    await sleep(RELECTURE_MS);
     const apres = (await equipUn(x, true)).find((y) => y.id === id);
     return apres ? composerEquipement(apres) : null;
   } finally { enCours.delete(id); }

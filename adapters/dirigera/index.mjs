@@ -1,7 +1,6 @@
 // @zone appareils | Adaptateur DIRIGERA : lister, relire (versModele de modele.mjs : capacites, V2.1), equipements (V2.1 : tout le hub en capacites), ecrire (V2.1 : ecriture generique, ecriture.mjs), appliquer (ON puis niveau puis couleur ou temperature), animer (V1.5 : une ecriture d'une valeur avec fondu), commande de piece ; connexion (adresse, jeton, client TLS strict, erreurs) dans connexion.mjs, contrat hub dans hub.mjs. Interface : core/appareils.mjs.
 // Nouvelle commande d'ecriture : lire d'abord node_modules/dirigera/dist/api/*.js (le hub expose aussi blinds, capteurs, speakers...).
-import { withTimeout } from '../../core/outils.mjs';
-import { client, erreur } from './connexion.mjs';
+import { client, erreur, auHub } from './connexion.mjs';
 import { iconeGenerique } from './pieces.mjs';
 import { versModele, versEquipements } from './modele.mjs';
 import { suivre, constater, heures } from './evenements.mjs';
@@ -20,8 +19,7 @@ export const scenesHub = {
 };
 
 const TYPES = ['light', 'outlet'];
-const auHub = async (fn) => withTimeout(fn(await client()));
-// Hub non configure ou deconnecte : panne comme un hub injoignable (« Aucun hub configuré. », « Hub non connecté. ») ; s'il ne reste aucun appareil ON/OFF : « Hors ligne ».
+// Hub non configure ou deconnecte (auHub rejette) : panne comme un hub injoignable (« Aucun hub configuré. », « Hub non connecté. ») ; s'il ne reste aucun appareil ON/OFF : « Hors ligne ».
 
 // Evenements (V2.1) : ecoute du hub ouverte ou tenue a jour apres chaque lecture (evenements.mjs ; fermee si plus de hub configure)
 const ecouter = () => { suivre(client().catch(() => null)); };

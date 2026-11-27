@@ -1,4 +1,4 @@
-// @zone pieces | Creation de pieces (contrat gestionPieces, CLAUDE.md « Pièces » ; aucun nom de marque) : GET /api/pieces (pieces du hub et leurs appareils
+// @zone pieces | Creation de pieces (contrat gestionPieces, contrat « Pièces » de .claude/rules/pieces.md ; aucun nom de marque) : GET /api/pieces (pieces du hub et leurs appareils
 // ON/OFF, lecture fraiche ; V1.4 : pieces locales, appareils independants et leur piece), POST /api/pieces {adapter, nom, icone, appareils, locaux} :
 // lecture fraiche (hub joignable, doublon parmi les pieces du hub et locales, appareils connus ; rien n'est ecrit si elle echoue). Avec au moins un appareil
 // du hub : une creation dans le hub, puis un deplacement, chacun envoye une seule fois (jamais renvoye ni defait), relecture 1 s apres, 201 ou 207 ;
@@ -69,7 +69,7 @@ export async function contenu(x) {
 
 // Pieces creees depuis l'application (trace ; V1.4 : nom mis a jour au renommage, supprimee_le a la suppression) : fichier illisible jamais ecrase.
 const NOTES = 'pieces-creees.json';
-export function notes() { const l = lireJson(NOTES, null); return Array.isArray(l) ? l.filter((n) => n && typeof n === 'object') : []; }
+function notes() { const l = lireJson(NOTES, null); return Array.isArray(l) ? l.filter((n) => n && typeof n === 'object') : []; }
 // fn(liste) modifie la liste (false : rien a changer) ; rien n'est ecrit si le fichier existe mais est illisible
 export function majNotes(fn, quoi) {
   const l = lireJson(NOTES, null);
@@ -78,10 +78,41 @@ export function majNotes(fn, quoi) {
   if (fn(liste) === false) return; // rien a changer : fichier non reecrit
   ecrireJson(NOTES, liste.slice(-MAX_NOTES), 1);
 }
-const noter = (p) => majNotes((l) => l.push(p), 'création');
+export const noter = (p) => majNotes((l) => l.push(p), 'création');
+export const raison = (e) => (e && (e.code || e.status || e.name)) || ''; // code d'erreur pour le journal (jamais e.message)
 
-// Une operation sur les pieces a la fois (creation, modification, suppression)
+// Une operation sur les pieces a la fois (creation, modification, suppression ; maj.mjs le consulte)
 export const verrou = { pris: false };
+export async function avecVerrou(fn) {
+  if (verrou.pris) throw new HttpError(409, 'Une opération sur les pièces est déjà en cours.');
+  verrou.pris = true;
+  try { return await fn(); } finally { verrou.pris = false; }
+}
+// Relecture apres une ecriture sans reponse claire : pieces, ou null si impossible
+export async function relirePieces(x) {
+  invalider();
+  try { return piecesValides(await borne(() => x.a.pieces(), 6000)); } catch (e) { return null; }
+}
+// Rangement de ids dans la piece : une seule demande, jamais renvoyee ni defaite ; ensuite() (facultatif) juste apres la demande ; relecture 1 s apres
+// par relire() -> [{id, nom, piece}] ; -> {deplaces, echecs, relus (null si impossible), fait (valeur de ensuite)}
+export async function deplacer(x, piece, ids, nomDe, relire, ensuite) {
+  let motif = null;
+  try { await borne(() => x.g.deplacer(piece, ids), 10000); } catch (e) { motif = describe(e)[1]; log('pieces : déplacement', x.id, 'en échec', raison(e)); }
+  const fait = ensuite ? ensuite() : undefined;
+  invalider();
+  await sleep(1000);
+  let relus = null;
+  try { relus = await relire(); } catch (e) { relus = null; }
+  const deplaces = [], echecs = [];
+  for (const i of ids) {
+    const d = relus && relus.find((y) => y.id === i);
+    if (d && d.piece === piece) deplaces.push({ id: i, nom: d.nom });
+    else echecs.push({ id: i, nom: nomDe(i), motif: motif || (relus ? 'Non confirmé par le hub.' : 'Relecture impossible.') });
+  }
+  return { deplaces, echecs, relus, fait };
+}
+// Appareils ON/OFF de l'adaptateur et leur piece [{id, nom, piece}] (lecture fraiche, 10 s)
+export const appareilsOnOff = async (x) => (await withTimeout(lister(x.id), 10000)).map((d) => ({ id: d.id, nom: d.name, piece: d.room ? d.room.id : null }));
 // Validation d'une liste d'identifiants (0 a 50, sans doublon)
 export function listeIds(v, quoi) {
   const l = v === undefined || v === null ? [] : v;
@@ -89,7 +120,7 @@ export function listeIds(v, quoi) {
   return l;
 }
 // Nom deja pris (pieces du hub et pieces locales, sauf la piece « sauf ») : nom existant ou null
-export const AUTRES = 'Autres'; // piece par defaut des appareils sans piece (client : pieces-choix.js)
+const AUTRES = 'Autres'; // piece par defaut des appareils sans piece (client : pieces-choix.js)
 export function doublon(nom, piecesHub, sauf) {
   // « Autres » : nom réservé à la pièce par défaut (V1.4 ; une pièce du hub qui le porte déjà peut le garder)
   if (cle(nom) === cle(AUTRES) && !piecesHub.some((p) => p.id === sauf && cle(p.name) === cle(AUTRES))) return AUTRES;
@@ -105,7 +136,7 @@ export async function verifierIndependants(ids, garder) {
   return par;
 }
 // Range les appareils independants ids dans la piece (registre local, aucun effet sur le hub) -> {ranges: [{id, nom}], echecs: [{id, nom, motif}]}
-export function rangerLocaux(ids, piece, par, piecesHub) {
+function rangerLocaux(ids, piece, par, piecesHub) {
   if (!ids.length) return { ranges: [], echecs: [] };
   const nomDe = (i) => (par.get(i) && par.get(i).nom) || i;
   try {
@@ -121,9 +152,8 @@ export async function creerAuService(x, nom, icone, avant) {
     if (!id) throw new HttpError(502, 'Réponse illisible après la création.');
     return { id, confirmee: true };
   } catch (e) {
-    log('pieces : création', x.id, 'sans réponse claire', e.code || e.status || e.name || '');
-    let apres = null;
-    try { invalider(); apres = piecesValides(await borne(() => x.a.pieces(), 6000)); } catch (e2) { apres = null; }
+    log('pieces : création', x.id, 'sans réponse claire', raison(e));
+    const apres = await relirePieces(x);
     if (!apres) throw new HttpError(504, 'Résultat inconnu : vérifiez la liste des pièces avant de réessayer.');
     const t = apres.find((p) => cle(p.name) === cle(nom) && !avant.some((a) => a.id === p.id));
     if (!t) { const [s, m] = describe(e); throw new HttpError(s, 'La pièce n\'a pas été créée. ' + m); }
@@ -144,9 +174,7 @@ async function creer(c) {
   if (ids.length && !x) throw new HttpError(404, 'Création de pièce non gérée.');
   const icone = b.icone;
   if (x ? !iconesDe(x).includes(icone) : !(typeof icone === 'string' && /^[a-z]{1,20}$/.test(icone))) throw new HttpError(400, 'Icône inconnue.');
-  if (verrou.pris) throw new HttpError(409, 'Une opération sur les pièces est déjà en cours.');
-  verrou.pris = true;
-  try {
+  return avecVerrou(async () => {
     // 1. Lecture fraiche : rien n'est ecrit si elle echoue
     let avant = { pieces: [], appareils: [] };
     if (x) { try { avant = await lire(x); } catch (e) { const [s, m] = describe(e); throw new HttpError(s, m + ' Rien n\'a été créé.'); } }
@@ -169,26 +197,12 @@ async function creer(c) {
     // 2. Creation dans le hub : une seule demande ; en cas d'echec, relecture (jamais de renvoi)
     const { id, confirmee } = await creerAuService(x, nom, icone, avant.pieces);
     noter({ id, adapter: x.id, nom, cree_le: new Date().toISOString() });
-    // 3. Deplacement : une seule demande, jamais renvoyee ni defaite
-    let motif = null;
-    try { await borne(() => x.g.deplacer(id, ids), 10000); } catch (e) { motif = describe(e)[1]; log('pieces : déplacement', x.id, 'en échec', e.code || e.status || e.name || ''); }
-    // 4. Appareils independants ranges localement
-    const rl = rangerLocaux(loc, id, par, hubIds.concat(id));
-    // 5. Relecture 1 s apres
-    invalider();
-    await sleep(1000);
-    let relus = null;
-    try { relus = await withTimeout(lister(x.id), 10000); } catch (e) { relus = null; }
-    const deplaces = [], echecs = [];
-    for (const i of ids) {
-      const d = relus && relus.find((y) => y.id === i);
-      if (d && d.room && d.room.id === id) deplaces.push({ id: i, nom: d.name });
-      else echecs.push({ id: i, nom: parId.get(i).name, motif: motif || (relus ? 'Non confirmé par le hub.' : 'Relecture impossible.') });
-    }
+    // 3. Deplacement (une seule demande, jamais renvoyee ni defaite), 4. appareils independants ranges localement, 5. relecture 1 s apres
+    const { deplaces, echecs, fait: rl } = await deplacer(x, id, ids, (i) => parId.get(i).name, () => appareilsOnOff(x), () => rangerLocaux(loc, id, par, hubIds.concat(id)));
     echecs.push(...rl.echecs);
     log('pieces : pièce créée', x.id + (confirmee ? '' : ' (confirmée par relecture)') + ',', deplaces.length + '/' + ids.length, 'appareil(s) déplacé(s)' + (loc.length ? ', ' + rl.ranges.length + '/' + loc.length + ' indépendant(s) rangé(s)' : ''));
     c.envoyer(echecs.length ? 207 : 201, { piece: { id, nom, adapter: x.id }, confirmee, deplaces, echecs, ranges: rl.ranges, time: new Date().toISOString() });
-  } finally { verrou.pris = false; }
+  });
 }
 
 // Liste legere pour l'accueil, le menu et la vue d'une piece (GET /api/pieces/liste, relue avec chaque actualisation du client) : toutes les pieces

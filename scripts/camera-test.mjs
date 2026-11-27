@@ -3,11 +3,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 
-const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ENV_DON = String(process.env.DOMOWA_DONNEES || '').trim(); // V1.8 : meme regle que core/outils.mjs (choisirDonnees)
-const DON = ENV_DON && path.isAbsolute(ENV_DON) ? path.resolve(ENV_DON) : path.join(DIR, 'donnees');
+import { DONNEES as DON } from '../core/outils.mjs'; // V1.8 : DOMOWA_DONNEES (choisirDonnees)
 const cams = (() => { try { const j = JSON.parse(fs.readFileSync(path.join(DON, 'cameras.json'), 'utf8')); return Array.isArray(j) ? j : []; } catch (e) { return []; } })();
 const HOST = process.argv[2] || (cams[0] && cams[0].host) || '';
 const cam = cams.find((c) => c && c.host === HOST) || null;

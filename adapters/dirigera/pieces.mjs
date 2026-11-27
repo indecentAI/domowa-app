@@ -1,11 +1,10 @@
-// @zone pieces | DIRIGERA, pieces (contrat gestionPieces, CLAUDE.md « Pièces ») : icones generiques <-> liste fermee du hub, couleur choisie d'office,
+// @zone pieces | DIRIGERA, pieces (contrat gestionPieces, contrat « Pièces » de .claude/rules/pieces.md) : icones generiques <-> liste fermee du hub, couleur choisie d'office,
 // creer (POST /v1/rooms {name, icon, color}), deplacer (PATCH /v1/rooms/:id/devices {deviceIds}), modifier (PUT /v1/rooms/:id {name, icon, color} : les trois,
 // couleur relue et renvoyee telle quelle, icone hors liste gardee), supprimer (DELETE /v1/rooms/:id), contenu (tous les appareils du hub, telecommandes comprises) ;
 // formats de node_modules/dirigera/dist/api/rooms.js et types/Room.d.ts (2.0.2). PUT et DELETE : sans renvoi automatique (connexion.mjs, sansRenvoi).
 // Un refus du hub (HTTP 4xx/5xx hors jeton) devient HttpError(502) ; les autres erreurs (reseau, jeton, delai) sont traduites par connexion.mjs (erreur).
 import { HttpError } from '../../core/http.mjs';
-import { withTimeout } from '../../core/outils.mjs';
-import { client, sansRenvoi } from './connexion.mjs';
+import { auHub, sansRenvoyer } from './connexion.mjs';
 
 // Cle generique (dessin local, public/pieces.js) -> icone du hub (liste fermee de Room.d.ts)
 const ICONES = {
@@ -25,8 +24,6 @@ const COULEURS = [
 const GENERIQUES = Object.fromEntries(Object.entries(ICONES).map(([k, v]) => [v, k]));
 export const iconeGenerique = (icon) => GENERIQUES[icon] || null;
 
-const auHub = async (fn) => withTimeout(fn(await client()));
-const sansRenvoyer = async (fn) => withTimeout(fn(await sansRenvoi()));
 function refus(e) {
   const s = e && e.response && e.response.statusCode;
   if (s >= 400 && s !== 401 && s !== 403) return new HttpError(502, 'Le hub a refusé la demande (code ' + s + ').');

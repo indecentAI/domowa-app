@@ -1,4 +1,4 @@
-// @zone accueil equipements | Carte « Présence » de l'accueil (V2.2 ha-localisation, décision du 24/11) : dans la ligne Actions (APP.homeActions, clé « presence » : rangée et masquable
+// @zone accueil equipements-vue | Carte « Présence » de l'accueil (V2.2 ha-localisation, décision du 24/11) : dans la ligne Actions (APP.homeActions, clé « presence » : rangée et masquable
 // par « Organiser »), une icône par personne (initiale ; contour vert : à la maison), « N à la maison » ; toucher la carte : vue Équipements ; une icône : configuration de la personne
 // (APP.equipements.montrer). Lecture : GET /api/equipements/presence après chaque actualisation (APP.surActualisation, ordre 57) ; zone seulement, jamais de coordonnées ; carte ajoutée
 // à la première liste non vide (sans Home Assistant ni personne : aucune carte), accueil reconstruit quand la liste change. Rien de gardé, rien de journalisé.

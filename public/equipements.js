@@ -1,4 +1,4 @@
-// @zone equipements | Vue Équipements (#viewEquip, préfixe eq-, V2.1 étape equipements-vue) : tuiles de taille fixe par famille (lampe, prise, store, capteurs, hub, télécommande, enceinte,
+// @zone equipements-vue | Vue Équipements (#viewEquip, préfixe eq-, V2.1 étape equipements-vue) : tuiles de taille fixe par famille (lampe, prise, store, capteurs, hub, télécommande, enceinte,
 // purificateur, repli, absent ; famille déduite des capacités, jamais du modèle ni de la marque ; règle « Vue Équipements » de .claude/rules/equipements.md), action rapide directe (lampe, prise),
 // notification (pastille rouge : mise à jour disponible, batterie sous 20 %, problème signalé, air mauvais, alarme), alarme (bordure rouge), enceinte qui joue (bordure ambre). Configuration
 // (APP.composer(eq) ; panneau de droite, feuille sur téléphone) : lampe et prise = panneau des lumières (APP.reglages construit selon les capacités de l'équipement ; commandes par APP.applyLights,

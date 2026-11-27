@@ -1,13 +1,10 @@
 // @zone diagnostic | Diagnostic des alertes ONVIF d'une caméra (V1.9) : liste des sujets annoncés (GetEventProperties : mouvement, personne, son…), puis écoute des alertes reçues (abonnement PullPoint, retiré à la fin ou à Ctrl+C). Lecture seule : aucun réglage de la caméra n'est changé. Sortie sans adresse, identifiant ni mot de passe (à coller telle quelle). Usage : node scripts/camera-evenements.mjs [id de caméra] [secondes d'écoute : 60 par défaut, 0 = liste seulement, 600 au plus] ; identifiants : donnees/camera-secrets/<id>.json. Serveur en marche ou arrêté.
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { soap, xaddr, capacites, CORPS, ACTIONS, lireSujets, lireAbonnement, lireMessages, lireErreur } from '../adapters/cameras/onvif.mjs';
 
-const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ENV_DON = String(process.env.DOMOWA_DONNEES || '').trim(); // V1.8 : meme regle que core/outils.mjs (choisirDonnees)
-const DON = ENV_DON && path.isAbsolute(ENV_DON) ? path.resolve(ENV_DON) : path.join(DIR, 'donnees');
-const ID_RE = /^[A-Za-z0-9_-]{1,80}$/;
+import { DONNEES as DON } from '../core/outils.mjs'; // V1.8 : DOMOWA_DONNEES (choisirDonnees)
+import { ID_RE } from '../core/modele.mjs';
 const cams = (() => { try { const j = JSON.parse(fs.readFileSync(path.join(DON, 'cameras.json'), 'utf8')); return Array.isArray(j) ? j.filter((c) => c && ID_RE.test(String(c.id)) && /^[0-9.]{7,15}$/.test(String(c.host))) : []; } catch (e) { return []; } })();
 const fin = (code, t) => { if (t) console.log(t); process.exit(code); };
 if (!cams.length) fin(1, 'Aucune caméra dans donnees/cameras.json : ajouter d\'abord la caméra dans la fenêtre Caméras.');

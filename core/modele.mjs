@@ -17,7 +17,7 @@ export const KELVIN_MIN = 1801, KELVIN_MAX = 6535;
 export const ID_RE = /^[A-Za-z0-9_-]{1,80}$/;
 // Appareil commandable ON/OFF (seuls ceux-ci vont dans /api/devices, Tout OFF et les commandes de piece) : regle de role (contrat « Capacités ») :
 // capacite onoff de role eclairage ou prise ; un chauffage, une vanne, un appareil quelconque ont onoff mais n'y entrent jamais. Appareil sans capacites (forme ancienne) : caps.onoff.
-export const ROLES_ONOFF = ['eclairage', 'prise'];
+const ROLES_ONOFF = ['eclairage', 'prise'];
 const onoffCommun = (l) => l.find((c) => c && c.cap === 'onoff' && ROLES_ONOFF.includes(c.role));
 export const estOnOff = (d) => !!(d && (Array.isArray(d.capacites) ? onoffCommun(d.capacites) : d.caps && d.caps.onoff));
 

@@ -1,4 +1,4 @@
-// @zone equipements | Cartes de la vue Équipements (V2.1 étape cartes-lecture ; décisions : claude/cartes-v2.1.md du projet) : textes des valeurs, qualité de l'air (seuils, mesure la moins bonne :
+// @zone equipements-vue | Cartes de la vue Équipements (V2.1 étape cartes-lecture ; décisions : claude/cartes-v2.1.md du projet) : textes des valeurs, qualité de l'air (seuils, mesure la moins bonne :
 // fonctions pures, banc/unitaires/equipements-cartes.test.mjs), configurations par famille construites selon les capacités exposées (jamais construites puis cachées) : options communes
 // (au retour du courant, verrou enfant, voyant, identifier), consommation d'une prise, purificateur (mode, vitesse, air, filtre), enceinte, capteur d'air (qualité, min / max), ouverture,
 // fuite, mouvement (réglages du capteur, appareils commandés), télécommande (mode de commande, lampes liées), hub (logiciel, soleil et heure, localisation, code d'appairage) : même widget
@@ -930,12 +930,12 @@
     const piste = sv("g", { "class": "eq-thermo-piste" });
     for (let i = 0; i < N; i++) piste.appendChild(sv("path", { d: arcD(i / N, Math.min(1, (i + 1) / N + 0.004)), stroke: teinte((i + 0.5) / N) }));
     svg.appendChild(piste);
-    svg.appendChild(sv("circle", { cx: 100, cy: 100, r: 64, fill: "#11151c", stroke: "#262c37", "stroke-width": 1 }));
+    svg.appendChild(sv("circle", { cx: 100, cy: 100, r: 64, style: "fill:var(--cadran-centre);stroke:var(--cadran-bord)", "stroke-width": 1 }));
     const lueur = sv("g", { "class": "eq-thermo-lueur", filter: "url(#" + fid + ")" }), rempli = sv("g", { "class": "eq-thermo-rempli" });
     svg.appendChild(lueur); svg.appendChild(rempli);
     const mes = h.mesure && typeof h.mesure.valeur === "number" ? h.mesure.valeur : null;
     if (mes !== null) { const q = point(Math.max(0, Math.min(1, fr(mes)))); svg.appendChild(sv("circle", { cx: q[0].toFixed(1), cy: q[1].toFixed(1), r: 4, "class": "eq-thermo-mesure" })); }
-    const ombre = sv("circle", { r: 12, fill: "#000", "fill-opacity": 0.55, filter: "url(#" + fid + ")" }), pouce = sv("circle", { r: 11, "class": "eq-thermo-pouce" });
+    const ombre = sv("circle", { r: 12, style: "fill:var(--ombre)", "fill-opacity": 0.55, filter: "url(#" + fid + ")" }), pouce = sv("circle", { r: 11, "class": "eq-thermo-pouce" });
     svg.appendChild(ombre); svg.appendChild(pouce);
     boite.appendChild(svg);
     const centre = el("div", "eq-thermo-centre"), num = el("div", "eq-thermo-num", ""), u = el("div", "eq-thermo-u", unite(c.unite || "°C").trim());
@@ -954,7 +954,7 @@
       }
       lueur.style.opacity = lumiere ? (0.35 + 0.65 * h.intensite).toFixed(2) : "0";
       const q = point(fv);
-      pouce.setAttribute("cx", q[0].toFixed(1)); pouce.setAttribute("cy", q[1].toFixed(1)); pouce.setAttribute("stroke", actif ? teinte(fv) : "#6b7280");
+      pouce.setAttribute("cx", q[0].toFixed(1)); pouce.setAttribute("cy", q[1].toFixed(1)); pouce.style.stroke = actif ? teinte(fv) : "var(--lampe-off)";
       ombre.setAttribute("cx", q[0].toFixed(1)); ombre.setAttribute("cy", (q[1] + 2).toFixed(1));
       num.textContent = c.en_off ? "OFF" : nb(v, dec);
       svg.setAttribute("aria-valuenow", String(v)); svg.setAttribute("aria-valuetext", nb(v, dec) + unite(c.unite || "°C"));

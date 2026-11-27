@@ -1,10 +1,9 @@
-// @zone hubs | Contrat hub de l'adaptateur DIRIGERA (CLAUDE.md, « Hubs ») : un seul hub (id dirigera-1), etat (sonde GET /v1/hub/status, 4 s), adresses, deconnexion, recherche et appairage (appairage.mjs). Sans secret.
+// @zone hubs | Contrat hub de l'adaptateur DIRIGERA (contrat « Hubs » de .claude/rules/hubs.md) : un seul hub (id dirigera-1), etat (sonde GET /v1/hub/status, 4 s), adresses, deconnexion, recherche et appairage (appairage.mjs). Sans secret.
 import { HttpError } from '../../core/http.mjs';
 import { withTimeout } from '../../core/outils.mjs';
-import { lire, client, etatLocal, deconnecter, erreur, jetonPresent } from './connexion.mjs';
+import { lire, client, etatLocal, deconnecter, erreur, jetonPresent, ID } from './connexion.mjs';
 import { rechercher, identifier, champs, verifier, appairer } from './appairage.mjs';
 
-const ID = 'dirigera-1';
 export const hub = {
   nom: 'IKEA DIRIGERA',
   max: 1,
@@ -34,9 +33,9 @@ export const hub = {
   aide: [
     { titre: 'Connecter le hub IKEA DIRIGERA', lignes: [
       '1. Cet appareil et le hub doivent être sur le même réseau (le Wi-Fi de la box).',
-      '2. Appuyez sur « Connecter un hub » (ou « Changer de hub »), puis sur « Rechercher sur le réseau » et touchez le hub trouvé. Sinon, tapez son adresse : la box l\'affiche dans la liste des appareils connectés (conseil : réservez-la dans la box).',
+      '2. Appuyez sur « Connecter un hub » (ou « Changer de hub »), puis sur « Rechercher sur le réseau » : le hub trouvé est choisi d\'office (touchez-en un autre s\'il y en a plusieurs). Sinon, tapez son adresse : la box l\'affiche dans la liste des appareils connectés (conseil : réservez-la dans la box).',
       '3. Appuyez sur Connecter. Quand le compte à rebours s\'affiche, appuyez une fois, brièvement, sur le bouton sous le hub (60 secondes au plus).',
-      '4. L\'état passe à « Connecté » : les lumières et les prises apparaissent.',
+      '4. L\'état passe à « Connecté » : les lumières et les prises apparaissent, avec les équipements (vue Équipements).',
     ] },
     { titre: 'Reconnecter', lignes: [
       'Quand l\'état indique « Déconnecté » ou « Jeton refusé par le hub » (hub réinitialisé, par exemple) : Reconnecter, puis le bouton sous le hub. L\'adresse est gardée.',

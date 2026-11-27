@@ -68,13 +68,12 @@ function finCycle(r) {
   r.etats = r.etatsFin;
   cycle(r, Math.max(Date.now(), r.T0 + r.cycleMs));
 }
-const retirerFile = (pred) => file.retirer(pred);
 
 function ignorer(r, id, motif) {
   if (!r.lampes.has(id)) return;
   r.lampes.delete(id);
   r.ignorees.set(id, motif);
-  retirerFile((c) => c.run === r && c.lampe === id);
+  file.retirer((c) => c.run === r && c.lampe === id);
   log('animation', JSON.stringify(r.nom), ': lampe ignorée (' + motif + ')');
   if (!r.lampes.size) terminer(r, 'vide', false, 'Plus aucune lampe à animer.');
 }
@@ -82,7 +81,7 @@ function suspendre(r, motif) {
   if (r.etat === 'suspendue') return;
   r.etat = 'suspendue'; r.motif = motif; r.depuis = Date.now();
   clearTimeout(r.timer);
-  retirerFile((c) => c.run === r);
+  file.retirer((c) => c.run === r);
   log('animation', JSON.stringify(r.nom), ': suspendue (hub)');
   r.sonde = setInterval(() => sonder(r), CONTROLE);
 }
@@ -106,7 +105,7 @@ function reprendre(r) {
 function terminer(r, raison, reset, motif) {
   if (runs.get(r.cle) !== r) return;
   clearTimeout(r.timer); clearInterval(r.sonde);
-  retirerFile((c) => c.run === r);
+  file.retirer((c) => c.run === r);
   runs.delete(r.cle);
   finies.unshift({ cle: r.cle, id: r.id, nom: r.nom, raison, motif, fin: new Date().toISOString() });
   finies.length = Math.min(finies.length, 5);
@@ -138,8 +137,8 @@ async function controle() {
 }
 
 // Lancement : controle (chevauchements, ecart, plafond), 3 animations au plus, lampes reprises aux autres animations, etat de depart relu (reset).
-export async function lancer(anim, { cle, essai = false } = {}) {
-  cle = cle || (essai ? 'essai' : anim.id);
+export async function lancer(anim, { essai = false } = {}) {
+  const cle = essai ? 'essai' : anim.id;
   const l = await lister();
   for (const d of l) appareils.set(d.id, d);
   const v = verifier(anim, nomDe);
@@ -159,7 +158,7 @@ export async function lancer(anim, { cle, essai = false } = {}) {
   if (restantes.length >= LIMITES.simultanees) throw new HttpError(409, 'Trois animations tournent déjà : arrêtez-en une d\'abord.');
   if (runs.has(cle)) terminer(runs.get(cle), 'relancee', false, null);
   for (const r of autres) for (const id of lampes) if (r.lampes.has(id)) ignorer(r, id, 'reprise par « ' + (anim.nom || 'Essai') + ' »');
-  retirerFile((c) => !c.run && lampes.has(c.lampe));
+  file.retirer((c) => !c.run && lampes.has(c.lampe));
   const etats = new Map();
   for (const id of lampes) etats.set(id, etatDe(l.find((x) => x.id === id)));
   const r = {
@@ -180,16 +179,19 @@ export function arreter(cle) {
   return true;
 }
 export const enMarche = (cle) => runs.has(cle);
+// Appareils de la derniere lecture du moteur (lancement, controle toutes les 5 s) quand une animation tourne, sinon null : GET /api/animations s'en sert
+// au lieu de relire tout le hub (animer() invalide le cache a chaque ecriture ; V2.2 revision 2 : moins de lectures du hub, ecritures non retardees).
+export const appareilsEnMarche = () => (runs.size ? [...appareils.values()] : null);
 // Commande manuelle sur des lampes (POST d'un appareil, d'une piece, d'un lot, d'un scenario) : retirees des animations, sans retour a l'etat de depart
 export function liberer(ids, motif = 'autre commande') {
   const s = new Set(ids);
   for (const r of [...runs.values()]) for (const id of ids) if (r.lampes.has(id)) ignorer(r, id, motif);
-  retirerFile((c) => !c.run && s.has(c.lampe));
+  file.retirer((c) => !c.run && s.has(c.lampe));
 }
 // Tout OFF : toutes les animations arretees, sans retour a l'etat de depart
 export function toutArreter(motif = 'Tout OFF') {
   for (const r of [...runs.values()]) terminer(r, 'tout_off', false, motif);
-  retirerFile(() => true);
+  file.retirer(() => true);
 }
 function resume(r) {
   return {

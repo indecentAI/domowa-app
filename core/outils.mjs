@@ -1,4 +1,4 @@
-// @zone socle | Utilitaires communs : DIR (racine du projet), DONNEES (donnees/, 700 ; V1.8 : dossier choisi par DOMOWA_DONNEES, choisirDonnees), log horodate, sleep, withTimeout (10 s), borne (appel borne), lireJson/ecrireJson dans donnees/ (ecriture atomique), nouvelId.
+// @zone socle | Utilitaires communs : DIR (racine du projet), DONNEES (donnees/, 700 ; V1.8 : dossier choisi par DOMOWA_DONNEES, choisirDonnees), log horodate, sleep, versionInstallee, withTimeout (10 s), borne (appel borne), lireJson/ecrireJson dans donnees/ (ecriture atomique), ecrireSecret (600, atomique), nouvelId.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +13,10 @@ export function choisirDonnees(env, dir) {
 export const DONNEES = choisirDonnees(process.env, DIR); // donnees et secrets : jamais servis ni empaquetes
 export const log = (...a) => console.log(new Date().toISOString(), ...a);
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Version installee (fichier VERSION, 20 caracteres au plus) ou null s'il manque ; lue au demarrage par les modules qui la donnent au client.
+export function versionInstallee() {
+  try { return fs.readFileSync(path.join(DIR, 'VERSION'), 'utf8').trim().slice(0, 20) || null; } catch { return null; }
+}
 
 export function withTimeout(p, ms = 10000) {
   let t;
@@ -33,6 +37,15 @@ export function ecrireJson(nom, obj, indent) {
   const f = path.join(DONNEES, nom);
   fs.writeFileSync(f + '.tmp', JSON.stringify(obj, null, indent));
   fs.renameSync(f + '.tmp', f);
+}
+// Secret (jeton d'un hub, V2.2 revision 2 : commun aux adaptateurs) : ecrit par le serveur seul, 600, atomique (fichier temporaire puis renommage) ;
+// fichier : chemin absolu sous DONNEES. Jamais journalise ni renvoye par l'appelant.
+export function ecrireSecret(fichier, texte) {
+  fs.mkdirSync(DONNEES, { recursive: true, mode: 0o700 });
+  const tmp = fichier + '.tmp';
+  fs.writeFileSync(tmp, texte, { mode: 0o600 });
+  fs.chmodSync(tmp, 0o600);
+  fs.renameSync(tmp, fichier);
 }
 // Identifiant (scenarios, animations, couleurs, pieces locales) : instant (base 36), compteur (2 caracteres : uniques jusqu'a 1296 dans la meme milliseconde ;
 // le seul hasard de 4 caracteres se repetait parfois, vu au banc), hasard (4 caracteres) ; 14 caracteres [a-z0-9], sous la limite de 20 des routes.

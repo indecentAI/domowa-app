@@ -1,5 +1,5 @@
 // @zone socle | Mise a jour immediate : un POST connu est applique a l'affichage avant la reponse, annule si echec total, relu 2,5 s apres.
-// Regle : APP.prevoir(/regex de l'url/, function (m, corps) { return [{id, st}] ou null; }). La commande generique /api/devices/:id/cmd {set} est prevue d'office.
+// Regle : APP.prevoir(/regex de l'url/, function (m, corps) { return [{id, st}] ou null; }). La commande generique /api/devices/:id/cmd {set} est prevue d'office (regle ui-client) ; power et brightness, sans appelant dans le client, n'ont pas de regle.
 (function () {
   var rawApi = APP.api, checkTimer = null;
   function cloneDev(d) { var o = {}, k; for (k in d) if (d.hasOwnProperty(k)) o[k] = d[k]; return o; }
@@ -11,7 +11,7 @@
     if (st.mode === "color" && d.canColor) { d.colorMode = "color"; d.hue = st.hue; d.sat = st.sat; }
     else if (st.mode === "temperature" && d.canTemp) { d.colorMode = "temperature"; d.temp = st.kelvin; }
   }
-  APP.optimistic = function (items) {
+  var optimistic = function (items) {
     var snap = [], i, j, d, n;
     for (i = 0; i < items.length; i++) {
       j = indexOfDev(items[i].id);
@@ -24,7 +24,7 @@
     if (snap.length) APP.render();
     return snap;
   };
-  APP.rollback = function (snap) {
+  var rollback = function (snap) {
     var i, j;
     for (i = 0; i < snap.length; i++) { j = indexOfDev(snap[i].id); if (j >= 0) APP.devices[j] = snap[i].old; }
     APP.render();
@@ -37,8 +37,6 @@
     for (i = 0; i < regles.length; i++) if ((m = url.match(regles[i][0]))) return regles[i][1](m, body);
     return null;
   }
-  APP.prevoir(/^\/api\/devices\/([A-Za-z0-9_-]+)\/power$/, function (m, b) { return typeof b.on === "boolean" ? [{ id: m[1], st: { on: b.on } }] : null; });
-  APP.prevoir(/^\/api\/devices\/([A-Za-z0-9_-]+)\/brightness$/, function (m, b) { return typeof b.level === "number" ? [{ id: m[1], st: { level: b.level } }] : null; });
   APP.prevoir(/^\/api\/devices\/([A-Za-z0-9_-]+)\/cmd$/, function (m, b) { return (b.set && typeof b.set === "object") ? [{ id: m[1], st: b.set }] : null; });
   APP.prevoir(/^\/api\/lights\/apply$/, function (m, b) {
     var items = [], i;
@@ -77,10 +75,10 @@
     checkTimer = setTimeout(function () { checkTimer = null; APP.refresh(); }, 2500);
   }
   APP.api = function (method, url, body, cb) {
-    var items = method === "POST" ? predict(url, body) : null, snap = (items && items.length) ? APP.optimistic(items) : null;
+    var items = method === "POST" ? predict(url, body) : null, snap = (items && items.length) ? optimistic(items) : null;
     rawApi(method, url, body, function (err, d) {
       if (items) {
-        if (err && !(d && (d.failed || d.devices))) { if (snap && snap.length) APP.rollback(snap); }
+        if (err && !(d && (d.failed || d.devices))) { if (snap && snap.length) rollback(snap); }
         else checkLater();
       }
       cb(err, d);

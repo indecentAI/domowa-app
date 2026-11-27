@@ -2,7 +2,7 @@
 import { LOCAL_PORT } from '../config.mjs';
 
 export const ORIGINS = ['http://127.0.0.1:' + LOCAL_PORT, 'http://localhost:' + LOCAL_PORT];
-export const HOSTS = ['127.0.0.1:' + LOCAL_PORT, 'localhost:' + LOCAL_PORT];
+const HOSTS = ['127.0.0.1:' + LOCAL_PORT, 'localhost:' + LOCAL_PORT];
 
 // V1.8, mode distant : hote et origine de l'ecoute reseau (HTTPS), poses par server.mjs une fois l'ecoute ouverte ; null en mode local.
 let reseau = null;

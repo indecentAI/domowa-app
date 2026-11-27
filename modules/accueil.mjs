@@ -5,7 +5,7 @@ import { HttpError } from '../core/http.mjs';
 import { DONNEES, ecrireJson } from '../core/outils.mjs';
 import { ID_RE } from '../core/modele.mjs';
 
-export const FICHIER = 'accueil.json';
+const FICHIER = 'accueil.json';
 export const RUBRIQUES = ['pieces', 'actions', 'categories'];
 export const MAX_CLES = 100; // par rubrique : pièces du hub (30), locales (30), « Autres », et les places gardées des éléments absents
 // Pire cas du corps : ordre et masques, 2 x 3 rubriques x 100 clés de 80 caractères (guillemets et virgule compris) = 49,8 Ko, plus l'enveloppe ; vérifié par l'essai unitaire

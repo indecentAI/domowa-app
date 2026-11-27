@@ -1,5 +1,5 @@
 // @zone pieces | Modification et suppression des pieces (contrat gestionPieces : modifier, supprimer, contenu ; registre local : modules/pieces-registre.mjs ;
-// CLAUDE.md « Pièces » ; aucun nom de marque) : POST /api/pieces/:id/modifier {adapter, nom, icone?, ajouter?, locaux?} et
+// contrat « Pièces » de .claude/rules/pieces.md ; aucun nom de marque) : POST /api/pieces/:id/modifier {adapter, nom, icone?, ajouter?, locaux?} et
 // POST /api/pieces/:id/supprimer {adapter, confirm: true, destination?}. Piece du hub : chaque ecriture est envoyee une seule fois, jamais renvoyee ni defaite ;
 // sans reponse claire, relecture ; une operation a la fois (verrou commun avec la creation). Une piece du hub n'est supprimee que vide : ses appareils
 // (tous, telecommandes comprises) sont d'abord ranges dans la destination (une piece du hub), puis relus ; s'il en reste, rien n'est supprime ; ensuite
@@ -9,15 +9,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { HttpError, describe } from '../core/http.mjs';
-import { DONNEES, log, sleep, withTimeout, borne, lireJson, ecrireJson } from '../core/outils.mjs';
-import { charger, gestionsPieces, invalider, lister } from '../core/appareils.mjs';
-import { nomValide, MAX_NOM, iconesDe, piecesValides, lire, contenu, peut, majNotes, verrou, listeIds, doublon, verifierIndependants, creerAuService, CORPS_PIECES } from './pieces-creation.mjs';
+import { DONNEES, log, borne, lireJson, ecrireJson } from '../core/outils.mjs';
+import { charger, gestionsPieces, invalider } from '../core/appareils.mjs';
+import { nomValide, MAX_NOM, iconesDe, piecesValides, lire, contenu, peut, majNotes, listeIds, doublon, verifierIndependants, creerAuService, CORPS_PIECES, noter, raison, avecVerrou, relirePieces, deplacer, appareilsOnOff } from './pieces-creation.mjs';
 import { lireRegistre, majRegistre, estLocale, independants } from './pieces-registre.mjs';
 import { ID_RE } from '../core/modele.mjs';
 
 const maintenant = () => new Date().toISOString();
-const noter = (p) => majNotes((l) => l.push(p), 'création');
-const raison = (e) => (e && (e.code || e.status || e.name)) || '';
 const pluriel = (n, mot) => n + ' ' + mot + (n > 1 ? 's' : '');
 
 async function cibleDe(b, quoi) {
@@ -26,37 +24,17 @@ async function cibleDe(b, quoi) {
   if (!x || !peut(x)[quoi]) throw new HttpError(404, quoi === 'modifier' ? 'Modification de pièce non gérée.' : 'Suppression de pièce non gérée.');
   return x;
 }
-async function avecVerrou(fn) {
-  if (verrou.pris) throw new HttpError(409, 'Une opération sur les pièces est déjà en cours.');
-  verrou.pris = true;
-  try { return await fn(); } finally { verrou.pris = false; }
-}
-// Relecture apres une ecriture sans reponse claire : pieces, ou null si impossible
-async function relirePieces(x) {
-  invalider();
-  try { return piecesValides(await borne(() => x.a.pieces(), 6000)); } catch (e) { return null; }
-}
 // Appareils et leur piece : tous si l'adaptateur le declare (contenu), sinon ses appareils ON/OFF
 async function appareils(x) {
-  const t = await contenu(x);
-  if (t) return t;
-  return (await withTimeout(lister(x.id), 10000)).map((d) => ({ id: d.id, nom: d.name, piece: d.room ? d.room.id : null }));
+  return (await contenu(x)) || appareilsOnOff(x);
 }
-// Rangement de ids dans la piece : une seule demande, jamais renvoyee ni defaite ; relecture 1 s apres -> {deplaces, echecs, relus (null si impossible)}
-async function ranger(x, piece, ids, nomDe) {
-  let motif = null;
-  try { await borne(() => x.g.deplacer(piece, ids), 10000); } catch (e) { motif = describe(e)[1]; log('pieces : déplacement', x.id, 'en échec', raison(e)); }
-  invalider();
-  await sleep(1000);
-  let relus = null;
-  try { relus = await appareils(x); } catch (e) { relus = null; }
-  const deplaces = [], echecs = [];
-  for (const i of ids) {
-    const d = relus && relus.find((y) => y.id === i);
-    if (d && d.piece === piece) deplaces.push({ id: i, nom: d.nom });
-    else echecs.push({ id: i, nom: nomDe(i), motif: motif || (relus ? 'Non confirmé par le hub.' : 'Relecture impossible.') });
-  }
-  return { deplaces, echecs, relus };
+// Rangement de ids dans la piece (deplacer de pieces-creation.mjs) : relecture par appareils() -> {deplaces, echecs, relus}
+const ranger = (x, piece, ids, nomDe) => deplacer(x, piece, ids, nomDe, () => appareils(x));
+// Appareils independants rangés dans la piece id : vers la destination, sinon sans piece -> leur nombre
+function reloger(r, id, destination) {
+  let n = 0;
+  for (const a of Object.keys(r.rangement)) if (r.rangement[a] === id) { n++; if (destination) r.rangement[a] = destination.id; else delete r.rangement[a]; }
+  return n;
 }
 // Plan de la piece retire (layout.json) ; fichier illisible jamais reecrit
 function oublierPlan(id) {
@@ -97,7 +75,8 @@ async function modifier(c) {
     // 1. Lecture fraiche : rien n'est ecrit si elle echoue
     const avant = await lireHub(x, 'modifié');
     const reg = lireRegistre();
-    const p = locale ? (reg.locales.find((q) => q.id === id) && { id, name: reg.locales.find((q) => q.id === id).nom, icone: reg.locales.find((q) => q.id === id).icone }) : avant.pieces.find((q) => q.id === id);
+    const loc = locale ? reg.locales.find((q) => q.id === id) : null;
+    const p = locale ? (loc && { id, name: loc.nom, icone: loc.icone }) : avant.pieces.find((q) => q.id === id);
     if (!p) throw new HttpError(404, 'Pièce introuvable : la liste a changé, rouvrez la fenêtre.');
     const pris = doublon(nom, avant.pieces, id);
     if (pris) throw new HttpError(409, 'Une pièce « ' + pris.slice(0, 60) + ' » existe déjà.');
@@ -187,7 +166,7 @@ async function supprimer(c) {
       let n = 0;
       majRegistre((r) => {
         r.locales = r.locales.filter((y) => y.id !== id);
-        for (const a of Object.keys(r.rangement)) if (r.rangement[a] === id) { n++; if (destination) r.rangement[a] = destination.id; else delete r.rangement[a]; }
+        n = reloger(r, id, destination);
       }, hubIds);
       log('pieces : pièce locale supprimée,', n, 'appareil(s) indépendant(s)', destination ? 'rangé(s) ailleurs' : 'sans pièce');
       return c.envoyer(200, { piece: { id, nom: p.nom, adapter: null, locale: true }, supprimee: true, confirmee: true, destination, deplaces: [], echecs: [], independants: n, time: maintenant() });
@@ -244,7 +223,7 @@ async function supprimer(c) {
     majNotes((l) => { const n = l.find((y) => y.id === id && y.adapter === x.id); if (!n) return false; n.supprimee_le = maintenant(); }, 'suppression');
     let n = 0;
     try {
-      majRegistre((r) => { for (const a of Object.keys(r.rangement)) if (r.rangement[a] === id) { n++; if (destination) r.rangement[a] = destination.id; else delete r.rangement[a]; } },
+      majRegistre((r) => { n = reloger(r, id, destination); },
         pieces.map((q) => q.id).filter((q) => q !== id));
     } catch (e) { log('pieces : registre local non mis à jour après la suppression', raison(e)); }
     log('pieces : pièce supprimée', x.id + (confirmee ? '' : ' (confirmée par relecture)') + ',', deplaces.length, 'appareil(s) rangé(s) avant,', n, 'indépendant(s)');

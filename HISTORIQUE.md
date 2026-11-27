@@ -1,18 +1,18 @@
 # HISTORIQUE.md - évolutions (inutile pour coder)
 
-## V2.2 - Commandes Home Assistant
+## V2.2 - Commandes Home Assistant et thèmes
 - Home Assistant : presque tous ses équipements se commandent maintenant depuis la vue Équipements, avec seulement ce que chacun sait faire.
 - Interrupteurs, entrées, nombres, listes, textes, dates et heures, boutons, scènes, scripts et mises à jour (script et mise à jour en deux appuis).
 - Chauffage : cadran de température du bleu au rouge (14 à 26 °C), envoi au lâcher du doigt ; halo rouge quand ça chauffe, bleu quand ça refroidit ; modes et préréglages d'un appui, OFF en deux appuis.
 - Humidificateurs, ventilateurs, lecteurs (lecture, piste, volume, source), télécommandes (activité), aspirateurs et tondeuses (Démarrer, Pause, Retour à la base).
-- Volets et stores comme les stores IKEA ; porte de garage, vanne, serrure, alarme et sirène : le sens risqué (ouvrir, déverrouiller, désarmer, déclencher) demande deux appuis.
-- Code d'alarme ou de serrure : tapé à chaque commande, jamais enregistré. Ouvrir la porte depuis la serrure et déclencher l'alarme ne sont pas proposés.
-- Personnes et traceurs : zone (« À la maison ») et carte « Présence » sur l'accueil ; position sur demande seulement (deux appuis, effacée après 30 s), « Ouvrir dans Cartes ».
-- Application Android : « Ouvrir dans Cartes » ouvre l'application de cartes du téléphone.
+- Volets et stores comme les stores IKEA ; porte de garage, vanne, serrure, alarme et sirène : le sens risqué (ouvrir, déverrouiller, désarmer, déclencher) demande deux appuis ; code d'alarme ou de serrure tapé à chaque commande, jamais enregistré.
+- Personnes et traceurs : zone (« À la maison ») et carte « Présence » sur l'accueil ; position sur demande seulement (deux appuis, effacée après 30 s), « Ouvrir dans Cartes » (dans l'application Android aussi).
 - Heures « depuis… » des capteurs Home Assistant, dernier appui d'un bouton, dernière activation d'une scène, dernier lancement d'un script.
 - Rien de Home Assistant ne va dans Tout OFF, les pièces, les scènes ni les animations, hors lumières et prises.
+- Révision 2 (27/11/2026) : thèmes (« ⋯ » ou Plus > Thème) Sombre, Clair, Printemps, Été, Automne ou Automatique (suit le système) ; chaque appareil garde son choix, la page d'appairage le suit ; application Android en plein écran, barres du système masquées.
+- Révision 2 : « Modifier » change les couleurs d'un thème, « Nouveau thème » en crée un ; enregistrés pour tous les appareils, refusés si le texte devient peu lisible ; le Sombre d'origine reste intact (« Copier »).
 
-Détails : écriture générique Home Assistant en liste fermée (adapters/homeassistant/ecriture.mjs, actions lues dans le code officiel de Home Assistant 2026.2.3), paramètres d'une commande (code, ton, volume, durée) jamais gardés ni journalisés ; SmartThings gelé (chaîne du banc non déroulée, refactor à venir). Écarts connus : entités de configuration écrivables sans commande dans les familles, plage de consigne sans widget, oscillation horizontale en lecture seule, champs date et heure dans la langue du navigateur, lamelles ouvrir / fermer non décrites, envoi de commandes brutes (télécommande, aspirateur) non proposé, heures Home Assistant remises à son redémarrage.
+Détails : écriture générique Home Assistant en liste fermée (adapters/homeassistant/ecriture.mjs, actions lues dans le code officiel de Home Assistant 2026.2.3), paramètres d'une commande (code, ton, volume, durée) jamais gardés ni journalisés ; révision 2 : thèmes (registre APP_THEMES (version.js), variables de themes.css, thèmes modifiés et créés dans donnees/themes.json (modules/themes.mjs, dans sauvegarde.sh)) ; banc : simulateur d'équipements (banc/simu.sh, faux hub IKEA et faux Home Assistant pilotés depuis un panneau, aussi dans Termux), captures et contrastes par thème ; SmartThings gelé (chaîne du banc non déroulée, refactor à venir). Écarts connus : entités de configuration écrivables sans commande dans les familles, plage de consigne sans widget, oscillation horizontale en lecture seule, champs date et heure dans la langue du navigateur, lamelles ouvrir / fermer non décrites, envoi de commandes brutes (télécommande, aspirateur) non proposé, heures Home Assistant remises à son redémarrage ; tablette Android 7 : Automatique reste en Sombre (pas de thème système).
 
 ## V2.1 - Home Assistant et vue Équipements
 - Home Assistant peut remplacer le hub IKEA (un seul hub à la fois) : « Connecter un hub » trouve l'un ou l'autre sur le Wi-Fi ; lumières et prises se commandent comme avec le hub IKEA.

@@ -35,7 +35,7 @@
     const l = p ? p.independants : vueP && APP.room === "none" ? APP.piecesAutres : [];
     const sig = l.map((a) => a.id + ":" + a.nom).join("|");
     if (box.dataset.sig === sig && box.dataset.vis === String(!!l.length)) return;
-    box.dataset.sig = sig; box.dataset.vis = String(!!l.length); box.innerHTML = "";
+    box.dataset.sig = sig; box.dataset.vis = String(!!l.length); box.replaceChildren();
     box.className = "pl-ind" + (l.length ? "" : " hidden");
     if (!l.length) return;
     box.appendChild(el("div", "pl-titre", "Autres appareils de la pièce"));

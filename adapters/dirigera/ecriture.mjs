@@ -6,12 +6,10 @@
 // Formats : PATCH /devices/:id [{attributes}] (jamais renvoye par got) ; PUT (identifier, mise a jour du hub) : instance sans renvoi (connexion.mjs, sansRenvoi : got renvoie PUT apres un 5xx).
 // Capacite sans traduction : 400 « Commande non prise en charge » (jamais de route generique vers le hub). Aucune valeur ni identifiant journalise.
 import { HttpError } from '../../core/http.mjs';
-import { withTimeout } from '../../core/outils.mjs';
-import { client, sansRenvoi } from './connexion.mjs';
+import { withTimeout, sleep } from '../../core/outils.mjs';
+import { sansRenvoi, auHub, sansRenvoyer } from './connexion.mjs';
 import { horaire, planLier } from './modele.mjs';
 
-const auHub = async (fn) => withTimeout(fn(await client()));
-const sansRenvoyer = async (fn) => withTimeout(fn(await sansRenvoi()));
 const attr = (id, attributes) => auHub((c) => c.devices.setAttributes({ id, attributes }));
 
 // Traductions (element = identifiant DIRIGERA de l'appareil, ou du hub, ou du groupe pour groupe_onoff : d.groupe)
@@ -44,7 +42,7 @@ const T = {
   groupe_onoff: (id, v, d) => auHub((c) => c.deviceSets.setIsOn({ id: groupe(d), isOn: v })),
   groupe_luminosite: (id, v, d) => auHub((c) => c.deviceSets.setAttributes({ id: groupe(d), attributes: { lightLevel: v } })),
   groupe_temperature: (id, v, d) => auHub((c) => c.deviceSets.setAttributes({ id: groupe(d), attributes: { colorTemperature: v } })),
-  lier: (id, v) => lier(id, v),
+  lier,
   maj_rechercher: () => sansRenvoyer((c) => c.hub.checkFirmwareUpdate()),
   maj_installer: () => sansRenvoyer((c) => c.hub.installFirmwareUpdate()),
 };
@@ -54,7 +52,6 @@ const groupe = (d) => { if (!d || typeof d.groupe !== 'string') throw new HttpEr
 // V2.1 etape telecommande-lampes : ajout de l'appareil v aux appareils commandes par l'element (mode) de telecommande id. Groupe temporaire « Domo-wa liens » (deviceSets.create), l'appareil
 // seul dedans avec remoteLinkIds [element] (updateConfiguration), lien relu sur le hub (jusqu'a 3 s), puis TOUJOURS : groupe temporaire supprime et groupes d'origine de l'appareil remis avec
 // leur liste complete (planLier). Requetes sans renvoi (sansRenvoi : un POST ou DELETE renvoye creerait ou supprimerait deux fois). Aucun nom ni identifiant journalise.
-const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 async function lier(element, id) {
   const c = await sansRenvoi();
   const p = planLier(await withTimeout(c.devices.list()), element, id);
@@ -67,7 +64,7 @@ async function lier(element, id) {
   try {
     await withTimeout(c.deviceSets.updateConfiguration({ id: g.id, deviceIds: [id], remoteLinkIds: [element] }));
     for (let i = 0; i < 3 && !lie; i++) {
-      await pause(1000);
+      await sleep(1000);
       const d = (await withTimeout(c.devices.list())).find((x) => x && x.id === id);
       lie = !!(d && Array.isArray(d.remoteLinks) && d.remoteLinks.includes(element));
     }
@@ -79,7 +76,7 @@ async function lier(element, id) {
   if (!lie) throw new HttpError(502, 'Le hub n\'a pas ajouté la lampe à ce mode.');
 }
 
-// Valeur deja validee par le coeur ; la duree du capteur est arrondie a la minute (pas de l'interface)
+// Valeur deja validee par le coeur ; la duree du capteur est refusee (400) si elle n'est pas en minutes entieres. options (V2.2, parametres d'une commande) : aucune commande DIRIGERA n'en prend, elles sont ignorees
 export async function ecrire(element, cap, valeur, descripteur) {
   const f = T[cap];
   if (!f) throw new HttpError(400, 'Commande non prise en charge pour cet appareil.');

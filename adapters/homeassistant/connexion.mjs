@@ -5,16 +5,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
-import { DONNEES, lireJson, ecrireJson, log } from '../../core/outils.mjs';
+import { DONNEES, lireJson, ecrireJson, ecrireSecret, log } from '../../core/outils.mjs';
 import { privee } from '../../core/reseau.mjs';
 
-export const JETON = path.join(DONNEES, 'homeassistant-token.txt');
+const JETON = path.join(DONNEES, 'homeassistant-token.txt');
 const FICHIER = 'homeassistant.json'; // { adresse, port, appaire_le?, deconnecte_le? } : sans secret
 export const PORT_DEFAUT = 8123;
 const MAX = 8 * 1024 * 1024;
 export const portValide = (p) => Number.isInteger(p) && p >= 1 && p <= 65535;
 export const jetonValide = (j) => typeof j === 'string' && /^[\x21-\x7e]{20,4096}$/.test(j);
-const erreurCode = (code, extra) => Object.assign(new Error(code), { code }, extra || {});
+export const erreurCode = (code, extra) => Object.assign(new Error(code), { code }, extra || {});
 
 export function lire() {
   const f = path.join(DONNEES, FICHIER);
@@ -122,11 +122,7 @@ function demande(methode, chemin, corps, { adresse, port, jeton, delai = 8000 } 
 // Appairage reussi (hub.mjs) : jeton ecrit par le serveur seul, 600, atomique ; adresse et port notes, deconnecte_le retire. Un echec ou une annulation ne touche a rien.
 export function enregistrer(adresse, port, jeton) {
   if (!privee(adresse) || !portValide(port) || !jetonValide(jeton)) throw erreurCode('HA_JETON_FORME');
-  fs.mkdirSync(DONNEES, { recursive: true, mode: 0o700 });
-  const tmp = JETON + '.tmp';
-  fs.writeFileSync(tmp, jeton, { mode: 0o600 });
-  fs.chmodSync(tmp, 0o600);
-  fs.renameSync(tmp, JETON);
+  ecrireSecret(JETON, jeton);
   const c = lireJson(FICHIER, {});
   const n = Object.assign({}, c && typeof c === 'object' ? c : {}, { adresse, port, appaire_le: new Date().toISOString() });
   delete n.deconnecte_le;

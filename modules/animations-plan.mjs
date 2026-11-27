@@ -10,7 +10,7 @@ import { HttpError } from '../core/http.mjs';
 import { ID_RE, KELVIN_MIN, KELVIN_MAX } from '../core/modele.mjs';
 
 export const LIMITES = { animations: 30, etapes: 40, lampes: 20, dureeMin: 0.5, dureeMax: 3600, delaiMax: 3600, decalageMax: 60, ecart: 0.5, plafond: 4, cycleMin: 1, simultanees: 3 };
-export const COURBES = ['lineaire', 'acceleree', 'ralentie', 'douce'];
+const COURBES = ['lineaire', 'acceleree', 'ralentie', 'douce'];
 // Corps de requete d'une animation (routes de modules/animations.mjs) : aux limites (40 etapes de 20 lampes, identifiants de 80 caracteres), environ 80 Ko ;
 // la taille par defaut du serveur (4 Ko) refusait des 10 etapes de 8 lampes (essai : banc/unitaires/animations.test.mjs).
 export const CORPS_ANIMATION = 128 * 1024;
@@ -91,6 +91,7 @@ export function valider(a, icones) {
   return o;
 }
 
+// segments, courbe et horaire : employes ici (compiler, verifier) et exportes pour les essais (banc/unitaires/animations.test.mjs).
 // Nombre de petits glissements d'une courbe sur d secondes
 export const segments = (courbe, d) => (courbe === 'lineaire' || d < 2 ? 1 : Math.min(4, Math.floor(d / LIMITES.ecart)));
 const f = { lineaire: (x) => x, acceleree: (x) => x * x, ralentie: (x) => 1 - (1 - x) * (1 - x), douce: (x) => x * x * (3 - 2 * x) };

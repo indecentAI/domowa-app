@@ -1,4 +1,4 @@
-// @zone pieces | Registre local des pieces (V1.4, CLAUDE.md « Pièces » ; aucun nom de marque) : donnees/pieces.json {v: 1, locales: [{id: loc-..., nom, icone,
+// @zone pieces | Registre local des pieces (V1.4, contrat « Pièces » de .claude/rules/pieces.md ; aucun nom de marque) : donnees/pieces.json {v: 1, locales: [{id: loc-..., nom, icone,
 // cree_le}], rangement: {appareilId: pieceId}}. Une piece locale n'a aucun appareil du hub (elle passe dans le hub des qu'un appareil du hub y est range) ;
 // le rangement ne concerne que les appareils independants (adaptateurs avec rangement : lave-linge, familles SmartThings, cameras), sans aucun effet sur
 // le hub. Les pieces du hub n'y sont pas recopiees (le hub fait foi). Fichier absent = vide (rien a migrer ; une version precedente l'ignore) ;
@@ -11,8 +11,9 @@ import { charger, rangeables } from '../core/appareils.mjs';
 import { ID_RE } from '../core/modele.mjs';
 
 const FICHIER = 'pieces.json';
-export const MAX_LOCALES = 30, MAX_RANGES = 200;
-export const LOCAL_RE = /^loc-[a-z0-9]{4,30}$/;
+export const MAX_LOCALES = 30;
+export const MAX_RANGES = 200;
+const LOCAL_RE = /^loc-[a-z0-9]{4,30}$/;
 export const estLocale = (id) => LOCAL_RE.test(String(id));
 export const nouvelleLocale = () => 'loc-' + nouvelId().toLowerCase().replace(/[^a-z0-9]/g, '');
 

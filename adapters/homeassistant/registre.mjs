@@ -4,13 +4,13 @@
 // core/internals/websocket-api, lue le 19/11/2026) : /api/websocket, auth_required -> {type: 'auth', access_token} -> auth_ok | auth_invalid, puis commandes {id croissant, type} -> {id, type: 'result', success, result}.
 // Toujours avec jeton (cible() de connexion.mjs : sans jeton, aucune connexion) ; auth est le premier message envoye. Une connexion a la fois (appels simultanes : meme reponse), delai court
 // (6 s), message de 8 Mo au plus, ferme apres les trois reponses. Erreurs : codes HA_* sans message d'origine (jamais le jeton ni l'adresse). WebSocket global (Node 22) ; absent (Node 20) : null.
-import { cible, portValide } from './connexion.mjs';
+import { cible, portValide, erreurCode } from './connexion.mjs';
 import { privee } from '../../core/reseau.mjs';
 
-export const COMMANDES = Object.freeze({ 1: ['entites', 'config/entity_registry/list_for_display'], 2: ['appareils', 'config/device_registry/list'], 3: ['zones', 'config/area_registry/list'] });
-const MAX = 8 * 1024 * 1024;
-const erreurCode = (code) => Object.assign(new Error(code), { code });
+const COMMANDES = Object.freeze({ 1: ['entites', 'config/entity_registry/list_for_display'], 2: ['appareils', 'config/device_registry/list'], 3: ['zones', 'config/area_registry/list'] });
+const MAX = 8 * 1024 * 1024; // en caracteres (taille du texte recu), environ 8 Mo
 
+// Export garde pour les essais unitaires (point d'essai du WebSocket, banc/unitaires/homeassistant.test.mjs).
 // Dialogue avec un serveur WebSocket de Home Assistant (url ws://adresse:port/api/websocket) -> {entites, appareils, zones} (null pour une commande refusee ; entites refusees : HA_REFUS).
 export function dialoguer(url, jeton, { delai = 6000, WS = globalThis.WebSocket } = {}) {
   return new Promise((resolve, reject) => {

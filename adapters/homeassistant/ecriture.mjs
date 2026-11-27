@@ -22,10 +22,10 @@
 // Capacites ecrivables declarees mais hors de T : rendues en lecture seule par masquer (vue Equipements : aucune commande construite, rien envoye), sauf celles des lumieres et prises
 // (LUMIERES : commandees par les routes de la vue Lumieres, appliquer de index.mjs). Enveloppes configuration et diagnostic : traduites d'apres leur nature. Aucune valeur journalisee.
 import { HttpError } from '../../core/http.mjs';
+import { ENVELOPPES } from '../../core/capacites.mjs';
 import { envoyer } from './connexion.mjs';
 import { entiteDe } from './modele.mjs';
 
-const ENVELOPPES = ['configuration', 'diagnostic'];
 const effective = (c) => (c && ENVELOPPES.includes(c.cap) && typeof c.nature === 'string' ? c.nature : c && c.cap);
 const action = (dom, act, donnees) => ({ chemin: '/api/services/' + dom + '/' + act, donnees: donnees || {} });
 const nonPrise = () => new HttpError(400, 'Commande non prise en charge.');
@@ -43,7 +43,7 @@ function code(d, o, requis) {
 // Ouvrant (volet, vanne) : option choisie (open, close, stop) -> action du domaine
 const ouvrant = (dom) => (v, d, o) => { seules(o, []); const a = { open: 'open_', close: 'close_', stop: 'stop_' }[v]; if (!a) throw nonPrise(); return action(dom, a + dom); };
 // Choix -> action du domaine (liste fermee) ; code hors liste : 400
-const parmi = (dom, t) => (v) => { if (!Object.prototype.hasOwnProperty.call(t, v)) throw nonPrise(); return action(dom, t[v]); };
+const parmi = (dom, t) => (v) => { if (!Object.hasOwn(t, v)) throw nonPrise(); return action(dom, t[v]); };
 const ALARME = { disarm: 'alarm_disarm', arm_home: 'alarm_arm_home', arm_away: 'alarm_arm_away', arm_night: 'alarm_arm_night', arm_vacation: 'alarm_arm_vacation', arm_custom_bypass: 'alarm_arm_custom_bypass' };
 // Sirene : ton parmi ceux declares, volume en % (0-100, envoye 0-1), duree en secondes entieres (1-3600) ; seulement si declares (drapeaux TONES, VOLUME_SET, DURATION)
 function sirene(v, d, o) {
@@ -71,7 +71,7 @@ const entier = (v) => { if (!Number.isInteger(v)) throw new HttpError(400, 'Humi
 // Date, heure : formats que lisent dt_util.parse_date, parse_time et parse_datetime de Home Assistant ; date du calendrier verifiee
 const DATE = /^(\d{4})-(\d{2})-(\d{2})$/, HEURE = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 const dateValide = (s) => { const m = DATE.exec(s); if (!m) return false; const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])); return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3]; };
-export function dateHeure(format, v) {
+function dateHeure(format, v) {
   const s = String(v);
   if (format === 'date' && dateValide(s)) return s;
   if (format === 'time' && HEURE.test(s)) return s.length === 5 ? s + ':00' : s;
@@ -106,7 +106,7 @@ const T = {
   'climate:consigne_humidite': (v) => action('climate', 'set_humidity', { humidity: entier(v) }),
   'climate:vitesse_predefinie': (v) => action('climate', 'set_fan_mode', { fan_mode: v }),
   'climate:prereglage': (v) => action('climate', 'set_preset_mode', { preset_mode: v }),
-  'climate:sens': (v, d) => { if (d.horizontal) throw new HttpError(400, 'Commande non prise en charge.'); return action('climate', 'set_swing_mode', { swing_mode: v }); },
+  'climate:sens': (v, d) => { if (d.horizontal) throw nonPrise(); return action('climate', 'set_swing_mode', { swing_mode: v }); },
   'water_heater:onoff': onoff('water_heater'),
   'water_heater:mode': (v) => action('water_heater', 'set_operation_mode', { operation_mode: v }),
   'water_heater:consigne_temperature': (v) => action('water_heater', 'set_temperature', { temperature: v }),

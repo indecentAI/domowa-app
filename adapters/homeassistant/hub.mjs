@@ -1,31 +1,13 @@
-// @zone homeassistant hubs | Contrat hub de l'adaptateur Home Assistant (CLAUDE.md, « Hubs ») : un hub (id homeassistant-1), utilise (jeton present), etat (sonde GET /api/config, 4 s), adresses, deconnexion, recherche mDNS _home-assistant._tcp, appairage par jeton d'acces longue duree (champ secret), aide de la fenetre. Sans secret.
+// @zone homeassistant hubs | Contrat hub de l'adaptateur Home Assistant (contrat « Hubs » de .claude/rules/hubs.md) : un hub (id homeassistant-1), utilise (jeton present), etat (sonde GET /api/config, 4 s), adresses, deconnexion, recherche mDNS _home-assistant._tcp, appairage par jeton d'acces longue duree (champ secret), aide de la fenetre. Sans secret.
 import { HttpError } from '../../core/http.mjs';
-import { privee } from '../../core/reseau.mjs';
+import { privee, rechercherMdns, ADRESSE_REFUSEE } from '../../core/reseau.mjs';
 import { lire, etatLocal, obtenir, enregistrer, deconnecter, erreur, jetonPresent, PORT_DEFAUT, portValide, jetonValide } from './connexion.mjs';
 
 const ID = 'homeassistant-1';
 const texte = (v, n) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : null);
 
-// Recherche : annonce mDNS de Home Assistant (_home-assistant._tcp), adresses privees seulement, 5 s ; bibliotheque chargee a la demande.
-async function rechercher({ signal }) {
-  let mod;
-  try { mod = await import('bonjour-service'); } catch (e) { throw new HttpError(500, 'Recherche impossible : bibliothèque « bonjour-service » absente (npm install).'); }
-  const Bonjour = mod.Bonjour || (mod.default && mod.default.Bonjour);
-  const vus = new Map();
-  let B, nav;
-  return new Promise((resolve) => {
-    let fini = false;
-    const fin = () => { if (fini) return; fini = true; try { if (nav) nav.stop(); if (B) B.destroy(); } catch (e) { /* rien */ } resolve([...vus.values()]); };
-    try {
-      B = new Bonjour({}, () => {});
-      nav = B.find({ type: 'home-assistant', protocol: 'tcp' }, (s) => {
-        try { for (const a of (s && s.addresses) || []) if (privee(a) && !vus.has(a)) vus.set(a, { adresse: a, nom: texte(s.name, 60) }); } catch (e) { /* annonce illisible */ }
-      });
-    } catch (e) { return fin(); }
-    const t = setTimeout(fin, 5000);
-    if (signal) signal.addEventListener('abort', () => { clearTimeout(t); fin(); }, { once: true });
-  });
-}
+// Recherche : annonce mDNS de Home Assistant (_home-assistant._tcp ; rechercherMdns de core/reseau.mjs : IPv4 privees, 5 s).
+const rechercher = ({ signal }) => rechercherMdns('home-assistant', { signal });
 
 const champs = [
   { cle: 'adresse', libelle: 'Adresse du hub', type: 'adresse' }, // V2.0 : libelle neutre (aucun type de hub nomme)
@@ -34,7 +16,7 @@ const champs = [
 ];
 function verifier(ch) {
   const a = typeof ch.adresse === 'string' ? ch.adresse.trim() : '';
-  if (!privee(a)) throw new HttpError(400, 'Adresse refusée : seules les adresses IPv4 privées du réseau local sont acceptées (ex. 192.168.1.20).');
+  if (!privee(a)) throw new HttpError(400, ADRESSE_REFUSEE);
   const p = typeof ch.port === 'string' ? ch.port.trim() : '';
   const port = p === '' ? PORT_DEFAUT : (/^\d{1,5}$/.test(p) ? Number(p) : NaN);
   if (!portValide(port)) throw new HttpError(400, 'Port refusé : un nombre de 1 à 65535 (8123 par défaut).');
@@ -82,12 +64,13 @@ export const hub = {
       '1. Dans Home Assistant : votre profil (en bas à gauche), onglet Sécurité, « Jetons d\'accès longue durée », Créer un jeton (nom : Domowa). Copiez-le : il ne sera plus affiché.',
       '2. Ici : « Connecter un hub », puis « Rechercher sur le réseau » : Home Assistant est proposé en premier. Sinon, tapez son adresse et Connecter. Les champs Port et Jeton paraissent ensuite.',
       '3. Port : laissez vide pour 8123 (port habituel). Collez le jeton, puis Connecter.',
-      '4. L\'état passe à « Connecté » : les lumières et les prises de Home Assistant apparaissent.',
+      '4. L\'état passe à « Connecté » : les lumières et les prises de Home Assistant apparaissent, avec les autres équipements (vue Équipements).',
     ] },
     { titre: 'Ce qui est pris en charge', lignes: [
-      'Lumières (sauf les groupes de lumières) et interrupteurs déclarés comme prises (classe « outlet »).',
-      'Commandes : ON, OFF, luminosité, couleur et blanc des lumières ; ON et OFF des prises (Tout OFF compris). Chaque commande est envoyée une seule fois : si Home Assistant ne répond pas, l\'état est relu, jamais renvoyé.',
-      'Les pièces (zones) de Home Assistant ne sont pas encore reprises : les appareils sont dans « Autres ».',
+      'Vue Lumières : lumières (sauf les groupes de lumières) et interrupteurs déclarés comme prises (classe « outlet ») ; ON, OFF, luminosité, couleur et blanc des lumières ; ON et OFF des prises (Tout OFF compris).',
+      'Vue Équipements : les autres entités (capteurs, volets, thermostats, médias…), avec les commandes que l\'application sait envoyer ; les autres en lecture seule.',
+      'Chaque commande est envoyée une seule fois : si Home Assistant ne répond pas, l\'état est relu, jamais renvoyé.',
+      'Les pièces (zones) de Home Assistant sont reprises dans la vue Équipements ; dans la vue Lumières, les appareils sont dans « Autres ».',
     ] },
     { titre: 'Un seul hub à la fois', lignes: [
       'L\'application utilise soit le hub IKEA DIRIGERA, soit Home Assistant. Pour changer, déconnectez d\'abord l\'un, puis connectez l\'autre.',
@@ -102,6 +85,7 @@ export const hub = {
       '« Home Assistant injoignable » : vérifiez l\'adresse, le port et le Wi-Fi.',
       '« Redirection refusée » ou « Réponse illisible » : l\'adresse ne mène pas à l\'interface de Home Assistant (port, ou HTTPS seulement).',
       'Recherche sans résultat : Android bloque parfois la recherche sur le réseau ; tapez l\'adresse à la main.',
+      'Équipement mal lu : dans Home Assistant, Outils de développement > Modèle, collez le contenu de scripts/homeassistant-diagnostic.txt et transmettez le résultat (sans nom ni valeur).',
     ] },
   ],
   appairage: { champs, verifier, appairer },
